@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-04-21T17:15:22",
-  "usdkrw": 1484.84,
+  "updated_at": "2026-04-21T18:11:52",
+  "usdkrw": 1480.98,
   "stocks": [
     {
       "name": "네오위즈",
@@ -32,7 +32,7 @@
       "q3_op": null,
       "q4_rev": null,
       "q4_op": null,
-      "market_cap_oku": 14450352.6,
+      "market_cap_oku": 12693159.6,
       "currency": "KRW",
       "price_native": 219000.0
     },
