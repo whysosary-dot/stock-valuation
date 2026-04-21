@@ -66,27 +66,39 @@ def _get_usdkrw():
 
 
 def _fetch_marketcap_krw(ticker: str, usdkrw: float) -> dict:
-    """ticker의 현재 시총을 원화(억원)로 반환"""
+    """ticker의 현재 시총을 원화(억원)로 반환.
+    한국 증권사/네이버금융 표준(보통주 시총)에 맞추기 위해
+    info.sharesOutstanding(보통주만)을 우선 사용하고,
+    fast_info.shares(우선주 포함 가능성)는 폴백으로만 사용.
+    """
     try:
         t = yf.Ticker(ticker)
-        info = t.fast_info
-        price = info.get("lastPrice") or info.get("last_price")
-        shares = info.get("shares") or info.get("shares_outstanding")
-        currency = (info.get("currency") or "").upper()
+        fi = t.fast_info
+        price = fi.get("lastPrice") or fi.get("last_price")
+        currency = (fi.get("currency") or "").upper()
+
+        # 1) get_info()의 sharesOutstanding(보통주) 우선
+        shares = None
+        full_info = {}
+        try:
+            full_info = t.get_info() or {}
+            shares = full_info.get("sharesOutstanding")
+            currency = currency or (full_info.get("currency") or "").upper()
+            price = price or full_info.get("regularMarketPrice") or full_info.get("currentPrice")
+        except Exception:
+            full_info = {}
+
+        # 2) 폴백: fast_info.shares (우선주 포함될 수 있음)
+        if not shares:
+            shares = fi.get("shares") or fi.get("shares_outstanding")
 
         market_cap_native = None
         if price and shares:
             market_cap_native = float(price) * float(shares)
 
-        # fallback - info dict
-        if not market_cap_native:
-            try:
-                full_info = t.get_info()
-                market_cap_native = full_info.get("marketCap")
-                currency = currency or (full_info.get("currency") or "").upper()
-                price = price or full_info.get("regularMarketPrice") or full_info.get("currentPrice")
-            except Exception:
-                pass
+        # 3) 마지막 폴백: yfinance 보고 marketCap
+        if not market_cap_native and full_info:
+            market_cap_native = full_info.get("marketCap")
 
         if not market_cap_native:
             return {"ok": False, "error": "marketCap not found"}
