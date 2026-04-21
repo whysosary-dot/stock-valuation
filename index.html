@@ -15,17 +15,15 @@
     --text-dim: #6b7480;
     --accent: #2563eb;
     --accent-soft: #eaf1fe;
-    --green: #15803d;
+    --blue: #2563eb;
     --red: #b91c1c;
-    --yellow: #a16207;
     --header: #f0f3f8;
     --row-hover: #f6f8fc;
     --focus: #dbe8fe;
     --readonly: #fafbfd;
-    --topbar-h: 56px;
   }
   * { box-sizing: border-box; }
-  html, body { overflow-x: hidden; }
+  html, body { height: 100%; }
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Segoe UI", Roboto, sans-serif;
@@ -34,14 +32,16 @@
     font-size: 13px;
     -webkit-font-smoothing: antialiased;
     -webkit-text-size-adjust: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;  /* 스크롤은 .table-wrap 안에서만 발생 */
   }
   .topbar {
-    position: sticky; top: 0; z-index: 10;
+    flex: none;
     display: flex; align-items: center; gap: 10px;
     padding: 10px 14px;
     background: var(--panel);
     border-bottom: 1px solid var(--border);
-    min-height: var(--topbar-h);
     flex-wrap: wrap;
   }
   .topbar h1 {
@@ -99,12 +99,13 @@
   .toast.ok { border-color: #c4e5cf; background: #f1faf4; }
   .toast.err { border-color: #f3c4c4; background: #fdf1f1; }
 
-  /* 테이블은 overflow-x로 가로 스크롤만, sticky는 페이지 기준 유지 */
+  /* ── 여기가 핵심: 표 전체 영역이 스크롤 컨테이너, sticky는 여기 기준 ── */
   .table-wrap {
-    padding: 12px;
-    overflow-x: auto;
-    overflow-y: visible;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
     -webkit-overflow-scrolling: touch;
+    padding: 12px;
   }
   table {
     border-collapse: separate;
@@ -113,7 +114,6 @@
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 8px;
-    overflow: hidden;
   }
   th, td {
     padding: 8px 10px;
@@ -125,22 +125,21 @@
   }
   th:last-child, td:last-child { border-right: none; }
   tbody tr:last-child td { border-bottom: none; }
-  th {
+  thead th {
     background: var(--header);
-    position: sticky; top: var(--topbar-h); z-index: 3;
+    position: sticky; top: 0; z-index: 3;
     font-weight: 600;
     color: #4a5568;
     cursor: pointer;
     user-select: none;
     font-size: 12px;
   }
-  th.sorted-asc::after { content: " ▲"; color: var(--accent); font-size: 10px; }
-  th.sorted-desc::after { content: " ▼"; color: var(--accent); font-size: 10px; }
+  thead th.sorted-asc::after { content: " ▲"; color: var(--accent); font-size: 10px; }
+  thead th.sorted-desc::after { content: " ▼"; color: var(--accent); font-size: 10px; }
   th.text-left, td.text-left { text-align: left; }
   tbody tr { background: var(--panel); }
   tbody tr:hover { background: var(--row-hover); }
-  /* 데이터 셀은 자기 배경을 항상 가지도록 (sticky thead 뒤로 보이지 않게) */
-  tbody td { background: var(--panel); position: relative; }
+  tbody td { background: var(--panel); }
   tbody td.readonly-cell, tbody td.current-cap { background: var(--readonly); }
 
   input.cell-num {
@@ -156,68 +155,49 @@
   }
   input.cell-num::placeholder { color: #aab2bd; }
 
-  .readonly-cell {
-    color: var(--text);
-    font-weight: 500;
-  }
+  .readonly-cell { color: var(--text); font-weight: 500; }
   .readonly-cell.name { font-weight: 600; }
-  .readonly-cell.ticker { color: var(--text-dim); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
   .current-cap { color: var(--text); font-weight: 600; }
 
   .num { font-variant-numeric: tabular-nums; }
-  .pos { color: var(--green); font-weight: 600; }
-  .neg { color: var(--red); font-weight: 600; }
+  .up { color: var(--blue); font-weight: 600; }
+  .down { color: var(--red); font-weight: 600; }
   .dim { color: var(--text-dim); }
 
   .empty { padding: 40px; text-align: center; color: var(--text-dim); }
 
-  /* 스크롤바 (데스크톱만) */
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: #d0d6de; border-radius: 5px; }
-  ::-webkit-scrollbar-thumb:hover { background: #b5bcc6; }
+  /* 영업이익 합: 클릭으로 Q1~Q4 펼침/접힘 */
+  thead th.toggle-op-sum {
+    background: #e9efff;
+    color: var(--accent);
+  }
+  thead th.toggle-op-sum::after {
+    content: " ▸"; font-size: 11px; margin-left: 4px;
+  }
+  thead th.toggle-op-sum.expanded::after { content: " ▾"; }
+  /* 접힘 상태에서 Q 컬럼 숨김 */
+  table:not(.show-quarterly) [data-col^="q"] { display: none; }
 
-  /* 터치 기기에선 스크롤바 숨김 (iPhone/iPad/Android) */
+  /* 데스크톱 스크롤바 */
+  .table-wrap::-webkit-scrollbar { width: 10px; height: 10px; }
+  .table-wrap::-webkit-scrollbar-track { background: var(--bg); }
+  .table-wrap::-webkit-scrollbar-thumb { background: #d0d6de; border-radius: 5px; }
+  .table-wrap::-webkit-scrollbar-thumb:hover { background: #b5bcc6; }
+
+  /* 터치 기기 스크롤바 숨김 */
   @media (hover: none) and (pointer: coarse) {
-    ::-webkit-scrollbar { display: none; width: 0; height: 0; }
-    * { scrollbar-width: none; -ms-overflow-style: none; }
+    .table-wrap::-webkit-scrollbar { display: none; width: 0; height: 0; }
+    .table-wrap { scrollbar-width: none; -ms-overflow-style: none; }
   }
 
-  /* ───── 반응형: 컬럼 우선순위별 숨김 ─────
-     priority 1 = 항상 표시 (핵심)
-     priority 2 = 900px 이하에서 숨김
-     priority 3 = 680px 이하에서 숨김
-     priority 4 = 480px 이하에서 숨김
-  */
-  @media (max-width: 900px) {
-    [data-p="4"] { display: none; }
-    th, td { padding: 8px 8px; font-size: 12.5px; }
-  }
-  @media (max-width: 680px) {
-    [data-p="3"] { display: none; }
+  /* 좁은 뷰포트에서 topbar 가독성 보존 (컬럼 숨김은 하지 않음) */
+  @media (max-width: 640px) {
     .topbar { padding: 10px 12px; gap: 8px; }
     .topbar h1 { font-size: 14px; }
+    .topbar input.filter { width: 160px; font-size: 14px; }
     .topbar .meta { font-size: 11px; }
-    .topbar input.filter { width: 140px; padding: 7px 9px; }
-    th, td { padding: 9px 8px; font-size: 13px; }
-    th { font-size: 11.5px; }
-  }
-  @media (max-width: 480px) {
-    [data-p="2"] { display: none; }
-    :root { --topbar-h: 52px; }
-    .topbar { padding: 9px 10px; gap: 6px; min-height: 52px; }
-    .topbar h1 { font-size: 13.5px; }
-    .topbar h1 .dot { width: 7px; height: 7px; }
-    .topbar .meta { display: none; }
-    .topbar .status-pill { font-size: 10.5px; padding: 3px 8px; }
-    .topbar input.filter { width: 100%; flex: 1; font-size: 14px; }
-    .topbar .btn { font-size: 12px; padding: 6px 9px; }
-    .table-wrap { padding: 8px; }
-    table { border-radius: 6px; }
-    th, td { padding: 10px 8px; font-size: 13.5px; }
-    th { font-size: 11px; }
-    input.cell-num { font-size: 14px; padding: 6px 6px; }
-    .readonly-cell.ticker { font-size: 11px; }
+    .topbar .btn { font-size: 12px; padding: 7px 10px; }
+    input.cell-num { font-size: 14px; padding: 5px 6px; }
   }
 </style>
 </head>
@@ -250,34 +230,31 @@ const GH = {
   BRANCH:'main',
 };
 const LS_KEY = 'sv_user_inputs_v1';
+const LS_UI_KEY = 'sv_ui_v1';
 
-// 유저가 브라우저에서 편집 가능한 필드
 const USER_FIELDS = [
   'target_cap_oku','safety_cap_oku',
   'q1_rev','q1_op','q2_rev','q2_op','q3_rev','q3_op','q4_rev','q4_op'
 ];
 
-/* ───────── 컬럼 ─────────
-   priority: 1=항상, 2=≤480px숨김, 3=≤680px숨김, 4=≤900px숨김
-*/
+/* ───────── 컬럼 (티커 제거, 반응형 priority 제거) ───────── */
 const COLS = [
-  { key: 'name',            label: '기업명',        type: 'ro-text',   sortable: true, align: 'left', p: 1 },
-  { key: 'ticker',          label: '티커',          type: 'ro-ticker', sortable: true, align: 'left', p: 3 },
-  { key: 'market_cap_oku',  label: '현재시총 (억)',  type: 'current',   sortable: true, p: 1 },
-  { key: 'target_cap_oku',  label: '목표시총 (억)',  type: 'num',       sortable: true, p: 1 },
-  { key: 'safety_cap_oku',  label: '안전마진 (억)',  type: 'num',       sortable: true, p: 3 },
-  { key: '_upside',         label: '상방 %',        type: 'calc',      sortable: true, p: 1 },
-  { key: '_downside',       label: '하방 %',        type: 'calc',      sortable: true, p: 2 },
-  { key: 'q1_rev',          label: '1Q 매출',       type: 'num',       sortable: true, p: 4 },
-  { key: 'q1_op',           label: '1Q 영업이익',    type: 'num',       sortable: true, p: 4 },
-  { key: 'q2_rev',          label: '2Q 매출',       type: 'num',       sortable: true, p: 4 },
-  { key: 'q2_op',           label: '2Q 영업이익',    type: 'num',       sortable: true, p: 4 },
-  { key: 'q3_rev',          label: '3Q 매출',       type: 'num',       sortable: true, p: 4 },
-  { key: 'q3_op',           label: '3Q 영업이익',    type: 'num',       sortable: true, p: 4 },
-  { key: 'q4_rev',          label: '4Q 매출',       type: 'num',       sortable: true, p: 4 },
-  { key: 'q4_op',           label: '4Q 영업이익',    type: 'num',       sortable: true, p: 4 },
-  { key: '_op_sum',         label: '영업이익 합',    type: 'calc',      sortable: true, p: 3 },
-  { key: '_por',            label: 'POR',           type: 'calc',      sortable: true, p: 1 },
+  { key: 'name',            label: '기업명',        type: 'ro-text', sortable: true,  align: 'left' },
+  { key: 'market_cap_oku',  label: '현재시총 (억)',  type: 'current', sortable: true },
+  { key: 'target_cap_oku',  label: '목표시총 (억)',  type: 'num',     sortable: true },
+  { key: 'safety_cap_oku',  label: '안전마진 (억)',  type: 'num',     sortable: true },
+  { key: '_upside',         label: '상방 %',        type: 'calc',    sortable: true },
+  { key: '_downside',       label: '하방 %',        type: 'calc',    sortable: true },
+  { key: '_op_sum',         label: '영업이익 합',    type: 'calc',    sortable: false, toggle: 'quarterly' },
+  { key: 'q1_rev',          label: '1Q 매출',       type: 'num',     sortable: true, group: 'q' },
+  { key: 'q1_op',           label: '1Q 영업이익',    type: 'num',     sortable: true, group: 'q' },
+  { key: 'q2_rev',          label: '2Q 매출',       type: 'num',     sortable: true, group: 'q' },
+  { key: 'q2_op',           label: '2Q 영업이익',    type: 'num',     sortable: true, group: 'q' },
+  { key: 'q3_rev',          label: '3Q 매출',       type: 'num',     sortable: true, group: 'q' },
+  { key: 'q3_op',           label: '3Q 영업이익',    type: 'num',     sortable: true, group: 'q' },
+  { key: 'q4_rev',          label: '4Q 매출',       type: 'num',     sortable: true, group: 'q' },
+  { key: 'q4_op',           label: '4Q 영업이익',    type: 'num',     sortable: true, group: 'q' },
+  { key: '_por',            label: 'POR',           type: 'calc',    sortable: true },
 ];
 
 /* ───────── 상태 ───────── */
@@ -288,7 +265,15 @@ let state = {
   filter: '',
   sortKey: null,
   sortDir: 'asc',
+  showQuarterly: false,  // "영업이익 합" 토글
 };
+
+function loadUi() {
+  try { return JSON.parse(localStorage.getItem(LS_UI_KEY) || '{}') || {}; } catch { return {}; }
+}
+function saveUi() {
+  localStorage.setItem(LS_UI_KEY, JSON.stringify({ showQuarterly: state.showQuarterly }));
+}
 
 /* ───────── localStorage 유저 입력 ───────── */
 function loadUserInputs() {
@@ -325,12 +310,6 @@ const parseNum = v => {
 };
 const uid = () => Math.random().toString(36).slice(2,10);
 
-function b64ToUtf8(b64) {
-  const bin = atob(b64.replace(/\s/g,''));
-  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
-  return new TextDecoder('utf-8').decode(bytes);
-}
-
 /* 파생값 */
 const opSum = s => [s.q1_op,s.q2_op,s.q3_op,s.q4_op].map(parseNum).filter(v=>v!==null).reduce((a,b)=>a+b,0);
 const por = s => { const mc = parseNum(s.market_cap_oku), sum = opSum(s); return (!mc || !sum) ? null : mc/sum; };
@@ -347,9 +326,7 @@ function sortValue(s, k) {
   }
 }
 
-/* ───────── GitHub 읽기 (공개 repo, 인증 불필요) ───────── */
 async function fetchFromGitHub() {
-  // raw.githubusercontent.com 을 쓰면 rate-limit이 매우 느슨하고 CORS도 열려있음
   const url = `https://raw.githubusercontent.com/${GH.OWNER}/${GH.REPO}/${GH.BRANCH}/${GH.PATH}?t=${Date.now()}`;
   const r = await fetch(url, { cache: 'no-store' });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -365,6 +342,12 @@ function setSaveStatus(label, cls='') {
   if (cls) el.classList.add(cls);
 }
 
+function applyQuarterlyClass() {
+  const tbl = document.getElementById('tbl');
+  if (!tbl) return;
+  tbl.classList.toggle('show-quarterly', !!state.showQuarterly);
+}
+
 function renderHeader() {
   const tr = document.getElementById('header-row');
   tr.innerHTML = '';
@@ -372,16 +355,26 @@ function renderHeader() {
     const th = document.createElement('th');
     th.textContent = c.label;
     if (c.align === 'left') th.classList.add('text-left');
-    if (c.p) th.setAttribute('data-p', String(c.p));
-    if (c.sortable) {
+    if (c.group) th.setAttribute('data-col', c.group);
+    if (c.toggle === 'quarterly') {
+      th.classList.add('toggle-op-sum');
+      if (state.showQuarterly) th.classList.add('expanded');
+      th.title = '클릭하여 Q1~Q4 입력 보기/숨기기';
+      th.addEventListener('click', () => {
+        state.showQuarterly = !state.showQuarterly;
+        saveUi();
+        render();
+      });
+    } else if (c.sortable) {
       th.addEventListener('click', () => {
         if (state.sortKey === c.key) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
         else { state.sortKey = c.key; state.sortDir = 'asc'; }
         render();
       });
       if (state.sortKey === c.key) th.classList.add(state.sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
-    } else { th.style.cursor = 'default'; }
-    if (c.width) th.style.width = c.width + 'px';
+    } else {
+      th.style.cursor = 'default';
+    }
     tr.appendChild(th);
   });
 }
@@ -392,14 +385,11 @@ function renderRow(s) {
   COLS.forEach(c => {
     const td = document.createElement('td');
     if (c.align === 'left') td.classList.add('text-left');
-    if (c.p) td.setAttribute('data-p', String(c.p));
+    if (c.group) td.setAttribute('data-col', c.group);
 
     if (c.type === 'ro-text') {
       td.textContent = s[c.key] || '';
       td.classList.add('readonly-cell', 'name');
-    } else if (c.type === 'ro-ticker') {
-      td.textContent = s[c.key] || '';
-      td.classList.add('readonly-cell', 'ticker');
     } else if (c.type === 'current') {
       td.classList.add('current-cap');
       const v = parseNum(s[c.key]);
@@ -428,11 +418,18 @@ function renderRow(s) {
       });
       td.appendChild(inp);
     } else if (c.type === 'calc') {
-      let v = null, text = '—', cls = 'dim';
-      if (c.key === '_upside') { v = upside(s); if (v !== null) { text = fmt(v,1) + '%'; cls = v >= 0 ? 'pos' : 'neg'; } }
-      else if (c.key === '_downside') { v = downside(s); if (v !== null) { text = fmt(v,1) + '%'; cls = v >= 0 ? 'pos' : 'neg'; } }
-      else if (c.key === '_op_sum') { v = opSum(s); text = v ? fmt(v,0) : '—'; cls = ''; }
-      else if (c.key === '_por') { v = por(s); text = v ? fmt(v,2) + '×' : '—'; cls = ''; }
+      let text = '—', cls = 'dim';
+      if (c.key === '_upside') {
+        const v = upside(s);
+        if (v !== null) { text = fmt(v,1) + '%'; cls = 'up'; }  // 상방: 항상 blue
+      } else if (c.key === '_downside') {
+        const v = downside(s);
+        if (v !== null) { text = fmt(v,1) + '%'; cls = 'down'; }  // 하방: 항상 red
+      } else if (c.key === '_op_sum') {
+        const v = opSum(s); text = v ? fmt(v,0) : '—'; cls = '';
+      } else if (c.key === '_por') {
+        const v = por(s); text = v ? fmt(v,2) + '×' : '—'; cls = '';
+      }
       td.textContent = text;
       if (cls) td.classList.add(cls);
     }
@@ -443,6 +440,7 @@ function renderRow(s) {
 
 function render() {
   renderHeader();
+  applyQuarterlyClass();
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
 
@@ -487,7 +485,6 @@ function render() {
   m.textContent = parts.join(' · ');
 }
 
-/* ───────── 저장 (localStorage) ───────── */
 let saveTimer = null;
 function queueSave() {
   clearTimeout(saveTimer);
@@ -512,7 +509,6 @@ function toast(msg, type='ok', ms=2500) {
   t._timer = setTimeout(() => t.classList.remove('show'), ms);
 }
 
-/* ───────── 병합: GitHub 데이터 + localStorage 오버레이 ───────── */
 function mergeAndSetStocks(ghData) {
   const userInputs = loadUserInputs();
   state.stocks = (ghData.stocks || []).map(s => {
@@ -546,8 +542,10 @@ async function reload() {
   }
 }
 
-/* ───────── 초기화 ───────── */
 async function init() {
+  const ui = loadUi();
+  state.showQuarterly = !!ui.showQuarterly;
+
   try {
     const gh = await fetchFromGitHub();
     mergeAndSetStocks(gh);
@@ -563,15 +561,13 @@ async function init() {
   });
   document.getElementById('btn-reload').addEventListener('click', reload);
 
-  // 포커스 복귀 시 자동 새로고침 (스케줄러가 바꿨을 수 있음)
+  // 포커스 복귀 시 자동 새로고침 (스케줄러 반영)
   let lastReload = Date.now();
   window.addEventListener('focus', async () => {
     if (Date.now() - lastReload < 30_000) return;
     lastReload = Date.now();
     try {
       const gh = await fetchFromGitHub();
-      // 기존 유저 입력 유지하면서 market_cap 등 서버 값만 갱신
-      const userInputs = loadUserInputs();
       state.stocks.forEach(s => {
         const latest = (gh.stocks || []).find(x => x.ticker === s.ticker);
         if (latest) {
@@ -586,7 +582,6 @@ async function init() {
     } catch (_) {}
   });
 
-  // Cmd/Ctrl+S → 즉시 저장
   document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
       e.preventDefault();
