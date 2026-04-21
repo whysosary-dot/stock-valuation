@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stock Valuation Dashboard</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #141820;
+    --panel-2: #1b2029;
+    --border: #242a36;
+    --text: #e6e9ef;
+    --text-dim: #9aa3b2;
+    --accent: #4f8cff;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #eab308;
+    --header: #1f2633;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+  }
+  .topbar {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar h1 {
+    margin: 0; font-size: 16px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .topbar h1 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .topbar .spacer { flex: 1; }
+  .topbar .meta { color: var(--text-dim); font-size: 12px; }
+  .topbar input.filter {
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+    padding: 7px 10px; border-radius: 6px; width: 220px;
+  }
+  .btn {
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+    padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;
+    transition: background .15s;
+  }
+  .btn:hover { background: #222836; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: white; font-weight: 500; }
+  .btn.primary:hover { background: #3b77e6; }
+  .btn.ghost { background: transparent; }
+  .btn.danger { background: transparent; color: var(--red); border-color: #3a1f22; padding: 4px 8px; }
+  .btn.danger:hover { background: #2a1416; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .toast {
+    position: fixed; right: 16px; bottom: 16px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    padding: 10px 14px; border-radius: 6px;
+    color: var(--text); font-size: 13px; z-index: 100;
+    max-width: 420px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    opacity: 0; transform: translateY(10px); transition: all .2s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.ok { border-color: #1e3e2c; }
+  .toast.err { border-color: #3a1f22; }
+
+  .table-wrap {
+    overflow: auto;
+    padding: 8px;
+  }
+  table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    min-width: 1700px;
+    background: var(--panel);
+  }
+  th, td {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  th {
+    background: var(--header);
+    position: sticky; top: 56px; z-index: 2;
+    font-weight: 500;
+    color: var(--text-dim);
+    cursor: pointer;
+    user-select: none;
+  }
+  th.sorted-asc::after { content: " ▲"; color: var(--accent); font-size: 10px; }
+  th.sorted-desc::after { content: " ▼"; color: var(--accent); font-size: 10px; }
+  th:first-child, td:first-child { text-align: center; }
+  th.text-left, td.text-left { text-align: left; }
+  tbody tr:hover { background: #161b24; }
+
+  input.cell, input.cell-num {
+    background: transparent; border: 1px solid transparent; color: var(--text);
+    padding: 3px 5px; border-radius: 3px; width: 100%;
+    font: inherit;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  input.cell.name { text-align: left; font-weight: 500; }
+  input.cell:focus, input.cell-num:focus {
+    outline: none; border-color: var(--accent); background: #0f1419;
+  }
+  input.cell::placeholder, input.cell-num::placeholder { color: #4a5262; }
+
+  .num { font-variant-numeric: tabular-nums; }
+  .pos { color: var(--green); font-weight: 500; }
+  .neg { color: var(--red); font-weight: 500; }
+  .dim { color: var(--text-dim); }
+
+  .current-cap { color: #d4d9e2; font-weight: 500; }
+
+  .section-divider { background: #1a1f2a; color: var(--text-dim); font-size: 10px; letter-spacing: 1px; }
+
+  .add-row-btn {
+    margin: 10px 8px; padding: 8px 14px;
+    background: transparent; border: 1px dashed var(--border);
+    color: var(--text-dim); border-radius: 6px; cursor: pointer;
+    font-size: 12px;
+  }
+  .add-row-btn:hover { color: var(--text); border-color: #4a5262; }
+
+  .empty {
+    padding: 40px; text-align: center; color: var(--text-dim);
+  }
+
+  .col-group {
+    color: var(--text);
+    background: #1a202c !important;
+    text-align: center !important;
+  }
+
+  /* 스크롤바 */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: #2a3140; border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a4250; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1><span class="dot"></span> Stock Valuation</h1>
+  <input id="filter" class="filter" type="search" placeholder="기업명 검색..." />
+  <span class="spacer"></span>
+  <span class="meta" id="meta"></span>
+  <button id="btn-update" class="btn primary" title="yfinance로 현재 시총 일괄 업데이트">🔄 시총 업데이트</button>
+  <button id="btn-save" class="btn" title="stocks.json 저장">💾 저장</button>
+  <button id="btn-push" class="btn ghost" title="git commit & push">📤 GitHub 푸시</button>
+</div>
+
+<div class="table-wrap">
+  <table id="tbl">
+    <thead>
+      <tr id="header-row">
+        <!-- dynamically rendered -->
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <button class="add-row-btn" id="btn-add">+ 종목 추가</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ───────── 컬럼 정의 ───────── */
+const COLS = [
+  { key: '_del',       label: '',        type: 'action', sortable: false, width: 40 },
+  { key: 'name',       label: '기업명',   type: 'text',   sortable: true,  align: 'left' },
+  { key: 'ticker',     label: '티커',     type: 'text',   sortable: true,  align: 'left' },
+  { key: 'market_cap_oku',   label: '현재시총 (억)', type: 'current', sortable: true },
+  { key: 'target_cap_oku',   label: '목표시총 (억)', type: 'num',     sortable: true },
+  { key: 'safety_cap_oku',   label: '안전마진 (억)', type: 'num',     sortable: true },
+  { key: '_upside',    label: '상방 %',    type: 'calc',   sortable: true },
+  { key: '_downside',  label: '하방 %',    type: 'calc',   sortable: true },
+  { key: 'q1_rev',     label: '1Q 매출',   type: 'num',    sortable: true },
+  { key: 'q1_op',      label: '1Q 영업이익', type: 'num',  sortable: true },
+  { key: 'q2_rev',     label: '2Q 매출',   type: 'num',    sortable: true },
+  { key: 'q2_op',      label: '2Q 영업이익', type: 'num',  sortable: true },
+  { key: 'q3_rev',     label: '3Q 매출',   type: 'num',    sortable: true },
+  { key: 'q3_op',      label: '3Q 영업이익', type: 'num',  sortable: true },
+  { key: 'q4_rev',     label: '4Q 매출',   type: 'num',    sortable: true },
+  { key: 'q4_op',      label: '4Q 영업이익', type: 'num',  sortable: true },
+  { key: '_op_sum',    label: '영업이익 합',  type: 'calc', sortable: true },
+  { key: '_por',       label: 'POR',       type: 'calc',   sortable: true },
+];
+
+/* ───────── 상태 ───────── */
+let state = {
+  stocks: [],
+  usdkrw: 0,
+  updated_at: '',
+  filter: '',
+  sortKey: null,
+  sortDir: 'asc',
+  saveTimer: null,
+};
+
+/* ───────── 유틸 ───────── */
+const fmt = (v, dec = 0) => {
+  if (v === null || v === undefined || v === '' || Number.isNaN(v)) return '';
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '';
+  return n.toLocaleString('ko-KR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+};
+const parseNum = (v) => {
+  if (v === null || v === undefined) return null;
+  const s = String(v).replace(/,/g, '').trim();
+  if (s === '') return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+};
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+/* 파생값 */
+function opSum(s) {
+  return [s.q1_op, s.q2_op, s.q3_op, s.q4_op]
+    .map(v => parseNum(v))
+    .filter(v => v !== null)
+    .reduce((a, b) => a + b, 0);
+}
+function por(s) {
+  const mc = parseNum(s.market_cap_oku);
+  const sum = opSum(s);
+  if (!mc || !sum) return null;
+  return mc / sum;
+}
+function upside(s) {
+  const mc = parseNum(s.market_cap_oku);
+  const tg = parseNum(s.target_cap_oku);
+  if (!mc || !tg) return null;
+  return (tg / mc - 1) * 100;
+}
+function downside(s) {
+  const mc = parseNum(s.market_cap_oku);
+  const sf = parseNum(s.safety_cap_oku);
+  if (!mc || !sf) return null;
+  return (sf / mc - 1) * 100;
+}
+
+/* 정렬값 */
+function sortValue(s, key) {
+  switch (key) {
+    case '_upside':   return upside(s);
+    case '_downside': return downside(s);
+    case '_op_sum':   return opSum(s);
+    case '_por':      return por(s);
+    default:          return s[key];
+  }
+}
+
+/* ───────── 렌더 ───────── */
+function renderHeader() {
+  const tr = document.getElementById('header-row');
+  tr.innerHTML = '';
+  COLS.forEach(c => {
+    const th = document.createElement('th');
+    th.textContent = c.label;
+    if (c.align === 'left') th.classList.add('text-left');
+    if (c.sortable) {
+      th.addEventListener('click', () => {
+        if (state.sortKey === c.key) {
+          state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          state.sortKey = c.key;
+          state.sortDir = 'asc';
+        }
+        render();
+      });
+      if (state.sortKey === c.key) {
+        th.classList.add(state.sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+      }
+    } else {
+      th.style.cursor = 'default';
+    }
+    if (c.width) th.style.width = c.width + 'px';
+    tr.appendChild(th);
+  });
+}
+
+function renderRow(s, idx) {
+  const tr = document.createElement('tr');
+  tr.dataset.id = s._id;
+  COLS.forEach(c => {
+    const td = document.createElement('td');
+    if (c.align === 'left') td.classList.add('text-left');
+
+    if (c.key === '_del') {
+      const b = document.createElement('button');
+      b.className = 'btn danger';
+      b.textContent = '✕';
+      b.title = '삭제';
+      b.addEventListener('click', () => removeStock(s._id));
+      td.appendChild(b);
+    } else if (c.type === 'text') {
+      const inp = document.createElement('input');
+      inp.className = 'cell' + (c.key === 'name' ? ' name' : '');
+      inp.value = s[c.key] || '';
+      inp.placeholder = c.key === 'ticker' ? '예: 005930.KS' : '';
+      inp.addEventListener('input', () => {
+        s[c.key] = inp.value;
+        queueSave();
+      });
+      td.appendChild(inp);
+    } else if (c.type === 'num') {
+      const inp = document.createElement('input');
+      inp.className = 'cell-num';
+      inp.value = s[c.key] !== undefined && s[c.key] !== null && s[c.key] !== '' ? fmt(s[c.key], 0) : '';
+      inp.inputMode = 'decimal';
+      inp.addEventListener('focus', () => {
+        const v = parseNum(s[c.key]);
+        inp.value = v === null ? '' : String(v);
+        inp.select();
+      });
+      inp.addEventListener('blur', () => {
+        const v = parseNum(inp.value);
+        s[c.key] = v;
+        inp.value = v === null ? '' : fmt(v, 0);
+        render();
+        queueSave();
+      });
+      td.appendChild(inp);
+    } else if (c.type === 'current') {
+      // 현재 시총은 서버가 주입, 편집 불가
+      td.classList.add('current-cap');
+      const v = parseNum(s[c.key]);
+      td.textContent = v === null ? '—' : fmt(v, 0);
+      if (s.currency && s.currency !== 'KRW') {
+        td.title = `${s.currency} 기준 환산 (업데이트 시 환율 적용)`;
+      }
+    } else if (c.type === 'calc') {
+      let v = null, text = '—', cls = 'dim';
+      if (c.key === '_upside') {
+        v = upside(s);
+        if (v !== null) { text = fmt(v, 1) + '%'; cls = v >= 0 ? 'pos' : 'neg'; }
+      } else if (c.key === '_downside') {
+        v = downside(s);
+        if (v !== null) { text = fmt(v, 1) + '%'; cls = v >= 0 ? 'pos' : 'neg'; }
+      } else if (c.key === '_op_sum') {
+        v = opSum(s);
+        text = v ? fmt(v, 0) : '—';
+        cls = '';
+      } else if (c.key === '_por') {
+        v = por(s);
+        text = v ? fmt(v, 2) + '×' : '—';
+        cls = '';
+      }
+      td.textContent = text;
+      if (cls) td.classList.add(cls);
+    }
+    tr.appendChild(td);
+  });
+  return tr;
+}
+
+function render() {
+  renderHeader();
+
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+
+  let list = [...state.stocks];
+
+  // filter
+  if (state.filter) {
+    const q = state.filter.toLowerCase();
+    list = list.filter(s =>
+      (s.name || '').toLowerCase().includes(q) ||
+      (s.ticker || '').toLowerCase().includes(q)
+    );
+  }
+
+  // sort
+  if (state.sortKey) {
+    const dir = state.sortDir === 'asc' ? 1 : -1;
+    list.sort((a, b) => {
+      const av = sortValue(a, state.sortKey);
+      const bv = sortValue(b, state.sortKey);
+      const aNull = av === null || av === undefined || av === '' || Number.isNaN(av);
+      const bNull = bv === null || bv === undefined || bv === '' || Number.isNaN(bv);
+      if (aNull && bNull) return 0;
+      if (aNull) return 1;
+      if (bNull) return -1;
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
+      return String(av).localeCompare(String(bv), 'ko') * dir;
+    });
+  }
+
+  if (!list.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = COLS.length;
+    td.className = 'empty';
+    td.textContent = state.filter ? '검색 결과 없음' : '종목을 추가해주세요 (+ 버튼)';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  } else {
+    list.forEach((s, idx) => tbody.appendChild(renderRow(s, idx)));
+  }
+
+  // meta
+  const m = document.getElementById('meta');
+  const parts = [];
+  if (state.updated_at) parts.push(`업데이트 ${state.updated_at.replace('T', ' ').slice(0, 16)}`);
+  if (state.usdkrw) parts.push(`USDKRW ${state.usdkrw.toFixed(1)}`);
+  parts.push(`${state.stocks.length}개 종목`);
+  m.textContent = parts.join(' · ');
+}
+
+/* ───────── 상태 변경 ───────── */
+function addStock() {
+  state.stocks.push({
+    _id: uid(),
+    name: '',
+    ticker: '',
+    market_cap_oku: null,
+    target_cap_oku: null,
+    safety_cap_oku: null,
+    q1_rev: null, q1_op: null,
+    q2_rev: null, q2_op: null,
+    q3_rev: null, q3_op: null,
+    q4_rev: null, q4_op: null,
+    currency: '',
+  });
+  render();
+  queueSave();
+  // focus new row's first input
+  setTimeout(() => {
+    const rows = document.querySelectorAll('#tbody tr');
+    const last = rows[rows.length - 1];
+    if (last) last.querySelector('input.cell')?.focus();
+  }, 50);
+}
+
+function removeStock(id) {
+  if (!confirm('이 종목을 삭제할까요?')) return;
+  state.stocks = state.stocks.filter(s => s._id !== id);
+  render();
+  queueSave();
+}
+
+/* ───────── 서버 통신 ───────── */
+const API = {
+  async load() {
+    const r = await fetch('/api/data');
+    return r.json();
+  },
+  async save(stocks) {
+    const r = await fetch('/api/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stocks }),
+    });
+    return r.json();
+  },
+  async updateMarketCap() {
+    const r = await fetch('/api/update-marketcap', { method: 'POST' });
+    return r.json();
+  },
+  async commitPush(message) {
+    const r = await fetch('/api/commit-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
+    });
+    return r.json();
+  },
+};
+
+function toast(msg, type = 'ok', ms = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function queueSave() {
+  clearTimeout(state.saveTimer);
+  state.saveTimer = setTimeout(async () => {
+    try {
+      // strip _id before saving (keep it though - useful to identify)
+      const payload = state.stocks.map(({ _id, ...rest }) => rest);
+      await API.save(payload);
+    } catch (e) {
+      toast('저장 실패: ' + e.message, 'err');
+    }
+  }, 800);
+}
+
+async function doUpdate() {
+  const btn = document.getElementById('btn-update');
+  btn.disabled = true;
+  btn.textContent = '⏳ 업데이트 중...';
+  try {
+    const res = await API.updateMarketCap();
+    if (res.ok) {
+      // merge market_cap back into existing (match by ticker)
+      const byTicker = {};
+      (res.data?.stocks || []).forEach(s => { byTicker[s.ticker] = s; });
+      state.stocks.forEach(s => {
+        const u = byTicker[s.ticker];
+        if (u) {
+          s.market_cap_oku = u.market_cap_oku;
+          s.currency = u.currency;
+          s.price_native = u.price_native;
+        }
+      });
+      state.usdkrw = res.usdkrw;
+      state.updated_at = res.data?.updated_at || new Date().toISOString();
+      render();
+      const fail = res.results.filter(r => !r.ok);
+      if (fail.length) {
+        toast(`업데이트 완료 (실패 ${fail.length}건: ${fail.map(f => f.ticker || f.name).join(', ')})`, 'err', 5000);
+      } else {
+        toast('시총 업데이트 완료 ✓');
+      }
+    } else {
+      toast('업데이트 실패', 'err');
+    }
+  } catch (e) {
+    toast('업데이트 오류: ' + e.message, 'err', 5000);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔄 시총 업데이트';
+  }
+}
+
+async function doSave() {
+  clearTimeout(state.saveTimer);
+  try {
+    const payload = state.stocks.map(({ _id, ...rest }) => rest);
+    const r = await API.save(payload);
+    if (r.ok) toast('저장 완료 ✓');
+  } catch (e) {
+    toast('저장 실패: ' + e.message, 'err');
+  }
+}
+
+async function doPush() {
+  const btn = document.getElementById('btn-push');
+  btn.disabled = true;
+  btn.textContent = '⏳ 푸시 중...';
+  try {
+    // save first
+    clearTimeout(state.saveTimer);
+    const payload = state.stocks.map(({ _id, ...rest }) => rest);
+    await API.save(payload);
+
+    const r = await API.commitPush();
+    if (r.ok && r.pushed) {
+      toast('GitHub 푸시 완료 ✓');
+    } else if (r.ok && !r.pushed) {
+      toast('변경 사항 없음');
+    } else {
+      toast('푸시 실패: ' + (r.steps?.slice(-1)[0]?.stderr || ''), 'err', 6000);
+    }
+  } catch (e) {
+    toast('푸시 오류: ' + e.message, 'err', 5000);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📤 GitHub 푸시';
+  }
+}
+
+/* ───────── 초기화 ───────── */
+async function init() {
+  try {
+    const data = await API.load();
+    state.stocks = (data.stocks || []).map(s => ({ _id: uid(), ...s }));
+    state.usdkrw = data.usdkrw || 0;
+    state.updated_at = data.updated_at || '';
+  } catch (e) {
+    toast('데이터 로드 실패 (로컬 서버 실행 중인지 확인): ' + e.message, 'err', 6000);
+    state.stocks = [];
+  }
+  render();
+
+  document.getElementById('filter').addEventListener('input', e => {
+    state.filter = e.target.value.trim();
+    render();
+  });
+  document.getElementById('btn-add').addEventListener('click', addStock);
+  document.getElementById('btn-update').addEventListener('click', doUpdate);
+  document.getElementById('btn-save').addEventListener('click', doSave);
+  document.getElementById('btn-push').addEventListener('click', doPush);
+
+  // Ctrl/Cmd+S → save
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      doSave();
+    }
+  });
+}
+
+init();
+</script>
+</body>
+</html>
