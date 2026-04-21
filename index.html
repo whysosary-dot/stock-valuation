@@ -223,7 +223,6 @@
   <span class="spacer"></span>
   <span class="status-pill" id="save-status" title="입력 값은 이 브라우저에만 저장됩니다">로컬 저장</span>
   <span class="meta" id="meta"></span>
-  <button class="btn" id="btn-reload" title="GitHub에서 최신 시총 다시 가져오기">↻ 새로고침</button>
 </div>
 
 <div class="table-wrap">
@@ -538,22 +537,21 @@ function mergeAndSetStocks(ghData) {
   state.updated_at = ghData.updated_at || '';
 }
 
-async function reload() {
-  const btn = document.getElementById('btn-reload');
-  if (btn) btn.disabled = true;
-  setSaveStatus('로드 중...');
+async function silentRefresh() {
   try {
     const gh = await fetchFromGitHub();
-    mergeAndSetStocks(gh);
+    state.stocks.forEach(s => {
+      const latest = (gh.stocks || []).find(x => x.ticker === s.ticker);
+      if (latest) {
+        s.market_cap_oku = latest.market_cap_oku;
+        s.currency = latest.currency;
+        s.price_native = latest.price_native;
+      }
+    });
+    state.usdkrw = gh.usdkrw || state.usdkrw;
+    state.updated_at = gh.updated_at || state.updated_at;
     render();
-    setSaveStatus('로컬 저장');
-    toast('최신 시총 반영됨 ✓');
-  } catch (e) {
-    setSaveStatus('로드 실패', 'err');
-    toast('GitHub 로드 실패: ' + e.message, 'err', 4500);
-  } finally {
-    if (btn) btn.disabled = false;
-  }
+  } catch (_) {}
 }
 
 async function init() {
@@ -573,27 +571,13 @@ async function init() {
     state.filter = e.target.value.trim();
     render();
   });
-  document.getElementById('btn-reload').addEventListener('click', reload);
 
-  // 포커스 복귀 시 자동 새로고침 (스케줄러 반영)
+  // 포커스 복귀 시 자동 새로고침 (스케줄러 반영분 반영)
   let lastReload = Date.now();
-  window.addEventListener('focus', async () => {
+  window.addEventListener('focus', () => {
     if (Date.now() - lastReload < 30_000) return;
     lastReload = Date.now();
-    try {
-      const gh = await fetchFromGitHub();
-      state.stocks.forEach(s => {
-        const latest = (gh.stocks || []).find(x => x.ticker === s.ticker);
-        if (latest) {
-          s.market_cap_oku = latest.market_cap_oku;
-          s.currency = latest.currency;
-          s.price_native = latest.price_native;
-        }
-      });
-      state.usdkrw = gh.usdkrw || state.usdkrw;
-      state.updated_at = gh.updated_at || state.updated_at;
-      render();
-    } catch (_) {}
+    silentRefresh();
   });
 
   document.addEventListener('keydown', e => {
