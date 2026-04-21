@@ -253,6 +253,7 @@ const USER_FIELDS = [
 /* ───────── 컬럼 (티커 제거, 반응형 priority 제거) ───────── */
 const COLS = [
   { key: 'name',            label: '기업명',        type: 'ro-text', sortable: true,  align: 'left' },
+  { key: 'market_cap_oku',  label: '현재시총 (억)',  type: 'current', sortable: true },
   { key: 'price_native',    label: '현재주가',      type: 'current-price', sortable: true },
   { key: 'target_price',    label: '목표주가',      type: 'num-price', sortable: true },
   { key: 'safety_price',    label: '안전주가',      type: 'num-price', sortable: true },
@@ -409,6 +410,11 @@ function renderRow(s) {
     if (c.type === 'ro-text') {
       td.textContent = s[c.key] || '';
       td.classList.add('readonly-cell', 'name');
+    } else if (c.type === 'current') {
+      td.classList.add('current-cap');
+      const v = parseNum(s[c.key]);
+      td.textContent = v === null ? '—' : fmt(v, 0);
+      if (s.currency && s.currency !== 'KRW') td.title = `${s.currency} 기준 환산 (억원)`;
     } else if (c.type === 'current-price') {
       td.classList.add('current-cap');
       const v = parseNum(s[c.key]);
