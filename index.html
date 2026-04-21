@@ -6,17 +6,21 @@
 <title>Stock Valuation Dashboard</title>
 <style>
   :root {
-    --bg: #0b0d12;
-    --panel: #141820;
-    --panel-2: #1b2029;
-    --border: #242a36;
-    --text: #e6e9ef;
-    --text-dim: #9aa3b2;
-    --accent: #4f8cff;
-    --green: #22c55e;
-    --red: #ef4444;
-    --yellow: #eab308;
-    --header: #1f2633;
+    --bg: #f7f9fc;
+    --panel: #ffffff;
+    --panel-2: #f2f4f8;
+    --border: #e3e7ee;
+    --border-strong: #cfd5de;
+    --text: #1f2933;
+    --text-dim: #6b7480;
+    --accent: #2563eb;
+    --accent-soft: #eaf1fe;
+    --green: #15803d;
+    --red: #b91c1c;
+    --yellow: #a16207;
+    --header: #f0f3f8;
+    --row-hover: #f6f8fc;
+    --focus: #dbe8fe;
   }
   * { box-sizing: border-box; }
   body {
@@ -25,6 +29,7 @@
     background: var(--bg);
     color: var(--text);
     font-size: 13px;
+    -webkit-font-smoothing: antialiased;
   }
   .topbar {
     position: sticky; top: 0; z-index: 10;
@@ -40,114 +45,121 @@
   .topbar h1 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
   .topbar .spacer { flex: 1; }
   .topbar .meta { color: var(--text-dim); font-size: 12px; }
+  .topbar .status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--accent-soft); color: var(--accent);
+    padding: 4px 9px; border-radius: 999px; font-size: 11px; font-weight: 500;
+  }
+  .topbar .status-pill::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+  }
   .topbar input.filter {
-    background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+    background: var(--panel); border: 1px solid var(--border-strong); color: var(--text);
     padding: 7px 10px; border-radius: 6px; width: 220px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .topbar input.filter:focus {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus);
   }
   .btn {
-    background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+    background: var(--panel); border: 1px solid var(--border-strong); color: var(--text);
     padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;
-    transition: background .15s;
+    transition: background .15s, border-color .15s;
   }
-  .btn:hover { background: #222836; }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: white; font-weight: 500; }
-  .btn.primary:hover { background: #3b77e6; }
-  .btn.ghost { background: transparent; }
-  .btn.danger { background: transparent; color: var(--red); border-color: #3a1f22; padding: 4px 8px; }
-  .btn.danger:hover { background: #2a1416; }
+  .btn:hover { background: var(--panel-2); border-color: var(--accent); }
+  .btn.danger { background: transparent; color: var(--red); border-color: transparent; padding: 4px 8px; }
+  .btn.danger:hover { background: #fde9e9; border-color: #f3c4c4; }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .toast {
     position: fixed; right: 16px; bottom: 16px;
-    background: var(--panel-2); border: 1px solid var(--border);
+    background: var(--panel); border: 1px solid var(--border-strong);
     padding: 10px 14px; border-radius: 6px;
     color: var(--text); font-size: 13px; z-index: 100;
-    max-width: 420px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    max-width: 420px; box-shadow: 0 8px 24px rgba(15,23,42,0.12);
     opacity: 0; transform: translateY(10px); transition: all .2s;
     pointer-events: none;
   }
   .toast.show { opacity: 1; transform: translateY(0); }
-  .toast.ok { border-color: #1e3e2c; }
-  .toast.err { border-color: #3a1f22; }
+  .toast.ok { border-color: #c4e5cf; background: #f1faf4; }
+  .toast.err { border-color: #f3c4c4; background: #fdf1f1; }
 
-  .table-wrap {
-    overflow: auto;
-    padding: 8px;
-  }
+  .table-wrap { overflow: auto; padding: 12px; }
   table {
     border-collapse: separate;
     border-spacing: 0;
     width: 100%;
     min-width: 1700px;
     background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
   }
   th, td {
-    padding: 6px 8px;
+    padding: 7px 9px;
     border-bottom: 1px solid var(--border);
     border-right: 1px solid var(--border);
     text-align: right;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
   }
+  th:last-child, td:last-child { border-right: none; }
+  tbody tr:last-child td { border-bottom: none; }
   th {
     background: var(--header);
     position: sticky; top: 56px; z-index: 2;
-    font-weight: 500;
-    color: var(--text-dim);
+    font-weight: 600;
+    color: #4a5568;
     cursor: pointer;
     user-select: none;
+    font-size: 12px;
   }
   th.sorted-asc::after { content: " ▲"; color: var(--accent); font-size: 10px; }
   th.sorted-desc::after { content: " ▼"; color: var(--accent); font-size: 10px; }
   th:first-child, td:first-child { text-align: center; }
   th.text-left, td.text-left { text-align: left; }
-  tbody tr:hover { background: #161b24; }
+  tbody tr:hover { background: var(--row-hover); }
 
   input.cell, input.cell-num {
     background: transparent; border: 1px solid transparent; color: var(--text);
-    padding: 3px 5px; border-radius: 3px; width: 100%;
+    padding: 3px 5px; border-radius: 4px; width: 100%;
     font: inherit;
     text-align: right;
     font-variant-numeric: tabular-nums;
   }
   input.cell.name { text-align: left; font-weight: 500; }
   input.cell:focus, input.cell-num:focus {
-    outline: none; border-color: var(--accent); background: #0f1419;
+    outline: none; border-color: var(--accent); background: white;
+    box-shadow: 0 0 0 3px var(--focus);
   }
-  input.cell::placeholder, input.cell-num::placeholder { color: #4a5262; }
+  input.cell::placeholder, input.cell-num::placeholder { color: #aab2bd; }
 
   .num { font-variant-numeric: tabular-nums; }
-  .pos { color: var(--green); font-weight: 500; }
-  .neg { color: var(--red); font-weight: 500; }
+  .pos { color: var(--green); font-weight: 600; }
+  .neg { color: var(--red); font-weight: 600; }
   .dim { color: var(--text-dim); }
 
-  .current-cap { color: #d4d9e2; font-weight: 500; }
-
-  .section-divider { background: #1a1f2a; color: var(--text-dim); font-size: 10px; letter-spacing: 1px; }
+  .current-cap {
+    color: var(--text);
+    font-weight: 600;
+    background: #fafbfd;
+  }
 
   .add-row-btn {
-    margin: 10px 8px; padding: 8px 14px;
-    background: transparent; border: 1px dashed var(--border);
+    margin: 12px 0 4px; padding: 9px 16px;
+    background: var(--panel); border: 1px dashed var(--border-strong);
     color: var(--text-dim); border-radius: 6px; cursor: pointer;
     font-size: 12px;
   }
-  .add-row-btn:hover { color: var(--text); border-color: #4a5262; }
+  .add-row-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 
-  .empty {
-    padding: 40px; text-align: center; color: var(--text-dim);
-  }
-
-  .col-group {
-    color: var(--text);
-    background: #1a202c !important;
-    text-align: center !important;
-  }
+  .empty { padding: 40px; text-align: center; color: var(--text-dim); }
 
   /* 스크롤바 */
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: #2a3140; border-radius: 5px; }
-  ::-webkit-scrollbar-thumb:hover { background: #3a4250; }
+  ::-webkit-scrollbar-thumb { background: #d0d6de; border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: #b5bcc6; }
 </style>
 </head>
 <body>
@@ -156,10 +168,8 @@
   <h1><span class="dot"></span> Stock Valuation</h1>
   <input id="filter" class="filter" type="search" placeholder="기업명 검색..." />
   <span class="spacer"></span>
+  <span class="status-pill" id="save-status" title="입력하면 자동 저장됩니다">자동 저장</span>
   <span class="meta" id="meta"></span>
-  <button id="btn-update" class="btn primary" title="yfinance로 현재 시총 일괄 업데이트">🔄 시총 업데이트</button>
-  <button id="btn-save" class="btn" title="stocks.json 저장">💾 저장</button>
-  <button id="btn-push" class="btn ghost" title="git commit & push">📤 GitHub 푸시</button>
 </div>
 
 <div class="table-wrap">
@@ -208,6 +218,7 @@ let state = {
   sortKey: null,
   sortDir: 'asc',
   saveTimer: null,
+  readOnly: false,
 };
 
 /* ───────── 유틸 ───────── */
@@ -300,17 +311,20 @@ function renderRow(s, idx) {
     if (c.align === 'left') td.classList.add('text-left');
 
     if (c.key === '_del') {
-      const b = document.createElement('button');
-      b.className = 'btn danger';
-      b.textContent = '✕';
-      b.title = '삭제';
-      b.addEventListener('click', () => removeStock(s._id));
-      td.appendChild(b);
+      if (!state.readOnly) {
+        const b = document.createElement('button');
+        b.className = 'btn danger';
+        b.textContent = '✕';
+        b.title = '삭제';
+        b.addEventListener('click', () => removeStock(s._id));
+        td.appendChild(b);
+      }
     } else if (c.type === 'text') {
       const inp = document.createElement('input');
       inp.className = 'cell' + (c.key === 'name' ? ' name' : '');
       inp.value = s[c.key] || '';
       inp.placeholder = c.key === 'ticker' ? '예: 005930.KS' : '';
+      if (state.readOnly) inp.readOnly = true;
       inp.addEventListener('input', () => {
         s[c.key] = inp.value;
         queueSave();
@@ -321,6 +335,7 @@ function renderRow(s, idx) {
       inp.className = 'cell-num';
       inp.value = s[c.key] !== undefined && s[c.key] !== null && s[c.key] !== '' ? fmt(s[c.key], 0) : '';
       inp.inputMode = 'decimal';
+      if (state.readOnly) inp.readOnly = true;
       inp.addEventListener('focus', () => {
         const v = parseNum(s[c.key]);
         inp.value = v === null ? '' : String(v);
@@ -456,8 +471,13 @@ function removeStock(id) {
 /* ───────── 서버 통신 ───────── */
 const API = {
   async load() {
-    const r = await fetch('/api/data');
-    return r.json();
+    // Flask 서버가 있으면 /api/data, 없으면(GitHub Pages) stocks.json 직접
+    try {
+      const r = await fetch('/api/data');
+      if (r.ok) return { data: await r.json(), hasServer: true };
+    } catch (_) {}
+    const r2 = await fetch('stocks.json?t=' + Date.now(), { cache: 'no-cache' });
+    return { data: await r2.json(), hasServer: false };
   },
   async save(stocks) {
     const r = await fetch('/api/data', {
@@ -465,18 +485,7 @@ const API = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ stocks }),
     });
-    return r.json();
-  },
-  async updateMarketCap() {
-    const r = await fetch('/api/update-marketcap', { method: 'POST' });
-    return r.json();
-  },
-  async commitPush(message) {
-    const r = await fetch('/api/commit-push', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
-    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.json();
   },
 };
@@ -489,102 +498,63 @@ function toast(msg, type = 'ok', ms = 2500) {
 }
 
 function queueSave() {
+  if (state.readOnly) return;
   clearTimeout(state.saveTimer);
+  setSaveStatus('편집 중...');
   state.saveTimer = setTimeout(async () => {
     try {
-      // strip _id before saving (keep it though - useful to identify)
       const payload = state.stocks.map(({ _id, ...rest }) => rest);
       await API.save(payload);
+      setSaveStatus('저장됨 ✓');
+      setTimeout(() => setSaveStatus('자동 저장'), 1500);
     } catch (e) {
+      setSaveStatus('저장 실패');
       toast('저장 실패: ' + e.message, 'err');
     }
   }, 800);
 }
 
-async function doUpdate() {
-  const btn = document.getElementById('btn-update');
-  btn.disabled = true;
-  btn.textContent = '⏳ 업데이트 중...';
-  try {
-    const res = await API.updateMarketCap();
-    if (res.ok) {
-      // merge market_cap back into existing (match by ticker)
-      const byTicker = {};
-      (res.data?.stocks || []).forEach(s => { byTicker[s.ticker] = s; });
-      state.stocks.forEach(s => {
-        const u = byTicker[s.ticker];
-        if (u) {
-          s.market_cap_oku = u.market_cap_oku;
-          s.currency = u.currency;
-          s.price_native = u.price_native;
-        }
-      });
-      state.usdkrw = res.usdkrw;
-      state.updated_at = res.data?.updated_at || new Date().toISOString();
-      render();
-      const fail = res.results.filter(r => !r.ok);
-      if (fail.length) {
-        toast(`업데이트 완료 (실패 ${fail.length}건: ${fail.map(f => f.ticker || f.name).join(', ')})`, 'err', 5000);
-      } else {
-        toast('시총 업데이트 완료 ✓');
-      }
-    } else {
-      toast('업데이트 실패', 'err');
-    }
-  } catch (e) {
-    toast('업데이트 오류: ' + e.message, 'err', 5000);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '🔄 시총 업데이트';
-  }
+function setSaveStatus(label) {
+  const el = document.getElementById('save-status');
+  if (el) el.textContent = label;
 }
 
 async function doSave() {
   clearTimeout(state.saveTimer);
   try {
     const payload = state.stocks.map(({ _id, ...rest }) => rest);
+    setSaveStatus('저장 중...');
     const r = await API.save(payload);
-    if (r.ok) toast('저장 완료 ✓');
-  } catch (e) {
-    toast('저장 실패: ' + e.message, 'err');
-  }
-}
-
-async function doPush() {
-  const btn = document.getElementById('btn-push');
-  btn.disabled = true;
-  btn.textContent = '⏳ 푸시 중...';
-  try {
-    // save first
-    clearTimeout(state.saveTimer);
-    const payload = state.stocks.map(({ _id, ...rest }) => rest);
-    await API.save(payload);
-
-    const r = await API.commitPush();
-    if (r.ok && r.pushed) {
-      toast('GitHub 푸시 완료 ✓');
-    } else if (r.ok && !r.pushed) {
-      toast('변경 사항 없음');
-    } else {
-      toast('푸시 실패: ' + (r.steps?.slice(-1)[0]?.stderr || ''), 'err', 6000);
+    if (r.ok) {
+      setSaveStatus('저장됨 ✓');
+      setTimeout(() => setSaveStatus('자동 저장'), 1500);
     }
   } catch (e) {
-    toast('푸시 오류: ' + e.message, 'err', 5000);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '📤 GitHub 푸시';
+    setSaveStatus('저장 실패');
+    toast('저장 실패: ' + e.message, 'err');
   }
 }
 
 /* ───────── 초기화 ───────── */
 async function init() {
   try {
-    const data = await API.load();
+    const { data, hasServer } = await API.load();
     state.stocks = (data.stocks || []).map(s => ({ _id: uid(), ...s }));
     state.usdkrw = data.usdkrw || 0;
     state.updated_at = data.updated_at || '';
+    state.readOnly = !hasServer;
+    if (state.readOnly) {
+      setSaveStatus('읽기 전용');
+      const pill = document.getElementById('save-status');
+      if (pill) {
+        pill.style.background = '#fff3cd';
+        pill.style.color = '#7a5d00';
+        pill.title = '로컬 서버 없이 GitHub Pages에서 열린 상태입니다. 편집은 로컬에서 ./run.sh로 서버를 띄운 뒤 http://127.0.0.1:5055 에서.';
+      }
+      document.getElementById('btn-add').style.display = 'none';
+    }
   } catch (e) {
-    toast('데이터 로드 실패 (로컬 서버 실행 중인지 확인): ' + e.message, 'err', 6000);
+    toast('데이터 로드 실패: ' + e.message, 'err', 6000);
     state.stocks = [];
   }
   render();
@@ -594,9 +564,6 @@ async function init() {
     render();
   });
   document.getElementById('btn-add').addEventListener('click', addStock);
-  document.getElementById('btn-update').addEventListener('click', doUpdate);
-  document.getElementById('btn-save').addEventListener('click', doSave);
-  document.getElementById('btn-push').addEventListener('click', doPush);
 
   // Ctrl/Cmd+S → save
   document.addEventListener('keydown', e => {
