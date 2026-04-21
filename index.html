@@ -421,10 +421,10 @@ function renderRow(s) {
       let text = '—', cls = 'dim';
       if (c.key === '_upside') {
         const v = upside(s);
-        if (v !== null) { text = fmt(v,1) + '%'; cls = 'up'; }  // 상방: 항상 blue
+        if (v !== null) { text = fmt(v,1) + '%'; cls = v >= 0 ? 'down' : 'up'; }  // +: red, −: blue
       } else if (c.key === '_downside') {
         const v = downside(s);
-        if (v !== null) { text = fmt(v,1) + '%'; cls = 'down'; }  // 하방: 항상 red
+        if (v !== null) { text = fmt(v,1) + '%'; cls = v >= 0 ? 'down' : 'up'; }  // +: red, −: blue
       } else if (c.key === '_op_sum') {
         const v = opSum(s); text = v ? fmt(v,0) : '—'; cls = '';
       } else if (c.key === '_por') {
