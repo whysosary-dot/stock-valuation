@@ -5,12 +5,12 @@
     {
       "name": "네오위즈",
       "ticker": "095660.KQ",
-      "target_cap_oku": 8000,
-      "safety_cap_oku": 3500,
-      "q1_op": 150,
-      "q2_op": 180,
-      "q3_op": 200,
-      "q4_op": 220,
+      "target_cap_oku": null,
+      "safety_cap_oku": null,
+      "q1_rev": null, "q1_op": null,
+      "q2_rev": null, "q2_op": null,
+      "q3_rev": null, "q3_op": null,
+      "q4_rev": null, "q4_op": null,
       "market_cap_oku": 4671.9,
       "currency": "KRW",
       "price_native": 23650.0
@@ -18,12 +18,12 @@
     {
       "name": "삼성전자",
       "ticker": "005930.KS",
-      "target_cap_oku": 20000000,
-      "safety_cap_oku": 10000000,
-      "q1_op": 70000,
-      "q2_op": 75000,
-      "q3_op": 80000,
-      "q4_op": 85000,
+      "target_cap_oku": null,
+      "safety_cap_oku": null,
+      "q1_rev": null, "q1_op": null,
+      "q2_rev": null, "q2_op": null,
+      "q3_rev": null, "q3_op": null,
+      "q4_rev": null, "q4_op": null,
       "market_cap_oku": 14450352.6,
       "currency": "KRW",
       "price_native": 219000.0
@@ -31,6 +31,12 @@
     {
       "name": "SK하이닉스",
       "ticker": "000660.KS",
+      "target_cap_oku": null,
+      "safety_cap_oku": null,
+      "q1_rev": null, "q1_op": null,
+      "q2_rev": null, "q2_op": null,
+      "q3_rev": null, "q3_op": null,
+      "q4_rev": null, "q4_op": null,
       "market_cap_oku": 8669555.5,
       "currency": "KRW",
       "price_native": 1224000.0
@@ -38,6 +44,12 @@
     {
       "name": "와이지-원",
       "ticker": "019210.KQ",
+      "target_cap_oku": null,
+      "safety_cap_oku": null,
+      "q1_rev": null, "q1_op": null,
+      "q2_rev": null, "q2_op": null,
+      "q3_rev": null, "q3_op": null,
+      "q4_rev": null, "q4_op": null,
       "market_cap_oku": 4542.5,
       "currency": "KRW",
       "price_native": 13530.0
@@ -45,6 +57,12 @@
     {
       "name": "DN오토모티브",
       "ticker": "007340.KS",
+      "target_cap_oku": null,
+      "safety_cap_oku": null,
+      "q1_rev": null, "q1_op": null,
+      "q2_rev": null, "q2_op": null,
+      "q3_rev": null, "q3_op": null,
+      "q4_rev": null, "q4_op": null,
       "market_cap_oku": 20264.9,
       "currency": "KRW",
       "price_native": 39150.0
