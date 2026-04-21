@@ -246,17 +246,17 @@ const LS_KEY = 'sv_user_inputs_v1';
 const LS_UI_KEY = 'sv_ui_v1';
 
 const USER_FIELDS = [
-  'target_price','safety_price',
+  'target_cap_oku','safety_cap_oku',
   'q1_op','q2_op','q3_op','q4_op'
 ];
 
 /* ───────── 컬럼 (티커 제거, 반응형 priority 제거) ───────── */
 const COLS = [
   { key: 'name',            label: '기업명',        type: 'ro-text', sortable: true,  align: 'left' },
-  { key: 'market_cap_oku',  label: '현재시총 (억)',  type: 'current', sortable: true },
   { key: 'price_native',    label: '현재주가',      type: 'current-price', sortable: true },
-  { key: 'target_price',    label: '목표주가',      type: 'num-price', sortable: true },
-  { key: 'safety_price',    label: '안전주가',      type: 'num-price', sortable: true },
+  { key: 'market_cap_oku',  label: '현재시총 (억)',  type: 'current', sortable: true },
+  { key: 'target_cap_oku',  label: '목표시총 (억)',  type: 'num',     sortable: true },
+  { key: 'safety_cap_oku',  label: '안전시총 (억)',  type: 'num',     sortable: true },
   { key: '_upside',         label: '상방 %',        type: 'calc',    sortable: true },
   { key: '_downside',       label: '하방 %',        type: 'calc',    sortable: true },
   { key: '_op_sum',         label: '영업이익 합',    type: 'calc',    sortable: false, toggle: 'quarterly' },
@@ -323,8 +323,8 @@ const uid = () => Math.random().toString(36).slice(2,10);
 /* 파생값 */
 const opSum = s => [s.q1_op,s.q2_op,s.q3_op,s.q4_op].map(parseNum).filter(v=>v!==null).reduce((a,b)=>a+b,0);
 const por = s => { const mc = parseNum(s.market_cap_oku), sum = opSum(s); return (!mc || !sum) ? null : mc/sum; };
-const upside = s => { const p = parseNum(s.price_native), t = parseNum(s.target_price); return (!p || !t) ? null : (t/p-1)*100; };
-const downside = s => { const p = parseNum(s.price_native), sf = parseNum(s.safety_price); return (!p || !sf) ? null : (sf/p-1)*100; };
+const upside = s => { const mc = parseNum(s.market_cap_oku), t = parseNum(s.target_cap_oku); return (!mc || !t) ? null : (t/mc-1)*100; };
+const downside = s => { const mc = parseNum(s.market_cap_oku), sf = parseNum(s.safety_cap_oku); return (!mc || !sf) ? null : (sf/mc-1)*100; };
 
 /* 주가 표시 자릿수 (네이티브 통화 기준) */
 function priceDecimals(s) {
@@ -568,17 +568,17 @@ function mergeAndSetStocks(ghData) {
     for (const f of USER_FIELDS) {
       merged[f] = (ui[f] !== undefined) ? ui[f] : (s[f] ?? null);
     }
-    // ── v1 → v2 마이그레이션: 시총(억) 입력값을 주가(네이티브)로 환산 (비율 유지)
+    // ── v2(주가) → v3(시총) 역마이그레이션: 주가 입력값이 남아있으면 시총(억)으로 환산
     const mcNow = parseNum(s.market_cap_oku);
     const priceNow = parseNum(s.price_native);
     if (mcNow && priceNow) {
-      if ((merged.target_price === null || merged.target_price === undefined) && ui.target_cap_oku) {
-        const t = parseNum(ui.target_cap_oku);
-        if (t !== null) { merged.target_price = (t / mcNow) * priceNow; migrated = true; }
+      if ((merged.target_cap_oku === null || merged.target_cap_oku === undefined) && ui.target_price) {
+        const tp = parseNum(ui.target_price);
+        if (tp !== null) { merged.target_cap_oku = (tp / priceNow) * mcNow; migrated = true; }
       }
-      if ((merged.safety_price === null || merged.safety_price === undefined) && ui.safety_cap_oku) {
-        const sf = parseNum(ui.safety_cap_oku);
-        if (sf !== null) { merged.safety_price = (sf / mcNow) * priceNow; migrated = true; }
+      if ((merged.safety_cap_oku === null || merged.safety_cap_oku === undefined) && ui.safety_price) {
+        const sp = parseNum(ui.safety_price);
+        if (sp !== null) { merged.safety_cap_oku = (sp / priceNow) * mcNow; migrated = true; }
       }
     }
     return merged;
