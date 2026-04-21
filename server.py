@@ -10,8 +10,11 @@ Stock Valuation Local Server
 
 import os
 import json
+import base64
 import datetime
 import subprocess
+import urllib.request
+import urllib.error
 from pathlib import Path
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
@@ -139,6 +142,63 @@ def _run_git(*args, cwd=None):
 
 
 # ─────────────────────────────────────────────
+#   GitHub Contents API (fallback for local git)
+# ─────────────────────────────────────────────
+REPO = "whysosary-dot/stock-valuation"
+FILE_PATH = "stocks.json"
+TOKEN_FILE = BASE_DIR / ".github_token"
+DEFAULT_BRANCH = "main"
+
+
+def _get_gh_token():
+    tok = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if tok:
+        return tok.strip()
+    if TOKEN_FILE.exists():
+        return TOKEN_FILE.read_text().strip()
+    return None
+
+
+def _github_put(token: str, content_bytes: bytes, message: str):
+    api = f"https://api.github.com/repos/{REPO}/contents/{FILE_PATH}"
+    # 기존 sha
+    req = urllib.request.Request(
+        f"{api}?ref={DEFAULT_BRANCH}",
+        headers={
+            "Authorization": f"token {token}",
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "stock-valuation",
+        },
+    )
+    sha = None
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            sha = json.loads(resp.read()).get("sha")
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            raise
+
+    body = {
+        "message": message,
+        "content": base64.b64encode(content_bytes).decode("ascii"),
+        "branch": DEFAULT_BRANCH,
+    }
+    if sha:
+        body["sha"] = sha
+    put = urllib.request.Request(
+        api, method="PUT", data=json.dumps(body).encode("utf-8"),
+        headers={
+            "Authorization": f"token {token}",
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "stock-valuation",
+            "Content-Type": "application/json",
+        },
+    )
+    with urllib.request.urlopen(put, timeout=30) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+# ─────────────────────────────────────────────
 #   Routes
 # ─────────────────────────────────────────────
 
@@ -208,27 +268,32 @@ def update_one():
 
 @app.route("/api/commit-push", methods=["POST"])
 def commit_push():
-    """stocks.json을 git add, commit, push"""
+    """stocks.json을 GitHub Contents API로 직접 커밋 (로컬 git 상태 무관)"""
     payload = request.get_json(silent=True) or {}
     msg = payload.get("message") or f"📊 시총 업데이트: {datetime.date.today().isoformat()}"
 
-    steps = []
-    code, out, err = _run_git("add", "-A")
-    steps.append({"step": "add", "code": code, "stdout": out, "stderr": err})
+    token = _get_gh_token()
+    if not token:
+        return jsonify({"ok": False, "error": "GitHub 토큰 없음 (.github_token 파일 확인)"}), 500
 
-    # check if there is anything to commit
-    code, out, err = _run_git("status", "--porcelain")
-    if not out.strip():
-        return jsonify({"ok": True, "pushed": False, "message": "변경 사항이 없습니다.", "steps": steps})
+    # stocks.json 최신 내용 로드
+    try:
+        content = (BASE_DIR / "stocks.json").read_bytes()
+    except FileNotFoundError:
+        return jsonify({"ok": False, "error": "stocks.json 없음"}), 500
 
-    code, out, err = _run_git("commit", "-m", msg)
-    steps.append({"step": "commit", "code": code, "stdout": out, "stderr": err})
-
-    code, out, err = _run_git("push")
-    steps.append({"step": "push", "code": code, "stdout": out, "stderr": err})
-
-    ok = steps[-1]["code"] == 0
-    return jsonify({"ok": ok, "pushed": ok, "message": msg, "steps": steps})
+    try:
+        result = _github_put(token, content, msg)
+        commit = result.get("commit", {})
+        return jsonify({
+            "ok": True, "pushed": True, "message": msg,
+            "commit_sha": commit.get("sha"),
+            "commit_url": commit.get("html_url"),
+        })
+    except urllib.error.HTTPError as e:
+        return jsonify({"ok": False, "error": f"HTTP {e.code}: {e.read().decode('utf-8', 'ignore')[:300]}"}), 500
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 if __name__ == "__main__":
