@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-04-27T07:19:44",
-  "usdkrw": 1471.83,
+  "updated_at": "2026-04-27T07:33:37",
+  "usdkrw": 1470.68,
   "stocks": [
     {
       "name": "SGC에너지",
@@ -139,17 +139,17 @@
     {
       "name": "상신이디피",
       "ticker": "091580.KQ",
-      "shares_adjustment": 12414000,
-      "market_cap_oku": 6705.8,
+      "market_cap_oku": 3472.0,
       "currency": "KRW",
       "price_native": 26050.0
     },
     {
       "name": "한솔테크닉스",
       "ticker": "004710.KS",
-      "market_cap_oku": 2730.2,
+      "market_cap_oku": 3809.0,
       "currency": "KRW",
-      "price_native": 8690.0
+      "price_native": 8690.0,
+      "shares_adjustment": 12414000
     }
   ]
 }
