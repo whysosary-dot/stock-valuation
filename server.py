@@ -65,11 +65,14 @@ def _get_usdkrw():
     return 1400.0  # fallback
 
 
-def _fetch_marketcap_krw(ticker: str, usdkrw: float) -> dict:
+def _fetch_marketcap_krw(ticker: str, usdkrw: float, shares_adjustment: float = 0) -> dict:
     """ticker의 현재 시총을 원화(억원)로 반환.
     한국 증권사/네이버금융 표준(보통주 시총)에 맞추기 위해
     info.sharesOutstanding(보통주만)을 우선 사용하고,
     fast_info.shares(우선주 포함 가능성)는 폴백으로만 사용.
+
+    shares_adjustment: yfinance 보고 발행주식수에 더할 보정치 (예: 최근 유상증자가
+    아직 yfinance에 반영되지 않은 경우 신주 수만큼 양수로 지정).
     """
     try:
         t = yf.Ticker(ticker)
@@ -92,12 +95,20 @@ def _fetch_marketcap_krw(ticker: str, usdkrw: float) -> dict:
         if not shares:
             shares = fi.get("shares") or fi.get("shares_outstanding")
 
+        # 2.5) 사용자 지정 보정치 (유증 등 yfinance 미반영분)
+        try:
+            adj = float(shares_adjustment or 0)
+        except Exception:
+            adj = 0.0
+        if shares and adj:
+            shares = float(shares) + adj
+
         market_cap_native = None
         if price and shares:
             market_cap_native = float(price) * float(shares)
 
-        # 3) 마지막 폴백: yfinance 보고 marketCap
-        if not market_cap_native and full_info:
+        # 3) 마지막 폴백: yfinance 보고 marketCap (단, adj가 있으면 폴백 회피)
+        if not market_cap_native and full_info and not adj:
             market_cap_native = full_info.get("marketCap")
 
         if not market_cap_native:
@@ -249,7 +260,8 @@ def update_marketcap():
         if not ticker:
             results.append({"name": stock.get("name"), "ok": False, "error": "no ticker"})
             continue
-        r = _fetch_marketcap_krw(ticker, usdkrw)
+        adj = stock.get("shares_adjustment") or 0
+        r = _fetch_marketcap_krw(ticker, usdkrw, shares_adjustment=adj)
         if r["ok"]:
             stock["market_cap_oku"] = r["market_cap_oku"]
             stock["currency"] = r["currency"]
