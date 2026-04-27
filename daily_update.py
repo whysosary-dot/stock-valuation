@@ -30,6 +30,7 @@ BRANCH = "main"
 TOKEN_FILE = BASE_DIR / ".github_token"
 
 # 시총 업데이트가 덮어써도 되는 필드 (나머지는 유저 입력으로 간주하고 절대 건드리지 않음)
+# shares_adjustment: 유증 등 yfinance 미반영 발행주식수 보정치 — 유저 입력으로 보존
 SERVER_WRITE_FIELDS = {"market_cap_oku", "currency", "price_native"}
 
 
@@ -107,7 +108,8 @@ def main():
         if not ticker:
             fail.append(s.get("name", "?"))
             continue
-        r = _fetch_marketcap_krw(ticker, usdkrw)
+        adj = s.get("shares_adjustment") or 0
+        r = _fetch_marketcap_krw(ticker, usdkrw, shares_adjustment=adj)
         if r["ok"]:
             # ★ 시총 관련 필드만 덮어씀. target/safety/q1~q4 등 유저 입력은 유지
             s["market_cap_oku"] = r["market_cap_oku"]
