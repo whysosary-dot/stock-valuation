@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-04-29T08:09:35",
-  "usdkrw": 1478.32,
+  "updated_at": "2026-04-29T09:42:25",
+  "usdkrw": 1479.91,
   "stocks": [
     {
       "name": "SGC에너지",
@@ -150,6 +150,23 @@
       "currency": "KRW",
       "price_native": 8480.0,
       "shares_adjustment": 12414000
+    },
+    {
+      "name": "신흥에스이씨",
+      "ticker": "243840.KQ",
+      "target_cap_oku": null,
+      "safety_cap_oku": null,
+      "q1_rev": null,
+      "q1_op": null,
+      "q2_rev": null,
+      "q2_op": null,
+      "q3_rev": null,
+      "q3_op": null,
+      "q4_rev": null,
+      "q4_op": null,
+      "market_cap_oku": 4218.3,
+      "currency": "KRW",
+      "price_native": 10940.0
     }
   ]
 }
