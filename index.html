@@ -190,23 +190,15 @@
   /* 접힘 상태에서 Q 컬럼 숨김 */
   table:not(.show-quarterly) [data-col^="q"] { display: none; }
 
-  /* 섹터 칩 (선택형) */
-  td.sector-cell { padding: 6px 8px; }
-  select.sector-chip {
-    appearance: none; -webkit-appearance: none;
-    border: 1px solid transparent; border-radius: 999px;
-    padding: 4px 22px 4px 11px; font: inherit; font-size: 13px; font-weight: 500;
+  /* 섹터 칩 (읽기 전용 표시) */
+  td.sector-cell { padding: 8px 10px; }
+  span.sector-tag {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 3px 11px;
+    font-size: 13px; font-weight: 500;
     color: var(--text); background-color: var(--panel-2);
-    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
-                      linear-gradient(135deg, currentColor 50%, transparent 50%);
-    background-position: calc(100% - 12px) 50%, calc(100% - 7px) 50%;
-    background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
-    cursor: pointer; max-width: 140px;
-    transition: filter .15s, box-shadow .15s;
-  }
-  select.sector-chip:hover { filter: brightness(0.97); }
-  select.sector-chip:focus {
-    outline: none; box-shadow: 0 0 0 3px var(--focus);
+    white-space: nowrap;
   }
   /* 섹터별 색상 (배경/텍스트 모두 부드럽게) */
   .sec-반도체     { background-color: #e6efff; color: #1d4ed8; }
@@ -280,7 +272,7 @@
     th, td { padding: 11px 10px; font-size: 15px; }
     thead th { font-size: 13.5px; }
     input.cell-num { font-size: 15px; padding: 6px 7px; }
-    select.sector-chip { font-size: 12px; padding: 3px 20px 3px 9px; max-width: 110px; }
+    span.sector-tag { font-size: 12px; padding: 3px 9px; }
   }
 </style>
 </head>
@@ -319,7 +311,6 @@ const LS_KEY = 'sv_user_inputs_v1';
 const LS_UI_KEY = 'sv_ui_v1';
 
 const USER_FIELDS = [
-  'sector',
   'target_cap_oku','safety_cap_oku',
   'q1_op','q2_op','q3_op','q4_op'
 ];
@@ -511,32 +502,10 @@ function renderRow(s) {
     } else if (c.type === 'sector') {
       td.classList.add('sector-cell', 'text-left');
       const cur = normSector(s.sector);
-      const sel = document.createElement('select');
-      sel.className = 'sector-chip ' + sectorClass(cur);
-      // 옵션 구성 (현재값이 SECTORS에 없으면 추가)
-      const opts = [...SECTORS];
-      if (cur !== SECTOR_UNCATEGORIZED && !opts.includes(cur)) opts.unshift(cur);
-      // 미분류 옵션은 항상 첫 줄
-      const optEmpty = document.createElement('option');
-      optEmpty.value = ''; optEmpty.textContent = '— 미분류 —';
-      sel.appendChild(optEmpty);
-      opts.forEach(name => {
-        const o = document.createElement('option');
-        o.value = name; o.textContent = name;
-        sel.appendChild(o);
-      });
-      sel.value = (cur === SECTOR_UNCATEGORIZED) ? '' : cur;
-      sel.addEventListener('change', () => {
-        s.sector = sel.value || null;
-        // 칩 색 즉시 갱신
-        const next = normSector(s.sector);
-        sel.className = 'sector-chip ' + sectorClass(next);
-        queueSave();
-        // 그룹 보기 또는 섹터 필터가 활성화돼 있으면 재정렬/재렌더 필요
-        if (state.groupBySector || state.sectorFilter) render();
-        else updateSectorFilterOptions();
-      });
-      td.appendChild(sel);
+      const chip = document.createElement('span');
+      chip.className = 'sector-tag ' + sectorClass(cur);
+      chip.textContent = (cur === SECTOR_UNCATEGORIZED) ? '미분류' : cur;
+      td.appendChild(chip);
     } else if (c.type === 'current') {
       td.classList.add('current-cap');
       const v = parseNum(s[c.key]);
