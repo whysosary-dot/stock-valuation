@@ -1,27 +1,27 @@
 {
-  "updated_at": "2026-04-28T21:09:31",
-  "usdkrw": 1473.0,
+  "updated_at": "2026-04-29T08:09:35",
+  "usdkrw": 1478.32,
   "stocks": [
     {
       "name": "SGC에너지",
       "ticker": "005090.KS",
-      "market_cap_oku": 8601.1,
+      "market_cap_oku": 8716.4,
       "currency": "KRW",
-      "price_native": 59700.0
+      "price_native": 60500.0
     },
     {
       "name": "알테오젠",
       "ticker": "196170.KQ",
-      "market_cap_oku": 201360.0,
+      "market_cap_oku": 203231.9,
       "currency": "KRW",
-      "price_native": 376500.0
+      "price_native": 380000.0
     },
     {
       "name": "한화엔진",
       "ticker": "082740.KS",
-      "market_cap_oku": 67658.1,
+      "market_cap_oku": 73164.2,
       "currency": "KRW",
-      "price_native": 81100.0
+      "price_native": 87700.0
     },
     {
       "name": "네오위즈",
@@ -36,9 +36,9 @@
       "q3_op": null,
       "q4_rev": null,
       "q4_op": null,
-      "market_cap_oku": 4523.7,
+      "market_cap_oku": 4484.2,
       "currency": "KRW",
-      "price_native": 22900.0
+      "price_native": 22700.0
     },
     {
       "name": "와이지-원",
@@ -53,9 +53,9 @@
       "q3_op": null,
       "q4_rev": null,
       "q4_op": null,
-      "market_cap_oku": 5375.2,
+      "market_cap_oku": 5684.0,
       "currency": "KRW",
-      "price_native": 16010.0
+      "price_native": 16930.0
     },
     {
       "name": "DN오토모티브",
@@ -70,23 +70,23 @@
       "q3_op": null,
       "q4_rev": null,
       "q4_op": null,
-      "market_cap_oku": 21222.5,
+      "market_cap_oku": 22154.3,
       "currency": "KRW",
-      "price_native": 41000.0
+      "price_native": 42800.0
     },
     {
       "name": "아이센스",
       "ticker": "099190.KQ",
-      "market_cap_oku": 5848.2,
+      "market_cap_oku": 6000.0,
       "currency": "KRW",
-      "price_native": 21200.0
+      "price_native": 21750.0
     },
     {
       "name": "메지온",
       "ticker": "140410.KQ",
-      "market_cap_oku": 28046.0,
+      "market_cap_oku": 29013.1,
       "currency": "KRW",
-      "price_native": 92800.0
+      "price_native": 96000.0
     },
     {
       "name": "삼성전자",
@@ -101,9 +101,9 @@
       "q3_op": null,
       "q4_rev": null,
       "q4_op": null,
-      "market_cap_oku": 12796506.0,
+      "market_cap_oku": 13027073.7,
       "currency": "KRW",
-      "price_native": 222000.0
+      "price_native": 226000.0
     },
     {
       "name": "SK하이닉스",
@@ -118,37 +118,37 @@
       "q3_op": null,
       "q4_rev": null,
       "q4_op": null,
-      "market_cap_oku": 9213010.7,
+      "market_cap_oku": 9163402.2,
       "currency": "KRW",
-      "price_native": 1300000.0
+      "price_native": 1293000.0
     },
     {
       "name": "HD한국조선해양",
       "ticker": "009540.KS",
-      "market_cap_oku": 331298.0,
+      "market_cap_oku": 333773.1,
       "currency": "KRW",
-      "price_native": 468500.0
+      "price_native": 472000.0
     },
     {
       "name": "파두",
       "ticker": "440110.KQ",
-      "market_cap_oku": 40287.3,
+      "market_cap_oku": 40237.9,
       "currency": "KRW",
-      "price_native": 81600.0
+      "price_native": 81500.0
     },
     {
       "name": "상신이디피",
       "ticker": "091580.KQ",
-      "market_cap_oku": 3472.0,
+      "market_cap_oku": 3758.6,
       "currency": "KRW",
-      "price_native": 26050.0
+      "price_native": 28200.0
     },
     {
       "name": "한솔테크닉스",
       "ticker": "004710.KS",
-      "market_cap_oku": 3559.1,
+      "market_cap_oku": 3716.9,
       "currency": "KRW",
-      "price_native": 8120.0,
+      "price_native": 8480.0,
       "shares_adjustment": 12414000
     }
   ]
