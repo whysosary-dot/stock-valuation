@@ -190,7 +190,7 @@
   /* 접힘 상태에서 Q 컬럼 숨김 */
   table:not(.show-quarterly) [data-col^="q"] { display: none; }
 
-  /* 섹터 칩 (읽기 전용 표시) */
+  /* 섹터 칩 (읽기 전용 표시) — 색은 JS에서 인라인 스타일로 주입 */
   td.sector-cell { padding: 8px 10px; }
   span.sector-tag {
     display: inline-block;
@@ -200,35 +200,31 @@
     color: var(--text); background-color: var(--panel-2);
     white-space: nowrap;
   }
-  /* 섹터별 색상 (배경/텍스트 모두 부드럽게) */
-  .sec-반도체     { background-color: #e6efff; color: #1d4ed8; }
-  .sec-2차전지    { background-color: #fdebd0; color: #9a3412; }
-  .sec-조선       { background-color: #e3eaff; color: #3730a3; }
-  .sec-바이오     { background-color: #ddf4e3; color: #166534; }
-  .sec-게임       { background-color: #f1e1ff; color: #6b21a8; }
-  .sec-에너지     { background-color: #fff3cd; color: #854d0e; }
-  .sec-산업재     { background-color: #e2e8f0; color: #334155; }
-  .sec-자동차     { background-color: #ffe5e5; color: #9b1c1c; }
-  .sec-전자부품   { background-color: #d1f0ee; color: #0f766e; }
-  .sec-기타       { background-color: #f1f3f7; color: #4a5568; }
-  .sec-未분류     { background-color: #fafbfd; color: #94a3b8; }
+  /* 색상은 인라인 스타일로 주입 (sectorColors() 참고) */
 
-  /* 섹터 그룹 헤더 행 */
+  /* 섹터 그룹 헤더 행 — 배경색/좌측 컬러바는 JS에서 인라인 주입 */
   tr.group-row td {
-    background: linear-gradient(180deg, #f8faff, #eef2fa);
+    border-top: 1px solid var(--border-strong);
     border-bottom: 1px solid var(--border-strong);
-    padding: 10px 13px;
-    font-weight: 600;
+    padding: 11px 13px 11px 18px;
+    font-weight: 700;
     color: var(--text);
     font-size: 14px;
+    /* box-shadow는 JS에서 inset 5px 0 0 [strong-color] 으로 덮어씀 */
+    box-shadow: inset 5px 0 0 var(--border-strong);
   }
   tr.group-row .group-name { display: inline-flex; align-items: center; gap: 8px; }
   tr.group-row .group-dot {
-    width: 9px; height: 9px; border-radius: 50%;
-    background: currentColor; opacity: 0.55;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: currentColor; opacity: 0.95;
   }
   tr.group-row .group-meta {
     color: var(--text-dim); font-weight: 500; margin-left: 10px; font-size: 13px;
+  }
+  /* 그룹 모드: 그룹 내 행 첫 셀에 좌측 색 띠 (인라인으로 색 주입) */
+  tbody.grouped tr:not(.group-row) td:first-child {
+    box-shadow: inset 3px 0 0 transparent;
+    padding-left: 16px;
   }
 
   /* 토픽바 select / 토글 버튼 */
@@ -368,9 +364,63 @@ function normSector(v) {
   const s = (v == null ? '' : String(v)).trim();
   return s || SECTOR_UNCATEGORIZED;
 }
-function sectorClass(name) {
-  // 클래스명 안전 변환 (한글 그대로 두면 CSS에서 escape 필요하지만 여기선 .sec-名 형태 사용 가능)
-  return 'sec-' + name;
+
+/* 섹터 이름 → 색상.
+   - 미분류는 채도 낮은 회색
+   - 그 외는 현재 종목들에 등장하는 섹터 셋을 모아 황금각(137.508°)으로 균등 분배
+     → 현재 보이는 섹터들 사이에서 항상 시각적으로 잘 구분됨
+   - 섹터가 추가되면 buildSectorHueMap()이 다시 계산 (자동 색 부여) */
+function _hashName(name) {
+  // 31-base + finalizer (avalanche). 정렬 안정성을 위한 결정적 해시.
+  let h = 0;
+  for (let i = 0; i < name.length; i++) {
+    h = (Math.imul(31, h) + name.charCodeAt(i)) | 0;
+  }
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+const GOLDEN_ANGLE = 137.508;
+function buildSectorHueMap() {
+  const names = new Set();
+  for (const s of state.stocks) {
+    const n = normSector(s.sector);
+    if (n !== SECTOR_UNCATEGORIZED) names.add(n);
+  }
+  // 해시 순으로 정렬해 결정적 + "랜덤한" 순서. 황금각 곱으로 균등 분배.
+  const list = [...names].sort((a, b) => _hashName(a) - _hashName(b));
+  const map = new Map();
+  list.forEach((name, idx) => {
+    map.set(name, (idx * GOLDEN_ANGLE) % 360);
+  });
+  state._sectorHueMap = map;
+}
+function sectorHue(name) {
+  if (!name || name === SECTOR_UNCATEGORIZED) return null;
+  const m = state._sectorHueMap;
+  if (m && m.has(name)) return m.get(name);
+  // 폴백: 해시 기반 (맵 빌드 전 호출되는 경우)
+  return _hashName(name) % 360;
+}
+function sectorColors(name) {
+  const hue = sectorHue(name);
+  if (hue === null) {
+    return { bg: '#f1f3f7', fg: '#94a3b8', bar: '#cfd5de', headerBg: '#f5f7fb' };
+  }
+  return {
+    bg:       `hsl(${hue}, 72%, 92%)`,   // 칩 배경
+    fg:       `hsl(${hue}, 50%, 27%)`,   // 칩 텍스트
+    bar:      `hsl(${hue}, 65%, 50%)`,   // 좌측 컬러바 / 그룹 점 (진한 색)
+    headerBg: `hsl(${hue}, 78%, 95%)`,   // 그룹 헤더 배경 (아주 옅게)
+  };
+}
+function applyChipColor(el, name) {
+  const c = sectorColors(name);
+  el.style.backgroundColor = c.bg;
+  el.style.color = c.fg;
 }
 
 /* ───────── localStorage 유저 입력 ───────── */
@@ -503,8 +553,9 @@ function renderRow(s) {
       td.classList.add('sector-cell', 'text-left');
       const cur = normSector(s.sector);
       const chip = document.createElement('span');
-      chip.className = 'sector-tag ' + sectorClass(cur);
+      chip.className = 'sector-tag';
       chip.textContent = (cur === SECTOR_UNCATEGORIZED) ? '미분류' : cur;
+      applyChipColor(chip, cur);
       td.appendChild(chip);
     } else if (c.type === 'current') {
       td.classList.add('current-cap');
@@ -595,14 +646,19 @@ function compareStocks(a, b, key, dirSign) {
 }
 
 function buildGroupRow(sectorName, count, totalMcap) {
+  const colors = sectorColors(sectorName);
   const tr = document.createElement('tr');
   tr.className = 'group-row';
   const td = document.createElement('td');
   td.colSpan = COLS.length;
   td.className = 'text-left';
+  // 그룹 헤더: 옅은 섹터 배경 + 좌측 진한 색 바
+  td.style.backgroundColor = colors.headerBg;
+  td.style.boxShadow = `inset 5px 0 0 ${colors.bar}`;
   const span = document.createElement('span');
-  span.className = 'group-name ' + sectorClass(sectorName);
-  span.innerHTML = `<span class="group-dot"></span>${sectorName}`;
+  span.className = 'group-name';
+  span.style.color = colors.fg;
+  span.innerHTML = `<span class="group-dot" style="background:${colors.bar};opacity:1"></span>${sectorName === SECTOR_UNCATEGORIZED ? '미분류' : sectorName}`;
   const meta = document.createElement('span');
   meta.className = 'group-meta';
   const partsM = [`${count}개 종목`];
@@ -615,10 +671,12 @@ function buildGroupRow(sectorName, count, totalMcap) {
 }
 
 function render() {
+  buildSectorHueMap();
   renderHeader();
   applyQuarterlyClass();
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
+  tbody.classList.remove('grouped');
 
   let list = [...state.stocks];
   if (state.filter) {
@@ -645,6 +703,7 @@ function render() {
     tr.appendChild(td);
     tbody.appendChild(tr);
   } else if (state.groupBySector) {
+    tbody.classList.add('grouped');
     // 그룹 모드: 섹터별로 묶어서, 각 그룹 헤더 + 그룹 내부는 현재 정렬키로 정렬
     const groups = new Map();
     list.forEach(s => {
@@ -668,9 +727,16 @@ function render() {
       const innerDir = state.sortKey ? dirSign : -1;
       const sorted = [...items].sort((a, b) => compareStocks(a, b, innerKey, innerDir));
       tbody.appendChild(buildGroupRow(sector, items.length, total));
-      sorted.forEach(s => tbody.appendChild(renderRow(s)));
+      const barColor = sectorColors(sector).bar;
+      sorted.forEach(s => {
+        const row = renderRow(s);
+        // 그룹 모드에서 첫 셀에 색 띠
+        if (row.firstChild) row.firstChild.style.boxShadow = `inset 3px 0 0 ${barColor}`;
+        tbody.appendChild(row);
+      });
     });
   } else {
+    tbody.classList.remove('grouped');
     list.forEach(s => tbody.appendChild(renderRow(s)));
   }
 
