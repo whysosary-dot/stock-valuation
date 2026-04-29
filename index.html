@@ -190,6 +190,73 @@
   /* 접힘 상태에서 Q 컬럼 숨김 */
   table:not(.show-quarterly) [data-col^="q"] { display: none; }
 
+  /* 섹터 칩 (선택형) */
+  td.sector-cell { padding: 6px 8px; }
+  select.sector-chip {
+    appearance: none; -webkit-appearance: none;
+    border: 1px solid transparent; border-radius: 999px;
+    padding: 4px 22px 4px 11px; font: inherit; font-size: 13px; font-weight: 500;
+    color: var(--text); background-color: var(--panel-2);
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                      linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: calc(100% - 12px) 50%, calc(100% - 7px) 50%;
+    background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+    cursor: pointer; max-width: 140px;
+    transition: filter .15s, box-shadow .15s;
+  }
+  select.sector-chip:hover { filter: brightness(0.97); }
+  select.sector-chip:focus {
+    outline: none; box-shadow: 0 0 0 3px var(--focus);
+  }
+  /* 섹터별 색상 (배경/텍스트 모두 부드럽게) */
+  .sec-반도체     { background-color: #e6efff; color: #1d4ed8; }
+  .sec-2차전지    { background-color: #fdebd0; color: #9a3412; }
+  .sec-조선       { background-color: #e3eaff; color: #3730a3; }
+  .sec-바이오     { background-color: #ddf4e3; color: #166534; }
+  .sec-게임       { background-color: #f1e1ff; color: #6b21a8; }
+  .sec-에너지     { background-color: #fff3cd; color: #854d0e; }
+  .sec-산업재     { background-color: #e2e8f0; color: #334155; }
+  .sec-자동차     { background-color: #ffe5e5; color: #9b1c1c; }
+  .sec-전자부품   { background-color: #d1f0ee; color: #0f766e; }
+  .sec-기타       { background-color: #f1f3f7; color: #4a5568; }
+  .sec-未분류     { background-color: #fafbfd; color: #94a3b8; }
+
+  /* 섹터 그룹 헤더 행 */
+  tr.group-row td {
+    background: linear-gradient(180deg, #f8faff, #eef2fa);
+    border-bottom: 1px solid var(--border-strong);
+    padding: 10px 13px;
+    font-weight: 600;
+    color: var(--text);
+    font-size: 14px;
+  }
+  tr.group-row .group-name { display: inline-flex; align-items: center; gap: 8px; }
+  tr.group-row .group-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: currentColor; opacity: 0.55;
+  }
+  tr.group-row .group-meta {
+    color: var(--text-dim); font-weight: 500; margin-left: 10px; font-size: 13px;
+  }
+
+  /* 토픽바 select / 토글 버튼 */
+  .topbar select.sector-filter {
+    background: var(--panel); border: 1px solid var(--border-strong); color: var(--text);
+    padding: 9px 30px 9px 12px; border-radius: 6px; font-size: 14px;
+    appearance: none; -webkit-appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%),
+                      linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
+    background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+    background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+    cursor: pointer; min-width: 0;
+  }
+  .topbar select.sector-filter:focus {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus);
+  }
+  .btn.toggle-on {
+    background: var(--accent-soft); border-color: var(--accent); color: var(--accent);
+  }
+
   /* 데스크톱 스크롤바 */
   .table-wrap::-webkit-scrollbar { width: 10px; height: 10px; }
   .table-wrap::-webkit-scrollbar-track { background: var(--bg); }
@@ -206,12 +273,14 @@
   @media (max-width: 640px) {
     .topbar { padding: 11px 13px; gap: 9px; }
     .topbar h1 { font-size: 16px; }
-    .topbar input.filter { width: 180px; font-size: 15px; padding: 9px 11px; }
+    .topbar input.filter { width: 150px; font-size: 15px; padding: 9px 11px; }
+    .topbar select.sector-filter { font-size: 13px; padding: 9px 28px 9px 11px; }
     .topbar .meta { font-size: 13px; }
     .topbar .btn { font-size: 13px; padding: 8px 12px; }
     th, td { padding: 11px 10px; font-size: 15px; }
     thead th { font-size: 13.5px; }
     input.cell-num { font-size: 15px; padding: 6px 7px; }
+    select.sector-chip { font-size: 12px; padding: 3px 20px 3px 9px; max-width: 110px; }
   }
 </style>
 </head>
@@ -220,6 +289,10 @@
 <div class="topbar">
   <h1><span class="dot"></span> Stock Valuation</h1>
   <input id="filter" class="filter" type="search" placeholder="기업명 검색..." />
+  <select id="sector-filter" class="sector-filter" title="섹터로 필터">
+    <option value="">전체 섹터</option>
+  </select>
+  <button id="group-toggle" class="btn" type="button" title="섹터별로 묶어서 보기">섹터별 그룹</button>
   <span class="spacer"></span>
   <span class="status-pill" id="save-status" title="입력 값은 이 브라우저에만 저장됩니다">로컬 저장</span>
   <span class="meta" id="meta"></span>
@@ -246,13 +319,21 @@ const LS_KEY = 'sv_user_inputs_v1';
 const LS_UI_KEY = 'sv_ui_v1';
 
 const USER_FIELDS = [
+  'sector',
   'target_cap_oku','safety_cap_oku',
   'q1_op','q2_op','q3_op','q4_op'
 ];
 
+/* 섹터 옵션 (드롭다운). 자유롭게 확장 가능 — 미분류는 빈값 */
+const SECTORS = [
+  '반도체','2차전지','조선','바이오','게임','에너지','산업재','자동차','전자부품','기타'
+];
+const SECTOR_UNCATEGORIZED = '未분류';
+
 /* ───────── 컬럼 (티커 제거, 반응형 priority 제거) ───────── */
 const COLS = [
   { key: 'name',            label: '기업명',        type: 'ro-text', sortable: true,  align: 'left' },
+  { key: 'sector',          label: '섹터',          type: 'sector',  sortable: true,  align: 'left' },
   { key: 'price_native',    label: '현재주가',      type: 'current-price', sortable: true },
   { key: 'market_cap_oku',  label: '현재시총 (억)',  type: 'current', sortable: true },
   { key: 'target_cap_oku',  label: '목표시총 (억)',  type: 'num',     sortable: true },
@@ -273,6 +354,8 @@ let state = {
   usdkrw: 0,
   updated_at: '',
   filter: '',
+  sectorFilter: '',
+  groupBySector: false,
   sortKey: null,
   sortDir: 'asc',
   showQuarterly: false,  // "영업이익 합" 토글
@@ -282,7 +365,21 @@ function loadUi() {
   try { return JSON.parse(localStorage.getItem(LS_UI_KEY) || '{}') || {}; } catch { return {}; }
 }
 function saveUi() {
-  localStorage.setItem(LS_UI_KEY, JSON.stringify({ showQuarterly: state.showQuarterly }));
+  localStorage.setItem(LS_UI_KEY, JSON.stringify({
+    showQuarterly: state.showQuarterly,
+    sectorFilter: state.sectorFilter,
+    groupBySector: state.groupBySector,
+  }));
+}
+
+/* 섹터 정규화 / 표시명 */
+function normSector(v) {
+  const s = (v == null ? '' : String(v)).trim();
+  return s || SECTOR_UNCATEGORIZED;
+}
+function sectorClass(name) {
+  // 클래스명 안전 변환 (한글 그대로 두면 CSS에서 escape 필요하지만 여기선 .sec-名 형태 사용 가능)
+  return 'sec-' + name;
 }
 
 /* ───────── localStorage 유저 입력 ───────── */
@@ -342,6 +439,7 @@ function sortValue(s, k) {
     case '_downside': return downside(s);
     case '_op_sum': return opSum(s);
     case '_por': return por(s);
+    case 'sector': return normSector(s.sector);
     default: return s[k];
   }
 }
@@ -410,6 +508,35 @@ function renderRow(s) {
     if (c.type === 'ro-text') {
       td.textContent = s[c.key] || '';
       td.classList.add('readonly-cell', 'name');
+    } else if (c.type === 'sector') {
+      td.classList.add('sector-cell', 'text-left');
+      const cur = normSector(s.sector);
+      const sel = document.createElement('select');
+      sel.className = 'sector-chip ' + sectorClass(cur);
+      // 옵션 구성 (현재값이 SECTORS에 없으면 추가)
+      const opts = [...SECTORS];
+      if (cur !== SECTOR_UNCATEGORIZED && !opts.includes(cur)) opts.unshift(cur);
+      // 미분류 옵션은 항상 첫 줄
+      const optEmpty = document.createElement('option');
+      optEmpty.value = ''; optEmpty.textContent = '— 미분류 —';
+      sel.appendChild(optEmpty);
+      opts.forEach(name => {
+        const o = document.createElement('option');
+        o.value = name; o.textContent = name;
+        sel.appendChild(o);
+      });
+      sel.value = (cur === SECTOR_UNCATEGORIZED) ? '' : cur;
+      sel.addEventListener('change', () => {
+        s.sector = sel.value || null;
+        // 칩 색 즉시 갱신
+        const next = normSector(s.sector);
+        sel.className = 'sector-chip ' + sectorClass(next);
+        queueSave();
+        // 그룹 보기 또는 섹터 필터가 활성화돼 있으면 재정렬/재렌더 필요
+        if (state.groupBySector || state.sectorFilter) render();
+        else updateSectorFilterOptions();
+      });
+      td.appendChild(sel);
     } else if (c.type === 'current') {
       td.classList.add('current-cap');
       const v = parseNum(s[c.key]);
@@ -487,6 +614,37 @@ function renderRow(s) {
   return tr;
 }
 
+function compareStocks(a, b, key, dirSign) {
+  const av = sortValue(a, key), bv = sortValue(b, key);
+  const aN = av === null || av === undefined || av === '' || Number.isNaN(av);
+  const bN = bv === null || bv === undefined || bv === '' || Number.isNaN(bv);
+  if (aN && bN) return 0;
+  if (aN) return 1;
+  if (bN) return -1;
+  if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dirSign;
+  return String(av).localeCompare(String(bv), 'ko') * dirSign;
+}
+
+function buildGroupRow(sectorName, count, totalMcap) {
+  const tr = document.createElement('tr');
+  tr.className = 'group-row';
+  const td = document.createElement('td');
+  td.colSpan = COLS.length;
+  td.className = 'text-left';
+  const span = document.createElement('span');
+  span.className = 'group-name ' + sectorClass(sectorName);
+  span.innerHTML = `<span class="group-dot"></span>${sectorName}`;
+  const meta = document.createElement('span');
+  meta.className = 'group-meta';
+  const partsM = [`${count}개 종목`];
+  if (totalMcap) partsM.push(`합산 시총 ${fmt(totalMcap, 0)} 억`);
+  meta.textContent = partsM.join(' · ');
+  td.appendChild(span);
+  td.appendChild(meta);
+  tr.appendChild(td);
+  return tr;
+}
+
 function render() {
   renderHeader();
   applyQuarterlyClass();
@@ -500,18 +658,13 @@ function render() {
       (s.name || '').toLowerCase().includes(q) ||
       (s.ticker || '').toLowerCase().includes(q));
   }
+  if (state.sectorFilter) {
+    list = list.filter(s => normSector(s.sector) === state.sectorFilter);
+  }
+
+  const dirSign = state.sortDir === 'asc' ? 1 : -1;
   if (state.sortKey) {
-    const dir = state.sortDir === 'asc' ? 1 : -1;
-    list.sort((a,b) => {
-      const av = sortValue(a, state.sortKey), bv = sortValue(b, state.sortKey);
-      const aN = av === null || av === undefined || av === '' || Number.isNaN(av);
-      const bN = bv === null || bv === undefined || bv === '' || Number.isNaN(bv);
-      if (aN && bN) return 0;
-      if (aN) return 1;
-      if (bN) return -1;
-      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
-      return String(av).localeCompare(String(bv), 'ko') * dir;
-    });
+    list.sort((a,b) => compareStocks(a, b, state.sortKey, dirSign));
   }
 
   if (!list.length) {
@@ -519,19 +672,86 @@ function render() {
     const td = document.createElement('td');
     td.colSpan = COLS.length;
     td.className = 'empty';
-    td.textContent = state.filter ? '검색 결과 없음' : '데이터 없음';
+    td.textContent = (state.filter || state.sectorFilter) ? '검색 결과 없음' : '데이터 없음';
     tr.appendChild(td);
     tbody.appendChild(tr);
+  } else if (state.groupBySector) {
+    // 그룹 모드: 섹터별로 묶어서, 각 그룹 헤더 + 그룹 내부는 현재 정렬키로 정렬
+    const groups = new Map();
+    list.forEach(s => {
+      const sec = normSector(s.sector);
+      if (!groups.has(sec)) groups.set(sec, []);
+      groups.get(sec).push(s);
+    });
+    // 그룹 정렬: 시총 합 큰 순 (미분류는 항상 마지막)
+    const entries = [...groups.entries()].map(([k, arr]) => {
+      const total = arr.reduce((a, x) => a + (parseNum(x.market_cap_oku) || 0), 0);
+      return { sector: k, items: arr, total };
+    });
+    entries.sort((a, b) => {
+      if (a.sector === SECTOR_UNCATEGORIZED) return 1;
+      if (b.sector === SECTOR_UNCATEGORIZED) return -1;
+      return b.total - a.total;
+    });
+    entries.forEach(({ sector, items, total }) => {
+      // 그룹 내부도 현재 sortKey가 있으면 정렬, 없으면 시총 큰 순
+      const innerKey = state.sortKey || 'market_cap_oku';
+      const innerDir = state.sortKey ? dirSign : -1;
+      const sorted = [...items].sort((a, b) => compareStocks(a, b, innerKey, innerDir));
+      tbody.appendChild(buildGroupRow(sector, items.length, total));
+      sorted.forEach(s => tbody.appendChild(renderRow(s)));
+    });
   } else {
     list.forEach(s => tbody.appendChild(renderRow(s)));
   }
+
+  updateSectorFilterOptions();
+  syncToggleButton();
 
   const m = document.getElementById('meta');
   const parts = [];
   if (state.updated_at) parts.push(`시총 ${state.updated_at.replace('T',' ').slice(0,16)}`);
   if (state.usdkrw) parts.push(`USDKRW ${Number(state.usdkrw).toFixed(1)}`);
   parts.push(`${state.stocks.length}개 종목`);
+  if (state.sectorFilter) parts.push(`섹터: ${state.sectorFilter}`);
   m.textContent = parts.join(' · ');
+}
+
+function updateSectorFilterOptions() {
+  const sel = document.getElementById('sector-filter');
+  if (!sel) return;
+  const counts = new Map();
+  for (const s of state.stocks) {
+    const k = normSector(s.sector);
+    counts.set(k, (counts.get(k) || 0) + 1);
+  }
+  // 정렬: 사전 정의 SECTORS 순서 → 그 외 → 미분류 마지막
+  const known = SECTORS.filter(name => counts.has(name));
+  const extra = [...counts.keys()].filter(k => !SECTORS.includes(k) && k !== SECTOR_UNCATEGORIZED).sort((a,b)=>a.localeCompare(b,'ko'));
+  const order = [...known, ...extra];
+  if (counts.has(SECTOR_UNCATEGORIZED)) order.push(SECTOR_UNCATEGORIZED);
+
+  const prev = state.sectorFilter;
+  // 옵션이 동일하면 재구성 생략
+  const sig = order.map(k => `${k}:${counts.get(k)}`).join('|');
+  if (sel.dataset.sig === sig) { sel.value = prev; return; }
+  sel.dataset.sig = sig;
+  sel.innerHTML = '';
+  const all = document.createElement('option');
+  all.value = ''; all.textContent = `전체 섹터 (${state.stocks.length})`;
+  sel.appendChild(all);
+  order.forEach(name => {
+    const o = document.createElement('option');
+    o.value = name; o.textContent = `${name} (${counts.get(name)})`;
+    sel.appendChild(o);
+  });
+  sel.value = prev;
+}
+
+function syncToggleButton() {
+  const btn = document.getElementById('group-toggle');
+  if (!btn) return;
+  btn.classList.toggle('toggle-on', !!state.groupBySector);
 }
 
 let saveTimer = null;
@@ -611,6 +831,8 @@ async function silentRefresh() {
 async function init() {
   const ui = loadUi();
   state.showQuarterly = !!ui.showQuarterly;
+  state.sectorFilter = ui.sectorFilter || '';
+  state.groupBySector = !!ui.groupBySector;
 
   try {
     const gh = await fetchFromGitHub();
@@ -623,6 +845,18 @@ async function init() {
 
   document.getElementById('filter').addEventListener('input', e => {
     state.filter = e.target.value.trim();
+    render();
+  });
+
+  document.getElementById('sector-filter').addEventListener('change', e => {
+    state.sectorFilter = e.target.value || '';
+    saveUi();
+    render();
+  });
+
+  document.getElementById('group-toggle').addEventListener('click', () => {
+    state.groupBySector = !state.groupBySector;
+    saveUi();
     render();
   });
 
