@@ -65,7 +65,7 @@ def _get_usdkrw():
     return 1400.0  # fallback
 
 
-def _fetch_marketcap_krw(ticker: str, usdkrw: float, shares_adjustment: float = 0) -> dict:
+def _fetch_marketcap_krw(ticker: str, usdkrw: float, shares_adjustment: float = 0, shares_override: float = 0) -> dict:
     """ticker의 현재 시총을 원화(억원)로 반환.
     한국 증권사/네이버금융 표준(보통주 시총)에 맞추기 위해
     info.sharesOutstanding(보통주만)을 우선 사용하고,
@@ -95,20 +95,30 @@ def _fetch_marketcap_krw(ticker: str, usdkrw: float, shares_adjustment: float = 
         if not shares:
             shares = fi.get("shares") or fi.get("shares_outstanding")
 
-        # 2.5) 사용자 지정 보정치 (유증 등 yfinance 미반영분)
+        # 2.5) 사용자 지정 주식수 완전 대체 (shares_override)
         try:
-            adj = float(shares_adjustment or 0)
+            override = float(shares_override or 0)
         except Exception:
-            adj = 0.0
-        if shares and adj:
-            shares = float(shares) + adj
+            override = 0.0
+        if override:
+            shares = override
+
+        # 2.6) 사용자 지정 보정치 (유증 등 yfinance 미반영분) — override가 없을 때만 적용
+        else:
+            try:
+                adj = float(shares_adjustment or 0)
+            except Exception:
+                adj = 0.0
+            if shares and adj:
+                shares = float(shares) + adj
 
         market_cap_native = None
         if price and shares:
             market_cap_native = float(price) * float(shares)
 
-        # 3) 마지막 폴백: yfinance 보고 marketCap (단, adj가 있으면 폴백 회피)
-        if not market_cap_native and full_info and not adj:
+        # 3) 마지막 폴백: yfinance 보고 marketCap (단, override/adj가 있으면 폴백 회피)
+        adj = float(shares_adjustment or 0) if not override else 0.0
+        if not market_cap_native and full_info and not adj and not override:
             market_cap_native = full_info.get("marketCap")
 
         if not market_cap_native:
@@ -261,7 +271,8 @@ def update_marketcap():
             results.append({"name": stock.get("name"), "ok": False, "error": "no ticker"})
             continue
         adj = stock.get("shares_adjustment") or 0
-        r = _fetch_marketcap_krw(ticker, usdkrw, shares_adjustment=adj)
+        override = stock.get("shares_override") or 0
+        r = _fetch_marketcap_krw(ticker, usdkrw, shares_adjustment=adj, shares_override=override)
         if r["ok"]:
             stock["market_cap_oku"] = r["market_cap_oku"]
             stock["currency"] = r["currency"]
