@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-04-30T11:03:27",
-  "usdkrw": 1472.92,
+  "updated_at": "2026-04-30T11:04:52",
+  "usdkrw": 1472.28,
   "stocks": [
     {
       "name": "SGC에너지",
@@ -159,7 +159,7 @@
     {
       "name": "한솔테크닉스",
       "ticker": "004710.KS",
-      "market_cap_oku": 2554.2,
+      "market_cap_oku": 4342.7,
       "currency": "KRW",
       "price_native": 8130.0,
       "sector": "전자부품",
