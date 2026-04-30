@@ -162,8 +162,8 @@
       "market_cap_oku": 3563.5,
       "currency": "KRW",
       "price_native": 8130.0,
-      "shares_adjustment": 12414000,
-      "sector": "전자부품"
+      "sector": "전자부품",
+      "shares_override": 53415900
     },
     {
       "name": "신흥에스이씨",
