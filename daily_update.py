@@ -109,7 +109,8 @@ def main():
             fail.append(s.get("name", "?"))
             continue
         adj = s.get("shares_adjustment") or 0
-        r = _fetch_marketcap_krw(ticker, usdkrw, shares_adjustment=adj)
+        override = s.get("shares_override") or 0
+        r = _fetch_marketcap_krw(ticker, usdkrw, shares_adjustment=adj, shares_override=override)
         if r["ok"]:
             # ★ 시총 관련 필드만 덮어씀. target/safety/q1~q4 등 유저 입력은 유지
             s["market_cap_oku"] = r["market_cap_oku"]
