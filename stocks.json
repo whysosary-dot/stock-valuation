@@ -198,6 +198,14 @@
       "price_native": 247500.0,
       "currency": "KRW",
       "sector": "반도체"
+    },
+    {
+      "name": "테이크투 인터랙티브",
+      "ticker": "TTWO",
+      "market_cap_oku": 601463,
+      "price_native": 220.93,
+      "currency": "USD",
+      "sector": "게임"
     }
   ]
 }
