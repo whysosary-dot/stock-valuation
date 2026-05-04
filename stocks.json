@@ -182,6 +182,14 @@
       "currency": "KRW",
       "price_native": 10560.0,
       "sector": "2차전지"
+    },
+    {
+      "name": "네오티스",
+      "ticker": "085910.KQ",
+      "market_cap_oku": 3625,
+      "price_native": 27100.0,
+      "currency": "KRW",
+      "sector": ""
     }
   ]
 }
