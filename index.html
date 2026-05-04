@@ -675,6 +675,13 @@ function renderRow(s) {
         if (v !== null) { text = fmt(v,1) + '%'; cls = v >= 0 ? 'down' : 'up'; }  // +: red, −: blue
       } else if (c.key === '_op_sum') {
         const v = opSum(s); text = v ? fmt(v,0) : '—'; cls = '';
+        td.style.cursor = 'pointer';
+        td.title = '클릭하여 Q1~Q4 보기/숨기기';
+        td.addEventListener('click', () => {
+          state.showQuarterly = !state.showQuarterly;
+          saveUi();
+          render();
+        });
       } else if (c.key === '_por') {
         const v = por(s); text = v ? fmt(v,2) + '×' : '—'; cls = '';
       } else if (c.key === '_target_por') {
