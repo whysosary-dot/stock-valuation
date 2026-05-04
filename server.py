@@ -191,6 +191,18 @@ def _fetch_marketcap_krw(ticker: str, usdkrw: float, shares_adjustment: float = 
         return {"ok": False, "error": str(e)}
 
 
+def _fetch_price_history(ticker: str) -> list:
+    """1년치 주간 종가 반환 (sparkline용, ~52개 값)"""
+    try:
+        t = yf.Ticker(ticker)
+        hist = t.history(period='1y', interval='1wk')
+        if hist.empty:
+            return []
+        return [round(float(x), 4) for x in hist['Close'].dropna().tolist()]
+    except Exception:
+        return []
+
+
 def _run_git(*args, cwd=None):
     r = subprocess.run(
         ["git", *args],
