@@ -155,6 +155,19 @@ def _fetch_marketcap_krw(ticker: str, usdkrw: float, shares_adjustment: float = 
             # 기본: 달러로 간주
             market_cap_krw = float(market_cap_native) * usdkrw
 
+        # 네이버 금융 종목 코드 계산 (해외주식용)
+        naver_code = None
+        if not (ticker.endswith('.KS') or ticker.endswith('.KQ')):
+            exchange = (full_info.get('exchange') or '').upper()
+            if exchange in ('NMS', 'NGM', 'NCM', 'NASDAQ'):
+                naver_code = ticker + '.O'
+            elif exchange in ('NYQ', 'NYSE'):
+                naver_code = ticker + '.N'
+            elif exchange in ('AMX', 'AMEX'):
+                naver_code = ticker + '.A'
+            else:
+                naver_code = ticker  # fallback
+
         # 등락률 계산
         price_change_pct = None
         try:
@@ -172,6 +185,7 @@ def _fetch_marketcap_krw(ticker: str, usdkrw: float, shares_adjustment: float = 
             "currency": currency,
             "price_native": float(price) if price else None,
             "price_change_pct": price_change_pct,
+            "naver_code": naver_code,
         }
     except Exception as e:
         return {"ok": False, "error": str(e)}
