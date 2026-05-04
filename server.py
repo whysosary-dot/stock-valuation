@@ -191,11 +191,11 @@ def _fetch_marketcap_krw(ticker: str, usdkrw: float, shares_adjustment: float = 
         return {"ok": False, "error": str(e)}
 
 
-def _fetch_price_history(ticker: str) -> list:
-    """1년치 주간 종가 반환 (sparkline용, ~52개 값)"""
+def _fetch_price_history(ticker: str, period: str = '1y') -> list:
+    """주간 종가 반환 (sparkline용). period: '1y' or '3y'"""
     try:
         t = yf.Ticker(ticker)
-        hist = t.history(period='1y', interval='1wk')
+        hist = t.history(period=period, interval='1wk')
         if hist.empty:
             return []
         return [round(float(x), 4) for x in hist['Close'].dropna().tolist()]
