@@ -1,29 +1,29 @@
 {
-  "updated_at": "2026-05-03T21:09:35",
-  "usdkrw": 1471.22,
+  "updated_at": "2026-05-04T08:09:52",
+  "usdkrw": 1470.18,
   "stocks": [
     {
       "name": "SGC에너지",
       "ticker": "005090.KS",
-      "market_cap_oku": 8601.1,
+      "market_cap_oku": 8716.4,
       "currency": "KRW",
-      "price_native": 59700.0,
+      "price_native": 60500.0,
       "sector": "에너지"
     },
     {
       "name": "알테오젠",
       "ticker": "196170.KQ",
-      "market_cap_oku": 197081.5,
+      "market_cap_oku": 199488.2,
       "currency": "KRW",
-      "price_native": 368500.0,
+      "price_native": 373000.0,
       "sector": "바이오"
     },
     {
       "name": "한화엔진",
       "ticker": "082740.KS",
-      "market_cap_oku": 73414.5,
+      "market_cap_oku": 74665.9,
       "currency": "KRW",
-      "price_native": 88000.0,
+      "price_native": 89500.0,
       "sector": "조선"
     },
     {
@@ -39,9 +39,9 @@
       "q3_op": null,
       "q4_rev": null,
       "q4_op": null,
-      "market_cap_oku": 4345.9,
+      "market_cap_oku": 4326.2,
       "currency": "KRW",
-      "price_native": 22000.0,
+      "price_native": 21900.0,
       "sector": "게임"
     },
     {
@@ -57,9 +57,9 @@
       "q3_op": null,
       "q4_rev": null,
       "q4_op": null,
-      "market_cap_oku": 5304.7,
+      "market_cap_oku": 5368.5,
       "currency": "KRW",
-      "price_native": 15800.0,
+      "price_native": 15990.0,
       "sector": "산업재"
     },
     {
@@ -75,25 +75,25 @@
       "q3_op": null,
       "q4_rev": null,
       "q4_op": null,
-      "market_cap_oku": 24871.8,
+      "market_cap_oku": 26450.5,
       "currency": "KRW",
-      "price_native": 48050.0,
+      "price_native": 51100.0,
       "sector": "자동차"
     },
     {
       "name": "아이센스",
       "ticker": "099190.KQ",
-      "market_cap_oku": 5848.2,
+      "market_cap_oku": 6013.7,
       "currency": "KRW",
-      "price_native": 21200.0,
+      "price_native": 21800.0,
       "sector": "바이오"
     },
     {
       "name": "메지온",
       "ticker": "140410.KQ",
-      "market_cap_oku": 26504.6,
+      "market_cap_oku": 27562.4,
       "currency": "KRW",
-      "price_native": 87700.0,
+      "price_native": 91200.0,
       "sector": "바이오"
     },
     {
@@ -109,9 +109,9 @@
       "q3_op": null,
       "q4_rev": null,
       "q4_op": null,
-      "market_cap_oku": 12710043.1,
+      "market_cap_oku": 13401746.2,
       "currency": "KRW",
-      "price_native": 220500.0,
+      "price_native": 232500.0,
       "sector": "반도체"
     },
     {
@@ -127,41 +127,41 @@
       "q3_op": null,
       "q4_rev": null,
       "q4_op": null,
-      "market_cap_oku": 9113793.7,
+      "market_cap_oku": 10254789.6,
       "currency": "KRW",
-      "price_native": 1286000.0,
+      "price_native": 1447000.0,
       "sector": "반도체"
     },
     {
       "name": "HD한국조선해양",
       "ticker": "009540.KS",
-      "market_cap_oku": 326348.0,
+      "market_cap_oku": 332005.2,
       "currency": "KRW",
-      "price_native": 461500.0,
+      "price_native": 469500.0,
       "sector": "조선"
     },
     {
       "name": "파두",
       "ticker": "440110.KQ",
-      "market_cap_oku": 38608.6,
+      "market_cap_oku": 40089.8,
       "currency": "KRW",
-      "price_native": 78200.0,
+      "price_native": 81200.0,
       "sector": "반도체"
     },
     {
       "name": "상신이디피",
       "ticker": "091580.KQ",
-      "market_cap_oku": 3545.3,
+      "market_cap_oku": 3611.9,
       "currency": "KRW",
-      "price_native": 26600.0,
+      "price_native": 27100.0,
       "sector": "2차전지"
     },
     {
       "name": "한솔테크닉스",
       "ticker": "004710.KS",
-      "market_cap_oku": 4342.7,
+      "market_cap_oku": 4412.2,
       "currency": "KRW",
-      "price_native": 8130.0,
+      "price_native": 8260.0,
       "sector": "전자부품",
       "shares_override": 53415900
     },
@@ -178,9 +178,9 @@
       "q3_op": null,
       "q4_rev": null,
       "q4_op": null,
-      "market_cap_oku": 4067.9,
+      "market_cap_oku": 4071.7,
       "currency": "KRW",
-      "price_native": 10550.0,
+      "price_native": 10560.0,
       "sector": "2차전지"
     }
   ]
