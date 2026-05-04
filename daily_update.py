@@ -31,7 +31,7 @@ TOKEN_FILE = BASE_DIR / ".github_token"
 
 # 시총 업데이트가 덮어써도 되는 필드 (나머지는 유저 입력으로 간주하고 절대 건드리지 않음)
 # shares_adjustment: 유증 등 yfinance 미반영 발행주식수 보정치 — 유저 입력으로 보존
-SERVER_WRITE_FIELDS = {"market_cap_oku", "currency", "price_native", "price_change_pct", "naver_code", "price_history"}
+SERVER_WRITE_FIELDS = {"market_cap_oku", "currency", "price_native", "price_change_pct", "naver_code", "price_history", "price_history_3y"}
 
 
 def get_token() -> str:
@@ -119,7 +119,8 @@ def main():
             s["price_change_pct"] = r.get("price_change_pct")
             if r.get("naver_code"):
                 s["naver_code"] = r.get("naver_code")
-            s["price_history"] = _fetch_price_history(ticker)
+            s["price_history"] = _fetch_price_history(ticker, '1y')
+            s["price_history_3y"] = _fetch_price_history(ticker, '3y')
             ok_count += 1
             print(f"  ✓ {s.get('name','?'):10s} {ticker:12s} {r['market_cap_oku']:>14,.0f} 억원")
         else:
