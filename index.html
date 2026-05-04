@@ -574,10 +574,15 @@ function renderRow(s) {
 
     if (c.type === 'ro-text') {
       td.classList.add('readonly-cell', 'name');
-      const tickerCode = (s.ticker || '').split('.')[0];
+      const ticker = s.ticker || '';
+      const isKorean = ticker.endsWith('.KS') || ticker.endsWith('.KQ');
+      const tickerCode = ticker.split('.')[0];
+      const naverUrl = isKorean
+        ? `https://m.stock.naver.com/domestic/stock/${tickerCode}/total`
+        : `https://m.stock.naver.com/worldstock/stock/${ticker}/total`;
       if (tickerCode) {
         const a = document.createElement('a');
-        a.href = `https://m.stock.naver.com/domestic/stock/${tickerCode}/total`;
+        a.href = naverUrl;
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
         a.textContent = s[c.key] || '';
