@@ -167,6 +167,19 @@
   }
   input.cell-num::placeholder { color: #aab2bd; }
 
+  input.cell-text {
+    background: transparent; border: 1px solid transparent; color: var(--text);
+    padding: 4px 6px; border-radius: 4px; width: 100%;
+    font: inherit; font-size: 15px; text-align: left;
+    min-width: 240px;
+  }
+  input.cell-text:focus {
+    outline: none; border-color: var(--accent); background: white;
+    box-shadow: 0 0 0 3px var(--focus);
+  }
+  input.cell-text::placeholder { color: #aab2bd; }
+  td.idea-cell { min-width: 240px; max-width: 320px; }
+
   .readonly-cell { color: var(--text); font-weight: 500; }
   .readonly-cell.name { font-weight: 600; }
   .readonly-cell.name a {
@@ -314,7 +327,8 @@ const LS_UI_KEY = 'sv_ui_v1';
 
 const USER_FIELDS = [
   'target_cap_oku','safety_cap_oku',
-  'q1_op','q2_op','q3_op','q4_op'
+  'q1_op','q2_op','q3_op','q4_op',
+  'idea'
 ];
 
 /* 섹터 옵션 (드롭다운). 자유롭게 확장 가능 — 미분류는 빈값 */
@@ -340,6 +354,7 @@ const COLS = [
   { key: 'q4_op',           label: '4Q 영업이익',    type: 'num',     sortable: true, group: 'q' },
   { key: '_por',            label: 'POR',           type: 'calc',    sortable: true },
   { key: '_target_por',    label: '목표 POR',       type: 'calc',    sortable: true },
+  { key: 'idea',           label: '투자 아이디어',   type: 'text',    sortable: false, align: 'left' },
 ];
 
 /* ───────── 상태 ───────── */
@@ -630,6 +645,24 @@ function renderRow(s) {
       inp.addEventListener('keydown', e => {
         if (e.key === 'Enter') inp.blur();
         if (e.key === 'Escape') { inp.value = s[c.key] === null ? '' : String(s[c.key]); inp.blur(); }
+      });
+      td.appendChild(inp);
+    } else if (c.type === 'text') {
+      td.classList.add('idea-cell', 'text-left');
+      const inp = document.createElement('input');
+      inp.className = 'cell-text';
+      inp.type = 'text';
+      inp.maxLength = 60;
+      inp.placeholder = '메모...';
+      inp.value = s[c.key] || '';
+      inp.addEventListener('blur', () => {
+        s[c.key] = inp.value.trim();
+        inp.value = s[c.key];
+        queueSave();
+      });
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') inp.blur();
+        if (e.key === 'Escape') { inp.value = s[c.key] || ''; inp.blur(); }
       });
       td.appendChild(inp);
     } else if (c.type === 'calc') {
