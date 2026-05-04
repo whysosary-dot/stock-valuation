@@ -179,6 +179,9 @@
   }
   input.cell-text::placeholder { color: #aab2bd; }
   td.idea-cell { min-width: 480px; max-width: 600px; }
+  .text-center { text-align: center; }
+  td.chart-cell { width: 120px; min-width: 120px; padding: 6px 8px; text-align: center; }
+  td.chart-cell svg { display: block; margin: 0 auto; }
 
   .readonly-cell { color: var(--text); font-weight: 500; }
   .readonly-cell.name { font-weight: 600; }
@@ -340,8 +343,9 @@ const SECTOR_UNCATEGORIZED = '未분류';
 /* ───────── 컬럼 (티커 제거, 반응형 priority 제거) ───────── */
 const COLS = [
   { key: 'name',            label: '기업명',        type: 'ro-text', sortable: true,  align: 'left' },
-  { key: 'sector',          label: '섹터',          type: 'sector',  sortable: true,  align: 'left' },
-  { key: 'price_change_pct', label: '등락률',        type: 'change-pct',  sortable: true },
+  { key: '_chart',          label: '1년 차트',       type: 'chart',   sortable: false, align: 'center' },
+  { key: 'sector',          label: '섹터',          type: 'sector',  sortable: true,  align: 'center' },
+  { key: 'price_change_pct', label: '등락률',        type: 'change-pct',  sortable: true,  align: 'center' },
   { key: 'price_native',    label: '현재주가',      type: 'current-price', sortable: true },
   { key: 'market_cap_oku',  label: '현재시총 (억)',  type: 'current', sortable: true },
   { key: 'target_cap_oku',  label: '목표시총 (억)',  type: 'num',     sortable: true },
@@ -357,6 +361,25 @@ const COLS = [
   { key: '_target_por',    label: '목표 POR',       type: 'calc',    sortable: true },
   { key: 'idea',           label: '투자 아이디어',   type: 'text',    sortable: false, align: 'left' },
 ];
+
+/* ───────── Sparkline ───────── */
+function renderSparkline(prices, w=110, h=38) {
+  if (!prices || prices.length < 2) return `<svg width="${w}" height="${h}"></svg>`;
+  const min = Math.min(...prices), max = Math.max(...prices);
+  const range = max - min || 1;
+  const pad = 2;
+  const xs = prices.map((_, i) => pad + (i / (prices.length - 1)) * (w - pad * 2));
+  const ys = prices.map(p => h - pad - ((p - min) / range) * (h - pad * 2));
+  const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+  const color = prices[prices.length - 1] >= prices[0] ? '#2563eb' : '#b91c1c';
+  // 영역 채우기용 path
+  const areaPath = path + ` L${xs[xs.length-1].toFixed(1)},${h-pad} L${xs[0].toFixed(1)},${h-pad} Z`;
+  const fillColor = prices[prices.length - 1] >= prices[0] ? 'rgba(37,99,235,0.08)' : 'rgba(185,28,28,0.08)';
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+    <path d="${areaPath}" fill="${fillColor}" stroke="none"/>
+    <path d="${path}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>`;
+}
 
 /* ───────── 상태 ───────── */
 let state = {
@@ -570,6 +593,7 @@ function renderRow(s) {
   COLS.forEach(c => {
     const td = document.createElement('td');
     if (c.align === 'left') td.classList.add('text-left');
+    if (c.align === 'center') td.classList.add('text-center');
     if (c.group) td.setAttribute('data-col', c.group);
 
     if (c.type === 'ro-text') {
@@ -591,8 +615,11 @@ function renderRow(s) {
       } else {
         td.textContent = s[c.key] || '';
       }
+    } else if (c.type === 'chart') {
+      td.classList.add('chart-cell');
+      td.innerHTML = renderSparkline(s.price_history);
     } else if (c.type === 'sector') {
-      td.classList.add('sector-cell', 'text-left');
+      td.classList.add('sector-cell');
       const cur = normSector(s.sector);
       const chip = document.createElement('span');
       chip.className = 'sector-tag';
@@ -606,6 +633,7 @@ function renderRow(s) {
       } else {
         td.textContent = (v >= 0 ? '+' : '') + fmt(v, 2) + '%';
         td.classList.add(v > 0 ? 'down' : v < 0 ? 'up' : 'dim');
+        td.classList.add('text-center');
       }
     } else if (c.type === 'current') {
       td.classList.add('current-cap');
