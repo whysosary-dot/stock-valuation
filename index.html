@@ -339,6 +339,7 @@ const COLS = [
   { key: 'q3_op',           label: '3Q 영업이익',    type: 'num',     sortable: true, group: 'q' },
   { key: 'q4_op',           label: '4Q 영업이익',    type: 'num',     sortable: true, group: 'q' },
   { key: '_por',            label: 'POR',           type: 'calc',    sortable: true },
+  { key: '_target_por',    label: '목표 POR',       type: 'calc',    sortable: true },
 ];
 
 /* ───────── 상태 ───────── */
@@ -467,6 +468,7 @@ const uid = () => Math.random().toString(36).slice(2,10);
 /* 파생값 */
 const opSum = s => [s.q1_op,s.q2_op,s.q3_op,s.q4_op].map(parseNum).filter(v=>v!==null).reduce((a,b)=>a+b,0);
 const por = s => { const mc = parseNum(s.market_cap_oku), sum = opSum(s); return (!mc || !sum) ? null : mc/sum; };
+const targetPor = s => { const t = parseNum(s.target_cap_oku), sum = opSum(s); return (!t || !sum) ? null : t/sum; };
 const upside = s => { const mc = parseNum(s.market_cap_oku), t = parseNum(s.target_cap_oku); return (!mc || !t) ? null : (t/mc-1)*100; };
 const downside = s => { const mc = parseNum(s.market_cap_oku), sf = parseNum(s.safety_cap_oku); return (!mc || !sf) ? null : (sf/mc-1)*100; };
 
@@ -486,6 +488,7 @@ function sortValue(s, k) {
     case '_downside': return downside(s);
     case '_op_sum': return opSum(s);
     case '_por': return por(s);
+    case '_target_por': return targetPor(s);
     case 'sector': return normSector(s.sector);
     default: return s[k];
   }
@@ -641,6 +644,8 @@ function renderRow(s) {
         const v = opSum(s); text = v ? fmt(v,0) : '—'; cls = '';
       } else if (c.key === '_por') {
         const v = por(s); text = v ? fmt(v,2) + '×' : '—'; cls = '';
+      } else if (c.key === '_target_por') {
+        const v = targetPor(s); text = v ? fmt(v,2) + '×' : '—'; cls = '';
       }
       td.textContent = text;
       if (cls) td.classList.add(cls);
