@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-05-04T14:13:38",
-  "usdkrw": 1469.07,
+  "updated_at": "2026-05-04T14:32:10",
+  "usdkrw": 1468.18,
   "stocks": [
     {
       "name": "SGC에너지",
@@ -219,11 +219,12 @@
     {
       "name": "테이크투 인터랙티브",
       "ticker": "TTWO",
-      "market_cap_oku": 602681.5,
-      "price_native": 221.5449981689453,
+      "market_cap_oku": 608909.3,
+      "price_native": 223.97000122070312,
       "currency": "USD",
       "sector": "게임",
-      "price_change_pct": 2.55
+      "price_change_pct": 3.68,
+      "naver_code": "TTWO.O"
     }
   ]
 }
