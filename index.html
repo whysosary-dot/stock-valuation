@@ -344,6 +344,7 @@ const SECTOR_UNCATEGORIZED = '未분류';
 const COLS = [
   { key: 'name',            label: '기업명',        type: 'ro-text', sortable: true,  align: 'left' },
   { key: 'sector',          label: '섹터',          type: 'sector',  sortable: true,  align: 'center' },
+  { key: '_chart3y',        label: '3년 차트',       type: 'chart3y', sortable: false, align: 'center' },
   { key: '_chart',          label: '1년 차트',       type: 'chart',   sortable: false, align: 'center' },
   { key: 'price_change_pct', label: '등락률',        type: 'change-pct',  sortable: true,  align: 'center' },
   { key: 'price_native',    label: '현재주가',      type: 'current-price', sortable: true },
@@ -615,6 +616,9 @@ function renderRow(s) {
       } else {
         td.textContent = s[c.key] || '';
       }
+    } else if (c.type === 'chart3y') {
+      td.classList.add('chart-cell');
+      td.innerHTML = renderSparkline(s.price_history_3y);
     } else if (c.type === 'chart') {
       td.classList.add('chart-cell');
       td.innerHTML = renderSparkline(s.price_history);
