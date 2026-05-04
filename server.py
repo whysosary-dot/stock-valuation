@@ -155,11 +155,23 @@ def _fetch_marketcap_krw(ticker: str, usdkrw: float, shares_adjustment: float = 
             # 기본: 달러로 간주
             market_cap_krw = float(market_cap_native) * usdkrw
 
+        # 등락률 계산
+        price_change_pct = None
+        try:
+            prev_close = fi.get("previous_close") or fi.get("regularMarketPreviousClose")
+            if not prev_close and full_info:
+                prev_close = full_info.get("regularMarketPreviousClose") or full_info.get("previousClose")
+            if price and prev_close and float(prev_close) > 0:
+                price_change_pct = round((float(price) - float(prev_close)) / float(prev_close) * 100, 2)
+        except Exception:
+            pass
+
         return {
             "ok": True,
             "market_cap_oku": round(market_cap_krw / 1e8, 1),  # 억원
             "currency": currency,
             "price_native": float(price) if price else None,
+            "price_change_pct": price_change_pct,
         }
     except Exception as e:
         return {"ok": False, "error": str(e)}
