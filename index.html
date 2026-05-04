@@ -341,6 +341,7 @@ const SECTOR_UNCATEGORIZED = '未분류';
 const COLS = [
   { key: 'name',            label: '기업명',        type: 'ro-text', sortable: true,  align: 'left' },
   { key: 'sector',          label: '섹터',          type: 'sector',  sortable: true,  align: 'left' },
+  { key: 'price_change_pct', label: '등락률',        type: 'change-pct',  sortable: true },
   { key: 'price_native',    label: '현재주가',      type: 'current-price', sortable: true },
   { key: 'market_cap_oku',  label: '현재시총 (억)',  type: 'current', sortable: true },
   { key: 'target_cap_oku',  label: '목표시총 (억)',  type: 'num',     sortable: true },
@@ -499,6 +500,7 @@ function priceDecimals(s) {
 
 function sortValue(s, k) {
   switch (k) {
+    case 'price_change_pct': return parseNum(s.price_change_pct);
     case '_upside': return upside(s);
     case '_downside': return downside(s);
     case '_op_sum': return opSum(s);
@@ -591,6 +593,14 @@ function renderRow(s) {
       chip.textContent = (cur === SECTOR_UNCATEGORIZED) ? '미분류' : cur;
       applyChipColor(chip, cur);
       td.appendChild(chip);
+    } else if (c.type === 'change-pct') {
+      const v = parseNum(s[c.key]);
+      if (v === null) {
+        td.textContent = '—'; td.classList.add('dim');
+      } else {
+        td.textContent = (v >= 0 ? '+' : '') + fmt(v, 2) + '%';
+        td.classList.add(v > 0 ? 'down' : v < 0 ? 'up' : 'dim');
+      }
     } else if (c.type === 'current') {
       td.classList.add('current-cap');
       const v = parseNum(s[c.key]);
