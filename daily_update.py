@@ -22,7 +22,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).parent.resolve()
 sys.path.insert(0, str(BASE_DIR))
 
-from server import _get_usdkrw, _fetch_marketcap_krw  # noqa: E402
+from server import _get_usdkrw, _fetch_marketcap_krw, _fetch_price_history  # noqa: E402
 
 REPO = "whysosary-dot/stock-valuation"
 FILE_PATH = "stocks.json"
@@ -31,7 +31,7 @@ TOKEN_FILE = BASE_DIR / ".github_token"
 
 # 시총 업데이트가 덮어써도 되는 필드 (나머지는 유저 입력으로 간주하고 절대 건드리지 않음)
 # shares_adjustment: 유증 등 yfinance 미반영 발행주식수 보정치 — 유저 입력으로 보존
-SERVER_WRITE_FIELDS = {"market_cap_oku", "currency", "price_native", "price_change_pct", "naver_code"}
+SERVER_WRITE_FIELDS = {"market_cap_oku", "currency", "price_native", "price_change_pct", "naver_code", "price_history"}
 
 
 def get_token() -> str:
@@ -119,6 +119,7 @@ def main():
             s["price_change_pct"] = r.get("price_change_pct")
             if r.get("naver_code"):
                 s["naver_code"] = r.get("naver_code")
+            s["price_history"] = _fetch_price_history(ticker)
             ok_count += 1
             print(f"  ✓ {s.get('name','?'):10s} {ticker:12s} {r['market_cap_oku']:>14,.0f} 억원")
         else:
