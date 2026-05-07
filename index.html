@@ -1547,7 +1547,10 @@ function renderTradeView(dateStr) {
   container.appendChild(bar);
 
   if (!trades.length) {
-    container.innerHTML += '<div class="trade-empty">거래 내역이 없습니다.<br>+ 거래 추가를 눌러 기록하세요.</div>';
+    const empty = document.createElement('div');
+    empty.className = 'trade-empty';
+    empty.innerHTML = '거래 내역이 없습니다.<br>+ 거래 추가를 눌러 기록하세요.';
+    container.appendChild(empty);
     return;
   }
 
@@ -1591,14 +1594,14 @@ function renderTradeView(dateStr) {
     priceInp.addEventListener('focus', () => { priceInp.value = String(trade.price || '').replace(/,/g,''); });
     priceInp.addEventListener('blur', () => { trade.price = priceInp.value; priceInp.value = trade.price ? Number(trade.price).toLocaleString('ko-KR') : ''; saveDiaryData(diary.data); calcTotal(); });
     priceInp.addEventListener('input', calcTotal);
-    row2.innerHTML = `<span class="trade-label">수량</span>`;
-    row2.append(qtyInp); row2.innerHTML += `<span class="trade-label">주 × 가격</span>`; row2.append(priceInp); row2.innerHTML += `<span class="trade-label">원</span>`; row2.append(totalEl);
+    const mkLabel = t => { const s = document.createElement('span'); s.className = 'trade-label'; s.textContent = t; return s; };
+    row2.append(mkLabel('수량'), qtyInp, mkLabel('주  ×  가격'), priceInp, mkLabel('원'), totalEl);
 
     // Row 3: 메모
     const row3 = document.createElement('div'); row3.className = 'trade-row3';
     const memoInp = document.createElement('input'); memoInp.className = 'trade-inp memo'; memoInp.placeholder = '매매 사유 / 메모'; memoInp.value = trade.memo || '';
     memoInp.addEventListener('input', () => { trade.memo = memoInp.value; saveDiaryData(diary.data); });
-    row3.innerHTML = `<span class="trade-label">메모</span>`; row3.append(memoInp);
+    row3.append(mkLabel('메모'), memoInp);
 
     card.append(row1, row2, row3);
     container.appendChild(card);
