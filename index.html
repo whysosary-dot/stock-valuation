@@ -391,6 +391,15 @@
   }
   .diary-textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus); }
   .diary-textarea::placeholder { color: #aab2bd; }
+  .diary-read-view {
+    flex: 1; padding: 16px 18px; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--panel); color: var(--text); font-size: 15px;
+    line-height: 1.75; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    white-space: pre-wrap; word-break: break-word; cursor: text;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .diary-read-view:hover { border-color: var(--accent); }
+  .diary-read-view.empty { color: #aab2bd; font-style: italic; }
   .diary-footer {
     flex: none; display: flex; align-items: center; justify-content: space-between;
     padding: 6px 4px 2px; font-size: 13px;
@@ -532,6 +541,7 @@
       </div>
       <div class="diary-editor-wrap">
         <textarea id="diary-editor" class="diary-textarea" placeholder="오늘의 투자 생각을 기록하세요..."></textarea>
+        <div id="diary-read-view" class="diary-read-view" style="display:none;"></div>
         <div id="diary-trade-view" class="diary-trade-view" style="display:none;"></div>
         <div class="diary-footer">
           <span id="diary-save-status" class="diary-save-status"></span>
@@ -1634,9 +1644,34 @@ function diaryAutoSave() {
   renderDiaryList();
 }
 
+function switchToReadMode() {
+  const editor = document.getElementById('diary-editor');
+  const readView = document.getElementById('diary-read-view');
+  if (editor.style.display === 'none') return; // 이미 읽기 모드
+  const val = editor.value;
+  if (val.trim()) {
+    readView.textContent = val;
+    readView.classList.remove('empty');
+  } else {
+    readView.textContent = editor.placeholder || '클릭하여 편집...';
+    readView.classList.add('empty');
+  }
+  editor.style.display = 'none';
+  readView.style.display = 'block';
+}
+
+function switchToEditMode() {
+  const editor = document.getElementById('diary-editor');
+  const readView = document.getElementById('diary-read-view');
+  readView.style.display = 'none';
+  editor.style.display = 'block';
+  editor.focus();
+}
+
 function setDiaryEditor() {
   const editor = document.getElementById('diary-editor');
   const tradeView = document.getElementById('diary-trade-view');
+  const readView = document.getElementById('diary-read-view');
   const dateLabel = document.getElementById('diary-date-label');
   const status = document.getElementById('diary-save-status');
 
@@ -1644,6 +1679,8 @@ function setDiaryEditor() {
     b.classList.toggle('active', b.dataset.mode === diary.mode));
 
   const isTradeMode = diary.mode === 'trades';
+  // 읽기 모드 초기화 (모드 전환 시 항상 편집 모드로)
+  readView.style.display = 'none';
   editor.style.display = isTradeMode ? 'none' : 'block';
   tradeView.style.display = isTradeMode ? 'block' : 'none';
   document.getElementById('diary-char-count').textContent = '';
@@ -1799,6 +1836,20 @@ function initDiary() {
   });
   editor.addEventListener('keydown', e => {
     if ((e.metaKey||e.ctrlKey) && e.key==='s') { e.preventDefault(); clearTimeout(diary.saveTimer); diaryAutoSave(); }
+    if (e.key === 'Escape') { clearTimeout(diary.saveTimer); diaryAutoSave(); switchToReadMode(); }
+  });
+  // blur → 읽기 모드 (모드 탭/사이드바 클릭 시에는 setDiaryEditor가 리셋하므로 무관)
+  editor.addEventListener('blur', (e) => {
+    // 포커스가 diary 영역 내 다른 인터랙티브 요소로 이동하면 읽기 모드 전환 안 함
+    const relTarget = e.relatedTarget;
+    if (relTarget && relTarget.closest('#page-diary')) return;
+    clearTimeout(diary.saveTimer);
+    diaryAutoSave();
+    switchToReadMode();
+  });
+  // 읽기 뷰 클릭 → 편집 모드
+  document.getElementById('diary-read-view').addEventListener('click', () => {
+    switchToEditMode();
   });
   // 검색
   document.getElementById('diary-search').addEventListener('input', e => {
