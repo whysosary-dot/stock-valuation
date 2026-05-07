@@ -453,44 +453,6 @@
   <span class="meta" id="meta"></span>
 </div>
 
-<!-- 불러오기 모달 -->
-<div id="restore-modal" style="display:none; position:fixed; inset:0; z-index:200; background:rgba(15,23,42,0.45); align-items:center; justify-content:center; padding:16px;">
-  <div style="background:#fff; border-radius:12px; padding:24px; max-width:600px; width:100%; max-height:80vh; display:flex; flex-direction:column; gap:14px; box-shadow:0 20px 60px rgba(15,23,42,0.25);">
-    <div style="display:flex; align-items:center; justify-content:space-between;">
-      <strong style="font-size:16px;">📥 데이터 불러오기</strong>
-      <button id="restore-close" style="background:none; border:none; font-size:20px; cursor:pointer; color:#6b7480; padding:0 4px;">✕</button>
-    </div>
-    <p style="margin:0; font-size:14px; color:#6b7480; line-height:1.5;">백업 JSON을 아래에 붙여넣고 불러오기를 누르세요.<br>기존 입력값은 덮어씌워집니다.</p>
-    <textarea id="restore-text"
-      placeholder='{"_backup_date": "...", "data": {...}}'
-      style="flex:1; min-height:240px; font-family:monospace; font-size:12px; padding:12px; border:1px solid #e3e7ee; border-radius:8px; resize:none; background:#f7f9fc; color:#1f2933; line-height:1.5;"
-    ></textarea>
-    <div id="restore-msg" style="font-size:13px; color:#b91c1c; min-height:18px;"></div>
-    <div style="display:flex; gap:8px;">
-      <button id="restore-apply" class="btn" style="flex:1; background:#2563eb; color:#fff; border-color:#2563eb; font-weight:600;">불러오기</button>
-      <button id="restore-close2" class="btn" style="flex:none;">닫기</button>
-    </div>
-  </div>
-</div>
-
-<!-- 백업 모달 -->
-<div id="backup-modal" style="display:none; position:fixed; inset:0; z-index:200; background:rgba(15,23,42,0.45); align-items:center; justify-content:center; padding:16px;">
-  <div style="background:#fff; border-radius:12px; padding:24px; max-width:600px; width:100%; max-height:80vh; display:flex; flex-direction:column; gap:14px; box-shadow:0 20px 60px rgba(15,23,42,0.25);">
-    <div style="display:flex; align-items:center; justify-content:space-between;">
-      <strong style="font-size:16px;">📦 데이터 백업</strong>
-      <button id="backup-close" style="background:none; border:none; font-size:20px; cursor:pointer; color:#6b7480; padding:0 4px;">✕</button>
-    </div>
-    <p style="margin:0; font-size:14px; color:#6b7480; line-height:1.5;">아래 내용을 전체 선택 → 복사해서 보관하세요.<br>Claude에게 붙여넣으면 GitHub 동기화로 마이그레이션 할 수 있습니다.</p>
-    <textarea id="backup-text" readonly
-      style="flex:1; min-height:280px; font-family:monospace; font-size:12px; padding:12px; border:1px solid #e3e7ee; border-radius:8px; resize:none; background:#f7f9fc; color:#1f2933; line-height:1.5; overflow:auto;"
-    ></textarea>
-    <div style="display:flex; gap:8px;">
-      <button id="backup-copy" class="btn" style="flex:1; background:#2563eb; color:#fff; border-color:#2563eb; font-weight:600;">전체 복사</button>
-      <button id="backup-close2" class="btn" style="flex:none;">닫기</button>
-    </div>
-  </div>
-</div>
-
 <div class="table-wrap">
   <table id="tbl">
     <thead><tr id="header-row"></tr></thead>
@@ -502,7 +464,9 @@
 <div id="page-diary" class="page">
   <div class="diary-topbar">
     <h2>📔 투자 일기</h2>
+    <input id="diary-search" class="filter" type="search" placeholder="일기 검색..." style="width:180px;" />
     <span class="spacer"></span>
+    <button id="diary-restore-btn" class="btn" type="button">📥 불러오기</button>
     <button id="diary-backup-btn" class="btn" type="button">💾 백업</button>
   </div>
   <div class="diary-container">
@@ -529,6 +493,40 @@
     </div>
   </div>
 </div><!-- /page-diary -->
+
+<!-- ── 공용 모달 (position:fixed → 탭 밖에 위치해야 함) ── -->
+<div id="restore-modal" style="display:none; position:fixed; inset:0; z-index:200; background:rgba(15,23,42,0.45); align-items:center; justify-content:center; padding:16px;">
+  <div style="background:#fff; border-radius:12px; padding:24px; max-width:600px; width:100%; max-height:80vh; display:flex; flex-direction:column; gap:14px; box-shadow:0 20px 60px rgba(15,23,42,0.25);">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <strong style="font-size:16px;">📥 데이터 불러오기</strong>
+      <button id="restore-close" style="background:none; border:none; font-size:20px; cursor:pointer; color:#6b7480; padding:0 4px;">✕</button>
+    </div>
+    <p style="margin:0; font-size:14px; color:#6b7480; line-height:1.5;">백업 JSON을 아래에 붙여넣고 불러오기를 누르세요.<br>기존 입력값은 덮어씌워집니다.</p>
+    <textarea id="restore-text" placeholder='{"_backup_date": "...", "data": {...}}'
+      style="flex:1; min-height:240px; font-family:monospace; font-size:12px; padding:12px; border:1px solid #e3e7ee; border-radius:8px; resize:none; background:#f7f9fc; color:#1f2933; line-height:1.5;"></textarea>
+    <div id="restore-msg" style="font-size:13px; color:#b91c1c; min-height:18px;"></div>
+    <div style="display:flex; gap:8px;">
+      <button id="restore-apply" class="btn" style="flex:1; background:#2563eb; color:#fff; border-color:#2563eb; font-weight:600;">불러오기</button>
+      <button id="restore-close2" class="btn" style="flex:none;">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div id="backup-modal" style="display:none; position:fixed; inset:0; z-index:200; background:rgba(15,23,42,0.45); align-items:center; justify-content:center; padding:16px;">
+  <div style="background:#fff; border-radius:12px; padding:24px; max-width:600px; width:100%; max-height:80vh; display:flex; flex-direction:column; gap:14px; box-shadow:0 20px 60px rgba(15,23,42,0.25);">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <strong id="backup-modal-title" style="font-size:16px;">📦 데이터 백업</strong>
+      <button id="backup-close" style="background:none; border:none; font-size:20px; cursor:pointer; color:#6b7480; padding:0 4px;">✕</button>
+    </div>
+    <p style="margin:0; font-size:14px; color:#6b7480; line-height:1.5;">아래 내용을 전체 선택 → 복사해서 보관하세요.<br>Claude에게 붙여넣으면 GitHub 동기화로 마이그레이션 할 수 있습니다.</p>
+    <textarea id="backup-text" readonly
+      style="flex:1; min-height:280px; font-family:monospace; font-size:12px; padding:12px; border:1px solid #e3e7ee; border-radius:8px; resize:none; background:#f7f9fc; color:#1f2933; line-height:1.5; overflow:auto;"></textarea>
+    <div style="display:flex; gap:8px;">
+      <button id="backup-copy" class="btn" style="flex:1; background:#2563eb; color:#fff; border-color:#2563eb; font-weight:600;">전체 복사</button>
+      <button id="backup-close2" class="btn" style="flex:none;">닫기</button>
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -1357,12 +1355,23 @@ async function init() {
       const raw = document.getElementById('restore-text').value.trim();
       if (!raw) { restoreMsg.textContent = '내용을 입력해주세요.'; return; }
       const parsed = JSON.parse(raw);
-      const data = parsed.data || parsed; // data 키 있으면 그 안, 없으면 전체
+      const data = parsed.data || parsed;
       if (typeof data !== 'object' || Array.isArray(data)) throw new Error('형식 오류');
-      localStorage.setItem(LS_KEY, JSON.stringify(data));
-      closeRestore();
-      toast('불러오기 완료! 새로고침합니다...', 'ok', 1500);
-      setTimeout(() => location.reload(), 1600);
+      const target = document.getElementById('restore-modal').dataset.target;
+      if (target === 'diary') {
+        // diary 데이터: {daily:{}, weekly:{}} 구조
+        const diaryData = (data.daily || data.weekly) ? data : { daily: data, weekly: {} };
+        localStorage.setItem(DIARY_KEY, JSON.stringify(diaryData));
+        diary.data = diaryData;
+        closeRestore();
+        toast('Diary 불러오기 완료!', 'ok', 2000);
+        renderDiaryList();
+      } else {
+        localStorage.setItem(LS_KEY, JSON.stringify(data));
+        closeRestore();
+        toast('불러오기 완료! 새로고침합니다...', 'ok', 1500);
+        setTimeout(() => location.reload(), 1600);
+      }
     } catch(e) {
       restoreMsg.textContent = '❌ JSON 형식 오류: ' + e.message;
     }
@@ -1418,6 +1427,7 @@ const diary = {
   selectedWeek: null,   // "2026-W19"
   mode: 'daily',
   saveTimer: null,
+  searchQuery: '',
 };
 
 function todayDateStr() {
@@ -1510,12 +1520,30 @@ function renderDiaryList() {
   const dailyKeys = Object.keys(diary.data.daily).filter(k => diary.data.daily[k]).sort().reverse();
   const weeklyKeys = Object.keys(diary.data.weekly).filter(k => diary.data.weekly[k]).sort().reverse();
 
+  const q = diary.searchQuery.toLowerCase().trim();
+
+  // 검색 필터
+  const filteredDaily = q
+    ? dailyKeys.filter(k => (diary.data.daily[k]||'').toLowerCase().includes(q))
+    : dailyKeys;
+  const filteredWeekly = q
+    ? weeklyKeys.filter(k => (diary.data.weekly[k]||'').toLowerCase().includes(q))
+    : weeklyKeys;
+
+  if (q) {
+    const total = filteredDaily.length + filteredWeekly.length;
+    const info = document.createElement('div');
+    info.style.cssText = 'padding:8px 14px;font-size:12px;color:var(--accent);font-weight:600;';
+    info.textContent = total ? `"${q}" ${total}건` : `"${q}" 결과 없음`;
+    list.appendChild(info);
+  }
+
   // 주간 전략 그룹
-  if (weeklyKeys.length) {
+  if (filteredWeekly.length) {
     const grp = document.createElement('div');
     grp.className = 'diary-month-group';
     grp.innerHTML = `<div class="diary-month-label">주간 전략</div>`;
-    weeklyKeys.forEach(wk => {
+    filteredWeekly.forEach(wk => {
       const [y, w] = wk.split('-W');
       const isActive = diary.mode === 'weekly' && diary.selectedWeek === wk;
       const item = document.createElement('div');
@@ -1533,7 +1561,7 @@ function renderDiaryList() {
 
   // 일간 일기 - 월별 그룹
   const byMonth = {};
-  dailyKeys.forEach(k => { const m = k.slice(0,7); (byMonth[m] = byMonth[m]||[]).push(k); });
+  filteredDaily.forEach(k => { const m = k.slice(0,7); (byMonth[m] = byMonth[m]||[]).push(k); });
   Object.entries(byMonth).sort(([a],[b]) => b.localeCompare(a)).forEach(([month, keys]) => {
     const [y, m] = month.split('-');
     const grp = document.createElement('div');
@@ -1555,7 +1583,7 @@ function renderDiaryList() {
     list.appendChild(grp);
   });
 
-  if (!dailyKeys.length && !weeklyKeys.length) {
+  if (!filteredDaily.length && !filteredWeekly.length && !q) {
     list.innerHTML += '<div class="diary-empty">아직 기록이 없어요</div>';
   }
 }
@@ -1595,15 +1623,30 @@ function initDiary() {
   editor.addEventListener('keydown', e => {
     if ((e.metaKey||e.ctrlKey) && e.key==='s') { e.preventDefault(); clearTimeout(diary.saveTimer); diaryAutoSave(); }
   });
-  // 백업 버튼 (기존 백업 모달 재사용)
+  // 검색
+  document.getElementById('diary-search').addEventListener('input', e => {
+    diary.searchQuery = e.target.value;
+    renderDiaryList();
+  });
+
+  // 백업 버튼
   document.getElementById('diary-backup-btn').addEventListener('click', () => {
     const out = JSON.stringify({
       _backup_date: new Date().toISOString().slice(0,19).replace('T',' '),
       _note: 'sv_diary_v1', data: diary.data
     }, null, 2);
+    document.getElementById('backup-modal-title').textContent = '📔 Diary 백업';
     document.getElementById('backup-text').value = out;
     document.getElementById('backup-modal').style.display = 'flex';
     setTimeout(() => document.getElementById('backup-text').select(), 80);
+  });
+
+  // 불러오기 버튼 (diary 전용)
+  document.getElementById('diary-restore-btn').addEventListener('click', () => {
+    document.getElementById('restore-text').value = '';
+    document.getElementById('restore-msg').textContent = '';
+    document.getElementById('restore-modal').dataset.target = 'diary';
+    document.getElementById('restore-modal').style.display = 'flex';
   });
   // 초기: 오늘 날짜 선택
   diary.selectedDate = todayDateStr();
