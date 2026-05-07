@@ -518,6 +518,7 @@
     <div class="diary-sidebar">
       <button id="diary-today-btn" class="diary-shortcut-btn">✏️ 오늘 일기</button>
       <button id="diary-weekly-btn" class="diary-shortcut-btn">📅 이번 주 전략</button>
+      <button id="diary-trade-btn" class="diary-shortcut-btn">📊 오늘 매매 일지</button>
       <div id="diary-entry-list"></div>
     </div>
     <div class="diary-main">
@@ -1734,14 +1735,16 @@ function renderDiaryList() {
     grp.className = 'diary-month-group';
     grp.innerHTML = `<div class="diary-month-label">${y}년 ${parseInt(m)}월</div>`;
     keys.forEach(k => {
-      const isActive = diary.mode === 'daily' && diary.selectedDate === k;
+      const isActive = diary.selectedDate === k && (diary.mode === 'daily' || diary.mode === 'trades');
       const item = document.createElement('div');
       item.className = 'diary-entry-item' + (isActive ? ' active' : '');
       const tradeCnt = ((diary.data.trades||{})[k]||[]).length;
       item.innerHTML = `<div class="ei-date">${formatDateShort(k)}${tradeCnt ? `<span class="ei-trade-badge">${tradeCnt}건</span>` : ''}</div>
         <div class="ei-preview">${(diary.data.daily[k]||'').split('\n')[0].slice(0,22)}</div>`;
       item.addEventListener('click', () => {
-        diary.selectedDate = k; diary.mode = 'daily';
+        diary.selectedDate = k;
+        // trades 모드였으면 trades 유지, 아니면 daily로
+        if (diary.mode !== 'trades') diary.mode = 'daily';
         diary.selectedWeek = getWeekKey(k);
         setDiaryEditor(); renderDiaryList();
       });
@@ -1768,6 +1771,13 @@ function initDiary() {
     diary.selectedWeek = getWeekKey(todayDateStr());
     diary.selectedDate = null;
     diary.mode = 'weekly';
+    setDiaryEditor(); renderDiaryList();
+  });
+  // 오늘 매매 일지 버튼
+  document.getElementById('diary-trade-btn').addEventListener('click', () => {
+    diary.selectedDate = todayDateStr();
+    diary.selectedWeek = getWeekKey(diary.selectedDate);
+    diary.mode = 'trades';
     setDiaryEditor(); renderDiaryList();
   });
   // 모드 탭
