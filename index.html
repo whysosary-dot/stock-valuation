@@ -1346,7 +1346,9 @@ function mergeAndSetStocks(ghData) {
     const merged = { _id: uid() };
     for (const [k, v] of Object.entries(s)) merged[k] = v;
     for (const f of USER_FIELDS) {
-      merged[f] = (ui[f] !== undefined) ? ui[f] : (s[f] ?? null);
+      // GitHub(커밋된 값)을 우선 사용 → 다른 기기에서 커밋한 데이터 반영
+      // s[f]가 undefined(필드 자체 없음)일 때만 localStorage 폴백
+      merged[f] = (s[f] !== undefined) ? s[f] : (ui[f] ?? null);
     }
     // ── v2(주가) → v3(시총) 역마이그레이션: 주가 입력값이 남아있으면 시총(억)으로 환산
     const mcNow = parseNum(s.market_cap_oku);
@@ -1365,8 +1367,9 @@ function mergeAndSetStocks(ghData) {
   });
   state.usdkrw = ghData.usdkrw || 0;
   state.updated_at = ghData.updated_at || '';
+  // GitHub 데이터를 localStorage에도 반영 → 기기 간 베이스 동기화
+  saveUserInputs();
   if (migrated) {
-    // 새로운 필드(target_price/safety_price) 기준으로 재저장
     saveUserInputs();
   }
 }
@@ -1937,6 +1940,41 @@ function initDiary() {
   diary.selectedWeek = getWeekKey(diary.selectedDate);
   setDiaryEditor();
   renderDiaryList();
+
+  // GitHub diary.json 로드 (다른 기기에서 커밋한 데이터 반영)
+  (async () => {
+    try {
+      const url = `https://raw.githubusercontent.com/${GH.OWNER}/${GH.REPO}/${GH.BRANCH}/diary.json?t=${Date.now()}`;
+      const r = await fetch(url);
+      if (!r.ok) return; // diary.json 없으면 무시
+      const ghDiary = await r.json();
+      if (!ghDiary || typeof ghDiary !== 'object') return;
+
+      // GitHub 데이터가 더 최신이면 병합 (키 합집합으로 더 많은 데이터 보존)
+      let changed = false;
+      for (const section of ['daily', 'weekly', 'trades']) {
+        if (!ghDiary[section]) continue;
+        if (!diary.data[section]) { diary.data[section] = {}; }
+        for (const [k, v] of Object.entries(ghDiary[section])) {
+          // 로컬에 없는 키는 GitHub에서 채움
+          // 로컬에 있어도 GitHub 값이 더 길면(더 많은 내용) 덮어씀
+          const localVal = diary.data[section][k];
+          const ghVal = v;
+          const ghLen = Array.isArray(ghVal) ? ghVal.length : (ghVal || '').length;
+          const localLen = Array.isArray(localVal) ? localVal.length : (localVal || '').length;
+          if (!localVal || ghLen > localLen) {
+            diary.data[section][k] = ghVal;
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        saveDiaryData(diary.data);
+        setDiaryEditor();
+        renderDiaryList();
+      }
+    } catch (_) {}
+  })();
 }
 
 initDiary();
