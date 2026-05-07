@@ -998,7 +998,12 @@ function render() {
 
   const m = document.getElementById('meta');
   const parts = [];
-  if (state.updated_at) parts.push(`시총 ${state.updated_at.replace('T',' ').slice(0,16)}`);
+  if (state.updated_at) {
+    const utc = new Date(state.updated_at + 'Z');
+    const kst = new Date(utc.getTime() + 9 * 3600 * 1000);
+    const kstStr = kst.toISOString().slice(0,16).replace('T',' ');
+    parts.push(`시총 ${kstStr} KST`);
+  }
   if (state.usdkrw) parts.push(`USDKRW ${Number(state.usdkrw).toFixed(1)}`);
   parts.push(`${state.stocks.length}개 종목`);
   if (state.sectorFilter) parts.push(`섹터: ${state.sectorFilter}`);
