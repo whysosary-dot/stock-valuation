@@ -321,10 +321,38 @@
 
   /* ── 페이지 탭 ── */
   .page-tabs {
-    flex: none; display: flex;
+    flex: none; display: flex; align-items: center;
     background: var(--panel); border-bottom: 1px solid var(--border);
     padding: 0 16px; gap: 0;
   }
+  .page-tabs .tabs-spacer { flex: 1; }
+  .gh-commit-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--accent); color: #fff; border: none;
+    padding: 7px 14px; border-radius: 6px; cursor: pointer;
+    font-size: 13px; font-weight: 600; white-space: nowrap;
+    transition: opacity .15s, background .15s;
+    margin-left: 8px;
+  }
+  .gh-commit-btn:hover { opacity: .88; }
+  .gh-commit-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .gh-settings-btn {
+    background: none; border: none; cursor: pointer; font-size: 16px;
+    color: var(--text-dim); padding: 4px 6px; border-radius: 5px;
+    transition: color .15s, background .15s;
+    line-height: 1;
+  }
+  .gh-settings-btn:hover { color: var(--accent); background: var(--accent-soft); }
+  /* PAT 모달 */
+  .pat-modal-body { display: flex; flex-direction: column; gap: 12px; }
+  .pat-modal-desc { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+  .pat-modal-desc a { color: var(--accent); }
+  .pat-inp {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border-strong);
+    border-radius: 7px; font-size: 14px; font-family: monospace;
+    background: var(--panel); color: var(--text);
+  }
+  .pat-inp:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus); }
   .page-tab-btn {
     padding: 11px 20px; background: none; border: none;
     border-bottom: 3px solid transparent; margin-bottom: -1px;
@@ -490,6 +518,9 @@
 <nav class="page-tabs">
   <button class="page-tab-btn active" data-page="valuation">📊 Stock Valuation</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
+  <div class="tabs-spacer"></div>
+  <button id="gh-settings-btn" class="gh-settings-btn" title="GitHub 토큰 설정">⚙️</button>
+  <button id="gh-commit-btn" class="gh-commit-btn" title="밸류에이션 + 다이어리 GitHub에 커밋">☁️ 커밋 &amp; 푸시</button>
 </nav>
 
 <div id="page-valuation" class="page active">
@@ -586,6 +617,30 @@
   </div>
 </div>
 
+<!-- PAT 설정 모달 -->
+<div id="pat-modal" style="display:none; position:fixed; inset:0; z-index:300; background:rgba(15,23,42,0.45); align-items:center; justify-content:center; padding:16px;">
+  <div style="background:#fff; border-radius:12px; padding:24px; max-width:480px; width:100%; display:flex; flex-direction:column; gap:16px; box-shadow:0 20px 60px rgba(15,23,42,0.25);">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <strong style="font-size:16px;">🔑 GitHub 토큰 설정</strong>
+      <button id="pat-close" style="background:none; border:none; font-size:20px; cursor:pointer; color:#6b7480; padding:0 4px;">✕</button>
+    </div>
+    <div class="pat-modal-body">
+      <p class="pat-modal-desc">
+        GitHub Personal Access Token(PAT)을 입력하면 브라우저에서 직접 커밋할 수 있습니다.<br>
+        토큰은 <strong>이 기기의 브라우저(localStorage)에만</strong> 저장되며 외부로 전송되지 않습니다.<br><br>
+        <a href="https://github.com/settings/tokens/new" target="_blank">→ GitHub에서 PAT 발급</a>
+        (권한: <code>repo</code> 체크)
+      </p>
+      <input id="pat-inp" class="pat-inp" type="password" placeholder="ghp_xxxxxxxxxxxxxxxx" autocomplete="off" />
+      <div style="display:flex; gap:8px;">
+        <button id="pat-save" class="btn" style="flex:1; background:#2563eb; color:#fff; border-color:#2563eb; font-weight:600;">저장</button>
+        <button id="pat-clear" class="btn" style="flex:none; color:#b91c1c; border-color:#b91c1c;">삭제</button>
+      </div>
+      <div id="pat-status" style="font-size:13px; color:#16a34a; display:none;">✓ 저장됨</div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -598,6 +653,7 @@ const GH = {
 };
 const LS_KEY = 'sv_user_inputs_v1';
 const LS_UI_KEY = 'sv_ui_v1';
+const LS_PAT_KEY = 'sv_github_pat';
 
 const USER_FIELDS = [
   'target_cap_oku','safety_cap_oku',
@@ -1884,6 +1940,117 @@ function initDiary() {
 }
 
 initDiary();
+
+/* ───────── GitHub PAT 모달 ───────── */
+function openPatModal() {
+  const inp = document.getElementById('pat-inp');
+  const saved = localStorage.getItem(LS_PAT_KEY) || '';
+  inp.value = saved ? '••••••••••••••••' : '';
+  inp.dataset.filled = saved ? '1' : '';
+  document.getElementById('pat-status').style.display = saved ? 'block' : 'none';
+  document.getElementById('pat-modal').style.display = 'flex';
+  if (!saved) inp.focus();
+}
+function closePatModal() { document.getElementById('pat-modal').style.display = 'none'; }
+
+document.getElementById('gh-settings-btn').addEventListener('click', openPatModal);
+document.getElementById('pat-close').addEventListener('click', closePatModal);
+document.getElementById('pat-modal').addEventListener('click', e => { if (e.target === document.getElementById('pat-modal')) closePatModal(); });
+
+document.getElementById('pat-inp').addEventListener('focus', () => {
+  const inp = document.getElementById('pat-inp');
+  if (inp.dataset.filled) { inp.value = ''; inp.dataset.filled = ''; }
+});
+
+document.getElementById('pat-save').addEventListener('click', () => {
+  const val = document.getElementById('pat-inp').value.trim();
+  if (!val || val.startsWith('•')) { toast('토큰을 입력하세요', 'err', 2000); return; }
+  localStorage.setItem(LS_PAT_KEY, val);
+  document.getElementById('pat-status').style.display = 'block';
+  document.getElementById('gh-commit-btn').title = '밸류에이션 + 다이어리 GitHub에 커밋';
+  toast('토큰 저장됨 ✓', 'ok', 2000);
+  setTimeout(closePatModal, 700);
+});
+
+document.getElementById('pat-clear').addEventListener('click', () => {
+  localStorage.removeItem(LS_PAT_KEY);
+  document.getElementById('pat-inp').value = '';
+  document.getElementById('pat-status').style.display = 'none';
+  toast('토큰 삭제됨', 'ok', 2000);
+});
+
+/* ───────── GitHub 커밋 & 푸시 ───────── */
+async function ghApiGet(pat, path) {
+  const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/${path}?ref=${GH.BRANCH}`, {
+    headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'User-Agent': 'sv-browser' }
+  });
+  if (!r.ok) { if (r.status === 404) return null; throw new Error(`GET ${path}: ${r.status}`); }
+  return r.json();
+}
+
+async function ghApiPut(pat, path, contentStr, sha, message) {
+  // UTF-8 → base64 (한글 포함)
+  const bytes = new TextEncoder().encode(contentStr);
+  let bin = '';
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  const b64 = btoa(bin);
+  const body = { message, content: b64, branch: GH.BRANCH };
+  if (sha) body.sha = sha;
+  const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/${path}`, {
+    method: 'PUT',
+    headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json', 'User-Agent': 'sv-browser' },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) { const e = await r.json().catch(()=>{}); throw new Error(`PUT ${path}: ${r.status} ${e?.message||''}`); }
+  return r.json();
+}
+
+async function ghCommitAll() {
+  const pat = localStorage.getItem(LS_PAT_KEY) || '';
+  if (!pat) { openPatModal(); return; }
+
+  const btn = document.getElementById('gh-commit-btn');
+  btn.disabled = true;
+  btn.textContent = '커밋 중...';
+
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+
+    // ── 1. stocks.json : GitHub 최신 버전 받아서 유저 입력 필드만 덮어쓰기 ──
+    const stocksFile = await ghApiGet(pat, GH.PATH);
+    if (!stocksFile) throw new Error('stocks.json을 GitHub에서 찾을 수 없음');
+    const stocksRaw = new TextDecoder().decode(Uint8Array.from(atob(stocksFile.content.replace(/\n/g,'')), c => c.charCodeAt(0)));
+    const stocksData = JSON.parse(stocksRaw);
+    const userInputs = loadUserInputs();
+    stocksData.stocks = (stocksData.stocks || []).map(s => {
+      const ui = userInputs[s.ticker] || {};
+      const out = { ...s };
+      for (const f of USER_FIELDS) { if (ui[f] !== undefined) out[f] = ui[f]; }
+      return out;
+    });
+    await ghApiPut(pat, GH.PATH, JSON.stringify(stocksData, null, 2), stocksFile.sha,
+      `sync: 밸류에이션 입력값 업데이트 ${today}`);
+
+    // ── 2. diary.json : localStorage 다이어리 전체 커밋 ──
+    const diaryFile = await ghApiGet(pat, 'diary.json');
+    await ghApiPut(pat, 'diary.json', JSON.stringify(diary.data, null, 2),
+      diaryFile ? diaryFile.sha : null,
+      `sync: 다이어리 업데이트 ${today}`);
+
+    toast('✅ GitHub 커밋 완료!', 'ok', 3500);
+  } catch (e) {
+    if (e.message.includes('401') || e.message.includes('403')) {
+      toast('❌ 토큰 오류 — ⚙️ 버튼에서 토큰을 확인하세요', 'err', 5000);
+    } else {
+      toast('❌ 커밋 실패: ' + e.message, 'err', 5000);
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '☁️ 커밋 & 푸시';
+  }
+}
+
+document.getElementById('gh-commit-btn').addEventListener('click', ghCommitAll);
 </script>
 </body>
 </html>
