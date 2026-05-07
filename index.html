@@ -356,9 +356,30 @@
   </select>
   <button id="group-toggle" class="btn" type="button" title="섹터별로 묶어서 보기">섹터별 그룹</button>
   <button id="backup-btn" class="btn" type="button" title="입력 데이터 백업">💾 백업</button>
+  <button id="restore-btn" class="btn" type="button" title="백업 데이터 불러오기">📥 불러오기</button>
   <span class="spacer"></span>
   <span class="status-pill" id="save-status" title="입력 값은 이 브라우저에만 저장됩니다">로컬 저장</span>
   <span class="meta" id="meta"></span>
+</div>
+
+<!-- 불러오기 모달 -->
+<div id="restore-modal" style="display:none; position:fixed; inset:0; z-index:200; background:rgba(15,23,42,0.45); align-items:center; justify-content:center; padding:16px;">
+  <div style="background:#fff; border-radius:12px; padding:24px; max-width:600px; width:100%; max-height:80vh; display:flex; flex-direction:column; gap:14px; box-shadow:0 20px 60px rgba(15,23,42,0.25);">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <strong style="font-size:16px;">📥 데이터 불러오기</strong>
+      <button id="restore-close" style="background:none; border:none; font-size:20px; cursor:pointer; color:#6b7480; padding:0 4px;">✕</button>
+    </div>
+    <p style="margin:0; font-size:14px; color:#6b7480; line-height:1.5;">백업 JSON을 아래에 붙여넣고 불러오기를 누르세요.<br>기존 입력값은 덮어씌워집니다.</p>
+    <textarea id="restore-text"
+      placeholder='{"_backup_date": "...", "data": {...}}'
+      style="flex:1; min-height:240px; font-family:monospace; font-size:12px; padding:12px; border:1px solid #e3e7ee; border-radius:8px; resize:none; background:#f7f9fc; color:#1f2933; line-height:1.5;"
+    ></textarea>
+    <div id="restore-msg" style="font-size:13px; color:#b91c1c; min-height:18px;"></div>
+    <div style="display:flex; gap:8px;">
+      <button id="restore-apply" class="btn" style="flex:1; background:#2563eb; color:#fff; border-color:#2563eb; font-weight:600;">불러오기</button>
+      <button id="restore-close2" class="btn" style="flex:none;">닫기</button>
+    </div>
+  </div>
 </div>
 
 <!-- 백업 모달 -->
@@ -1192,6 +1213,35 @@ async function init() {
         document.getElementById('backup-copy').textContent = '복사됨 ✓';
         setTimeout(() => { document.getElementById('backup-copy').textContent = '전체 복사'; }, 1800);
       });
+    }
+  });
+
+  // 불러오기 버튼
+  const restoreModal = document.getElementById('restore-modal');
+  const restoreMsg   = document.getElementById('restore-msg');
+  document.getElementById('restore-btn').addEventListener('click', () => {
+    document.getElementById('restore-text').value = '';
+    restoreMsg.textContent = '';
+    restoreModal.style.display = 'flex';
+  });
+  const closeRestore = () => { restoreModal.style.display = 'none'; };
+  document.getElementById('restore-close').addEventListener('click', closeRestore);
+  document.getElementById('restore-close2').addEventListener('click', closeRestore);
+  restoreModal.addEventListener('click', e => { if (e.target === restoreModal) closeRestore(); });
+  document.getElementById('restore-apply').addEventListener('click', () => {
+    restoreMsg.textContent = '';
+    try {
+      const raw = document.getElementById('restore-text').value.trim();
+      if (!raw) { restoreMsg.textContent = '내용을 입력해주세요.'; return; }
+      const parsed = JSON.parse(raw);
+      const data = parsed.data || parsed; // data 키 있으면 그 안, 없으면 전체
+      if (typeof data !== 'object' || Array.isArray(data)) throw new Error('형식 오류');
+      localStorage.setItem(LS_KEY, JSON.stringify(data));
+      closeRestore();
+      toast('불러오기 완료! 새로고침합니다...', 'ok', 1500);
+      setTimeout(() => location.reload(), 1600);
+    } catch(e) {
+      restoreMsg.textContent = '❌ JSON 형식 오류: ' + e.message;
     }
   });
 
