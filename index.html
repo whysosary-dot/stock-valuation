@@ -168,18 +168,34 @@
   }
   input.cell-num::placeholder { color: #aab2bd; }
 
-  input.cell-text {
+  /* ── 투자 아이디어 셀 ── */
+  td.idea-cell { min-width: 480px; max-width: 600px; padding: 4px 6px; vertical-align: top; }
+  .idea-wrap {
+    display: flex; align-items: flex-start; gap: 4px; width: 100%;
+  }
+  textarea.cell-text {
     background: transparent; border: 1px solid transparent; color: var(--text);
     padding: 4px 6px; border-radius: 4px; width: 100%;
     font: inherit; font-size: 15px; text-align: left;
-    min-width: 480px;
+    resize: none; overflow: hidden;
+    line-height: 1.4;
+    transition: height 0.12s ease;
+    white-space: pre-wrap; word-break: break-all;
+    box-sizing: border-box;
   }
-  input.cell-text:focus {
+  textarea.cell-text:focus {
     outline: none; border-color: var(--accent); background: white;
     box-shadow: 0 0 0 3px var(--focus);
   }
-  input.cell-text::placeholder { color: #aab2bd; }
-  td.idea-cell { min-width: 480px; max-width: 600px; }
+  textarea.cell-text::placeholder { color: #aab2bd; }
+  .idea-toggle {
+    flex-shrink: 0; background: none; border: none; cursor: pointer;
+    color: var(--text-dim); font-size: 13px; padding: 3px 2px; line-height: 1;
+    opacity: 0.5; transition: opacity 0.15s;
+    margin-top: 2px;
+  }
+  .idea-toggle:hover { opacity: 1; color: var(--accent); }
+  .idea-toggle.expanded { opacity: 0.8; }
   .text-center { text-align: center; }
   td.chart-cell { width: 120px; min-width: 120px; padding: 6px 8px; text-align: center; }
   td.chart-cell svg { display: block; margin: 0 auto; }
@@ -268,6 +284,31 @@
     background: var(--accent-soft); border-color: var(--accent); color: var(--accent);
   }
 
+  /* ── 열 고정 (기업명 · 섹터) ── */
+  th.col-sticky, td.col-sticky {
+    position: sticky;
+    z-index: 1;
+  }
+  thead th.col-sticky {
+    z-index: 4; /* 일반 sticky 헤더(3) + body sticky(1) 위 */
+    background: var(--header);
+  }
+  tbody td.col-sticky {
+    background: var(--panel);
+  }
+  tbody td.col-sticky.readonly-cell {
+    background: var(--readonly);
+  }
+  tbody tr:hover td.col-sticky,
+  tbody tr:hover td.col-sticky.readonly-cell {
+    background: var(--row-hover);
+  }
+  /* 고정 구역 끝 오른쪽 구분선 */
+  th.col-sticky-end, td.col-sticky-end {
+    border-right: 2px solid var(--border-strong) !important;
+    box-shadow: 3px 0 8px -3px rgba(15,23,42,0.10);
+  }
+
   /* 데스크톱 스크롤바 */
   .table-wrap::-webkit-scrollbar { width: 10px; height: 10px; }
   .table-wrap::-webkit-scrollbar-track { background: var(--bg); }
@@ -345,6 +386,8 @@ const SECTOR_UNCATEGORIZED = '未분류';
 const COLS = [
   { key: 'name',            label: '기업명',        type: 'ro-text', sortable: true,  align: 'left' },
   { key: 'sector',          label: '섹터',          type: 'sector',  sortable: true,  align: 'center' },
+  { key: '_upside',         label: '상방 %',        type: 'calc',    sortable: true },
+  { key: '_downside',       label: '하방 %',        type: 'calc',    sortable: true },
   { key: '_chart3y',        label: '3년 차트',       type: 'chart3y', sortable: false, align: 'center' },
   { key: '_chart',          label: '1년 차트',       type: 'chart',   sortable: false, align: 'center' },
   { key: 'price_change_pct', label: '등락률',        type: 'change-pct',  sortable: true,  align: 'center' },
@@ -352,8 +395,6 @@ const COLS = [
   { key: 'market_cap_oku',  label: '현재시총 (억)',  type: 'current', sortable: true },
   { key: 'target_cap_oku',  label: '목표시총 (억)',  type: 'num',     sortable: true },
   { key: 'safety_cap_oku',  label: '안전시총 (억)',  type: 'num',     sortable: true },
-  { key: '_upside',         label: '상방 %',        type: 'calc',    sortable: true },
-  { key: '_downside',       label: '하방 %',        type: 'calc',    sortable: true },
   { key: '_op_sum',         label: '영업이익 합',    type: 'calc',    sortable: false, toggle: 'quarterly' },
   { key: 'q1_op',           label: '1Q 영업이익',    type: 'num',     sortable: true, group: 'q' },
   { key: 'q2_op',           label: '2Q 영업이익',    type: 'num',     sortable: true, group: 'q' },
@@ -561,8 +602,10 @@ function applyQuarterlyClass() {
 function renderHeader() {
   const tr = document.getElementById('header-row');
   tr.innerHTML = '';
-  COLS.forEach(c => {
+  COLS.forEach((c, ci) => {
     const th = document.createElement('th');
+    if (ci === 0) { th.classList.add('col-sticky'); th.dataset.stickyIdx = '0'; }
+    if (ci === 1) { th.classList.add('col-sticky', 'col-sticky-end'); th.dataset.stickyIdx = '1'; }
     th.textContent = c.label;
     if (c.align === 'left') th.classList.add('text-left');
     if (c.group) th.setAttribute('data-col', c.group);
@@ -592,8 +635,10 @@ function renderHeader() {
 function renderRow(s) {
   const tr = document.createElement('tr');
   tr.dataset.id = s._id;
-  COLS.forEach(c => {
+  COLS.forEach((c, ci) => {
     const td = document.createElement('td');
+    if (ci === 0) { td.classList.add('col-sticky'); td.dataset.stickyIdx = '0'; }
+    if (ci === 1) { td.classList.add('col-sticky', 'col-sticky-end'); td.dataset.stickyIdx = '1'; }
     if (c.align === 'left') td.classList.add('text-left');
     if (c.align === 'center') td.classList.add('text-center');
     if (c.group) td.setAttribute('data-col', c.group);
@@ -698,22 +743,72 @@ function renderRow(s) {
       td.appendChild(inp);
     } else if (c.type === 'text') {
       td.classList.add('idea-cell', 'text-left');
-      const inp = document.createElement('input');
-      inp.className = 'cell-text';
-      inp.type = 'text';
-      inp.maxLength = 60;
-      inp.placeholder = '메모...';
-      inp.value = s[c.key] || '';
-      inp.addEventListener('blur', () => {
-        s[c.key] = inp.value.trim();
-        inp.value = s[c.key];
+      const wrap = document.createElement('div');
+      wrap.className = 'idea-wrap';
+
+      const ta = document.createElement('textarea');
+      ta.className = 'cell-text';
+      ta.placeholder = '메모...';
+      ta.value = s[c.key] || '';
+      ta.rows = 1;
+
+      // 높이 자동계산: scrollHeight 기반
+      const COLLAPSED_H = 30;
+      const autoResize = () => {
+        ta.style.height = 'auto';
+        ta.style.height = ta.scrollHeight + 'px';
+      };
+      const collapse = () => {
+        ta.style.height = COLLAPSED_H + 'px';
+        ta.style.overflow = 'hidden';
+      };
+
+      // 초기 상태: 접힘
+      collapse();
+
+      // 펼치기/접기 버튼
+      const btn = document.createElement('button');
+      btn.className = 'idea-toggle';
+      btn.title = '펼치기 / 접기';
+      btn.textContent = '▼';
+      let expanded = false;
+      const setExpanded = (val) => {
+        expanded = val;
+        if (expanded) {
+          btn.textContent = '▲';
+          btn.classList.add('expanded');
+          autoResize();
+          ta.style.overflow = 'hidden';
+        } else {
+          btn.textContent = '▼';
+          btn.classList.remove('expanded');
+          if (document.activeElement !== ta) collapse();
+        }
+      };
+      btn.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // blur 방지
+        setExpanded(!expanded);
+      });
+
+      // 포커스 시 펼침 (입력 중 자동 확장)
+      ta.addEventListener('focus', () => {
+        ta.style.overflow = 'hidden';
+        autoResize();
+      });
+      ta.addEventListener('input', autoResize);
+      ta.addEventListener('blur', () => {
+        s[c.key] = ta.value.trim();
+        ta.value = s[c.key];
         queueSave();
+        if (!expanded) collapse();
       });
-      inp.addEventListener('keydown', e => {
-        if (e.key === 'Enter') inp.blur();
-        if (e.key === 'Escape') { inp.value = s[c.key] || ''; inp.blur(); }
+      ta.addEventListener('keydown', e => {
+        if (e.key === 'Escape') { ta.value = s[c.key] || ''; ta.blur(); }
       });
-      td.appendChild(inp);
+
+      wrap.appendChild(ta);
+      wrap.appendChild(btn);
+      td.appendChild(wrap);
     } else if (c.type === 'calc') {
       let text = '—', cls = 'dim';
       if (c.key === '_upside') {
@@ -852,6 +947,7 @@ function render() {
 
   updateSectorFilterOptions();
   syncToggleButton();
+  requestAnimationFrame(applyStickyOffsets);
 
   const m = document.getElementById('meta');
   const parts = [];
@@ -897,6 +993,14 @@ function syncToggleButton() {
   const btn = document.getElementById('group-toggle');
   if (!btn) return;
   btn.classList.toggle('toggle-on', !!state.groupBySector);
+}
+
+function applyStickyOffsets() {
+  const th0 = document.querySelector('#header-row th[data-sticky-idx="0"]');
+  if (!th0) return;
+  const w0 = th0.offsetWidth;
+  document.querySelectorAll('[data-sticky-idx="0"]').forEach(el => { el.style.left = '0px'; });
+  document.querySelectorAll('[data-sticky-idx="1"]').forEach(el => { el.style.left = w0 + 'px'; });
 }
 
 let saveTimer = null;
