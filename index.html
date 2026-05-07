@@ -319,6 +319,91 @@
     box-shadow: 3px 0 8px -3px rgba(15,23,42,0.10);
   }
 
+  /* ── 페이지 탭 ── */
+  .page-tabs {
+    flex: none; display: flex;
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    padding: 0 16px; gap: 0;
+  }
+  .page-tab-btn {
+    padding: 11px 20px; background: none; border: none;
+    border-bottom: 3px solid transparent; margin-bottom: -1px;
+    cursor: pointer; font-size: 14px; font-weight: 500;
+    color: var(--text-dim); transition: color .15s, border-color .15s;
+    white-space: nowrap;
+  }
+  .page-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .page-tab-btn:hover:not(.active) { color: var(--text); }
+  .page { display: none; flex: 1; min-height: 0; flex-direction: column; }
+  .page.active { display: flex; }
+
+  /* ── Diary ── */
+  .diary-topbar {
+    flex: none; display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--border);
+  }
+  .diary-topbar h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .diary-container { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+  .diary-sidebar {
+    width: 185px; flex: none; border-right: 1px solid var(--border);
+    background: var(--panel); overflow-y: auto; -webkit-overflow-scrolling: touch;
+    display: flex; flex-direction: column; padding: 10px 0;
+  }
+  .diary-shortcut-btn {
+    margin: 0 10px 4px; padding: 9px 12px;
+    background: var(--accent-soft); border: 1px solid var(--border);
+    border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 500;
+    color: var(--accent); text-align: left; transition: background .15s;
+  }
+  .diary-shortcut-btn:hover { background: #dbe8fe; }
+  .diary-month-group { margin-top: 8px; }
+  .diary-month-label {
+    padding: 6px 14px 3px; font-size: 11px; font-weight: 700;
+    color: var(--text-dim); letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .diary-entry-item {
+    padding: 7px 14px; cursor: pointer; font-size: 13px; color: var(--text);
+    border-left: 3px solid transparent; transition: background .1s, border-color .1s;
+  }
+  .diary-entry-item:hover { background: var(--row-hover); }
+  .diary-entry-item.active { background: var(--accent-soft); border-left-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .diary-entry-item .ei-date { font-size: 13px; }
+  .diary-entry-item .ei-preview { color: var(--text-dim); font-size: 12px; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .diary-main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg); }
+  .diary-header {
+    flex: none; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--border);
+  }
+  #diary-date-label { font-size: 16px; font-weight: 700; color: var(--text); flex: 1; }
+  .diary-mode-tabs { display: flex; gap: 3px; background: var(--panel-2); border-radius: 7px; padding: 3px; }
+  .diary-mode-btn {
+    padding: 5px 16px; border: none; border-radius: 5px;
+    background: transparent; cursor: pointer; font-size: 13px; font-weight: 500;
+    color: var(--text-dim); transition: background .15s, color .15s;
+  }
+  .diary-mode-btn.active { background: var(--panel); color: var(--accent); box-shadow: 0 1px 4px rgba(15,23,42,0.10); }
+  .diary-editor-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 14px 16px 8px; }
+  .diary-textarea {
+    flex: 1; padding: 16px 18px; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--panel); color: var(--text); font: inherit; font-size: 15px;
+    line-height: 1.75; resize: none; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .diary-textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus); }
+  .diary-textarea::placeholder { color: #aab2bd; }
+  .diary-footer {
+    flex: none; display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 4px 2px; font-size: 13px;
+  }
+  .diary-save-status { color: var(--text-dim); }
+  .diary-save-status.saved { color: #16a34a; font-weight: 500; }
+  .diary-empty { padding: 16px 14px; color: var(--text-dim); font-size: 13px; text-align: center; }
+  @media (max-width: 640px) {
+    .diary-sidebar { width: 140px; }
+    .diary-textarea { font-size: 15px; }
+    #diary-date-label { font-size: 14px; }
+  }
+
   /* 데스크톱 스크롤바 */
   .table-wrap::-webkit-scrollbar { width: 10px; height: 10px; }
   .table-wrap::-webkit-scrollbar-track { background: var(--bg); }
@@ -348,6 +433,12 @@
 </head>
 <body>
 
+<nav class="page-tabs">
+  <button class="page-tab-btn active" data-page="valuation">📊 Stock Valuation</button>
+  <button class="page-tab-btn" data-page="diary">📔 Diary</button>
+</nav>
+
+<div id="page-valuation" class="page active">
 <div class="topbar">
   <h1><span class="dot"></span> Stock Valuation</h1>
   <input id="filter" class="filter" type="search" placeholder="기업명 검색..." />
@@ -406,6 +497,38 @@
     <tbody id="tbody"></tbody>
   </table>
 </div>
+</div><!-- /page-valuation -->
+
+<div id="page-diary" class="page">
+  <div class="diary-topbar">
+    <h2>📔 투자 일기</h2>
+    <span class="spacer"></span>
+    <button id="diary-backup-btn" class="btn" type="button">💾 백업</button>
+  </div>
+  <div class="diary-container">
+    <div class="diary-sidebar">
+      <button id="diary-today-btn" class="diary-shortcut-btn">✏️ 오늘 일기</button>
+      <button id="diary-weekly-btn" class="diary-shortcut-btn">📅 이번 주 전략</button>
+      <div id="diary-entry-list"></div>
+    </div>
+    <div class="diary-main">
+      <div class="diary-header">
+        <span id="diary-date-label">날짜를 선택하세요</span>
+        <div class="diary-mode-tabs">
+          <button class="diary-mode-btn active" data-mode="daily">일간 일기</button>
+          <button class="diary-mode-btn" data-mode="weekly">주간 전략</button>
+        </div>
+      </div>
+      <div class="diary-editor-wrap">
+        <textarea id="diary-editor" class="diary-textarea" placeholder="오늘의 투자 생각을 기록하세요..."></textarea>
+        <div class="diary-footer">
+          <span id="diary-save-status" class="diary-save-status"></span>
+          <span id="diary-char-count" class="dim"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div><!-- /page-diary -->
 
 <div class="toast" id="toast"></div>
 
@@ -1265,6 +1388,231 @@ async function init() {
 }
 
 init();
+
+/* ═══════════════════════════════════
+   탭 전환
+═══════════════════════════════════ */
+document.querySelectorAll('.page-tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const page = btn.dataset.page;
+    document.querySelectorAll('.page-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
+    if (page === 'diary') renderDiaryList();
+  });
+});
+
+/* ═══════════════════════════════════
+   Diary
+═══════════════════════════════════ */
+const DIARY_KEY = 'sv_diary_v1';
+
+function loadDiary() {
+  try { return JSON.parse(localStorage.getItem(DIARY_KEY) || '{"daily":{},"weekly":{}}'); }
+  catch { return { daily: {}, weekly: {} }; }
+}
+function saveDiaryData(data) { localStorage.setItem(DIARY_KEY, JSON.stringify(data)); }
+
+const diary = {
+  data: loadDiary(),
+  selectedDate: null,   // "2026-05-07"
+  selectedWeek: null,   // "2026-W19"
+  mode: 'daily',
+  saveTimer: null,
+};
+
+function todayDateStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function getWeekKey(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const day = d.getDay() || 7;
+  d.setDate(d.getDate() + 4 - day);
+  const year = d.getFullYear();
+  const jan1 = new Date(year, 0, 1);
+  const week = Math.ceil(((d - jan1) / 86400000 + 1) / 7);
+  return `${year}-W${String(week).padStart(2,'0')}`;
+}
+
+function formatDateFull(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const DAYS = ['일','월','화','수','목','금','토'];
+  const today = todayDateStr();
+  const prefix = dateStr === today ? '오늘 · ' : '';
+  return `${prefix}${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${DAYS[d.getDay()]})`;
+}
+
+function formatWeekFull(weekKey) {
+  const [y, w] = weekKey.split('-W');
+  return `${y}년 ${parseInt(w)}주차 전략`;
+}
+
+function formatDateShort(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const DAYS = ['일','월','화','수','목','금','토'];
+  const today = todayDateStr();
+  if (dateStr === today) return `오늘 (${DAYS[d.getDay()]})`;
+  return `${d.getMonth()+1}/${d.getDate()} (${DAYS[d.getDay()]})`;
+}
+
+function diaryAutoSave() {
+  const editor = document.getElementById('diary-editor');
+  const status = document.getElementById('diary-save-status');
+  const val = editor.value;
+
+  if (diary.mode === 'daily' && diary.selectedDate) {
+    if (val.trim()) diary.data.daily[diary.selectedDate] = val;
+    else delete diary.data.daily[diary.selectedDate];
+  } else if (diary.mode === 'weekly' && diary.selectedWeek) {
+    if (val.trim()) diary.data.weekly[diary.selectedWeek] = val;
+    else delete diary.data.weekly[diary.selectedWeek];
+  }
+  saveDiaryData(diary.data);
+  document.getElementById('diary-char-count').textContent = val ? `${val.length}자` : '';
+  status.textContent = '저장됨 ✓';
+  status.className = 'diary-save-status saved';
+  renderDiaryList();
+}
+
+function setDiaryEditor() {
+  const editor = document.getElementById('diary-editor');
+  const dateLabel = document.getElementById('diary-date-label');
+  const status = document.getElementById('diary-save-status');
+
+  document.querySelectorAll('.diary-mode-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === diary.mode));
+
+  let content = '';
+  if (diary.mode === 'daily' && diary.selectedDate) {
+    dateLabel.textContent = formatDateFull(diary.selectedDate);
+    content = diary.data.daily[diary.selectedDate] || '';
+    editor.placeholder = '오늘의 투자 생각을 기록하세요...';
+  } else if (diary.mode === 'weekly') {
+    if (!diary.selectedWeek && diary.selectedDate)
+      diary.selectedWeek = getWeekKey(diary.selectedDate);
+    dateLabel.textContent = formatWeekFull(diary.selectedWeek);
+    content = diary.data.weekly[diary.selectedWeek] || '';
+    editor.placeholder = '이번 주 투자 전략을 정리하세요...';
+  }
+
+  editor.value = content;
+  document.getElementById('diary-char-count').textContent = content ? `${content.length}자` : '';
+  status.textContent = content ? '저장됨 ✓' : '';
+  status.className = content ? 'diary-save-status saved' : 'diary-save-status';
+  editor.focus();
+}
+
+function renderDiaryList() {
+  const list = document.getElementById('diary-entry-list');
+  list.innerHTML = '';
+
+  const dailyKeys = Object.keys(diary.data.daily).filter(k => diary.data.daily[k]).sort().reverse();
+  const weeklyKeys = Object.keys(diary.data.weekly).filter(k => diary.data.weekly[k]).sort().reverse();
+
+  // 주간 전략 그룹
+  if (weeklyKeys.length) {
+    const grp = document.createElement('div');
+    grp.className = 'diary-month-group';
+    grp.innerHTML = `<div class="diary-month-label">주간 전략</div>`;
+    weeklyKeys.forEach(wk => {
+      const [y, w] = wk.split('-W');
+      const isActive = diary.mode === 'weekly' && diary.selectedWeek === wk;
+      const item = document.createElement('div');
+      item.className = 'diary-entry-item' + (isActive ? ' active' : '');
+      item.innerHTML = `<div class="ei-date">${y}년 ${parseInt(w)}주차</div>
+        <div class="ei-preview">${(diary.data.weekly[wk]||'').split('\n')[0].slice(0,22)}</div>`;
+      item.addEventListener('click', () => {
+        diary.selectedWeek = wk; diary.selectedDate = null; diary.mode = 'weekly';
+        setDiaryEditor(); renderDiaryList();
+      });
+      grp.appendChild(item);
+    });
+    list.appendChild(grp);
+  }
+
+  // 일간 일기 - 월별 그룹
+  const byMonth = {};
+  dailyKeys.forEach(k => { const m = k.slice(0,7); (byMonth[m] = byMonth[m]||[]).push(k); });
+  Object.entries(byMonth).sort(([a],[b]) => b.localeCompare(a)).forEach(([month, keys]) => {
+    const [y, m] = month.split('-');
+    const grp = document.createElement('div');
+    grp.className = 'diary-month-group';
+    grp.innerHTML = `<div class="diary-month-label">${y}년 ${parseInt(m)}월</div>`;
+    keys.forEach(k => {
+      const isActive = diary.mode === 'daily' && diary.selectedDate === k;
+      const item = document.createElement('div');
+      item.className = 'diary-entry-item' + (isActive ? ' active' : '');
+      item.innerHTML = `<div class="ei-date">${formatDateShort(k)}</div>
+        <div class="ei-preview">${(diary.data.daily[k]||'').split('\n')[0].slice(0,22)}</div>`;
+      item.addEventListener('click', () => {
+        diary.selectedDate = k; diary.mode = 'daily';
+        diary.selectedWeek = getWeekKey(k);
+        setDiaryEditor(); renderDiaryList();
+      });
+      grp.appendChild(item);
+    });
+    list.appendChild(grp);
+  });
+
+  if (!dailyKeys.length && !weeklyKeys.length) {
+    list.innerHTML += '<div class="diary-empty">아직 기록이 없어요</div>';
+  }
+}
+
+function initDiary() {
+  // 오늘 일기 버튼
+  document.getElementById('diary-today-btn').addEventListener('click', () => {
+    diary.selectedDate = todayDateStr();
+    diary.selectedWeek = getWeekKey(diary.selectedDate);
+    diary.mode = 'daily';
+    setDiaryEditor(); renderDiaryList();
+  });
+  // 이번 주 전략 버튼
+  document.getElementById('diary-weekly-btn').addEventListener('click', () => {
+    diary.selectedWeek = getWeekKey(todayDateStr());
+    diary.selectedDate = null;
+    diary.mode = 'weekly';
+    setDiaryEditor(); renderDiaryList();
+  });
+  // 모드 탭
+  document.querySelectorAll('.diary-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      diary.mode = btn.dataset.mode;
+      if (diary.mode === 'weekly' && !diary.selectedWeek)
+        diary.selectedWeek = getWeekKey(diary.selectedDate || todayDateStr());
+      setDiaryEditor(); renderDiaryList();
+    });
+  });
+  // 에디터 자동저장
+  const editor = document.getElementById('diary-editor');
+  editor.addEventListener('input', () => {
+    const status = document.getElementById('diary-save-status');
+    status.textContent = '저장 중...'; status.className = 'diary-save-status';
+    clearTimeout(diary.saveTimer);
+    diary.saveTimer = setTimeout(diaryAutoSave, 600);
+  });
+  editor.addEventListener('keydown', e => {
+    if ((e.metaKey||e.ctrlKey) && e.key==='s') { e.preventDefault(); clearTimeout(diary.saveTimer); diaryAutoSave(); }
+  });
+  // 백업 버튼 (기존 백업 모달 재사용)
+  document.getElementById('diary-backup-btn').addEventListener('click', () => {
+    const out = JSON.stringify({
+      _backup_date: new Date().toISOString().slice(0,19).replace('T',' '),
+      _note: 'sv_diary_v1', data: diary.data
+    }, null, 2);
+    document.getElementById('backup-text').value = out;
+    document.getElementById('backup-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('backup-text').select(), 80);
+  });
+  // 초기: 오늘 날짜 선택
+  diary.selectedDate = todayDateStr();
+  diary.selectedWeek = getWeekKey(diary.selectedDate);
+  setDiaryEditor();
+  renderDiaryList();
+}
+
+initDiary();
 </script>
 </body>
 </html>
