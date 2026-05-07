@@ -775,8 +775,8 @@ function renderHeader() {
   tr.innerHTML = '';
   COLS.forEach((c, ci) => {
     const th = document.createElement('th');
-    if (ci === 0) { th.classList.add('col-sticky'); th.dataset.stickyIdx = '0'; }
-    if (ci === 1) { th.classList.add('col-sticky', 'col-sticky-end'); th.dataset.stickyIdx = '1'; }
+    if (ci <= 3) { th.classList.add('col-sticky'); th.dataset.stickyIdx = String(ci); }
+    if (ci === 3) th.classList.add('col-sticky-end');
     th.textContent = c.label;
     if (c.align === 'left') th.classList.add('text-left');
     if (c.group) th.setAttribute('data-col', c.group);
@@ -808,8 +808,8 @@ function renderRow(s) {
   tr.dataset.id = s._id;
   COLS.forEach((c, ci) => {
     const td = document.createElement('td');
-    if (ci === 0) { td.classList.add('col-sticky'); td.dataset.stickyIdx = '0'; }
-    if (ci === 1) { td.classList.add('col-sticky', 'col-sticky-end'); td.dataset.stickyIdx = '1'; }
+    if (ci <= 3) { td.classList.add('col-sticky'); td.dataset.stickyIdx = String(ci); }
+    if (ci === 3) td.classList.add('col-sticky-end');
     if (c.align === 'left') td.classList.add('text-left');
     if (c.align === 'center') td.classList.add('text-center');
     if (c.group) td.setAttribute('data-col', c.group);
@@ -1190,11 +1190,14 @@ function syncToggleButton() {
 }
 
 function applyStickyOffsets() {
-  const th0 = document.querySelector('#header-row th[data-sticky-idx="0"]');
-  if (!th0) return;
-  const w0 = th0.offsetWidth;
-  document.querySelectorAll('[data-sticky-idx="0"]').forEach(el => { el.style.left = '0px'; });
-  document.querySelectorAll('[data-sticky-idx="1"]').forEach(el => { el.style.left = w0 + 'px'; });
+  const ths = [0,1,2,3].map(i => document.querySelector(`#header-row th[data-sticky-idx="${i}"]`));
+  if (!ths[0]) return;
+  let left = 0;
+  ths.forEach((th, i) => {
+    if (!th) return;
+    document.querySelectorAll(`[data-sticky-idx="${i}"]`).forEach(el => { el.style.left = left + 'px'; });
+    left += th.offsetWidth;
+  });
 }
 
 let saveTimer = null;
