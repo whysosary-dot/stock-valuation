@@ -446,7 +446,14 @@
         369000.0,
         368500.0,
         356500.0
-      ]
+      ],
+      "target_cap_oku": 200000,
+      "safety_cap_oku": 100000,
+      "q1_op": null,
+      "q2_op": null,
+      "q3_op": null,
+      "q4_op": 10000,
+      "idea": "SC제형 확대."
     },
     {
       "name": "한화엔진",
@@ -674,8 +681,8 @@
     {
       "name": "네오위즈",
       "ticker": "095660.KQ",
-      "target_cap_oku": null,
-      "safety_cap_oku": null,
+      "target_cap_oku": 7500,
+      "safety_cap_oku": 3500,
       "q1_rev": null,
       "q1_op": null,
       "q2_rev": null,
@@ -683,7 +690,7 @@
       "q3_rev": null,
       "q3_op": null,
       "q4_rev": null,
-      "q4_op": null,
+      "q4_op": 500,
       "market_cap_oku": 4148.4,
       "currency": "KRW",
       "price_native": 21000.0,
@@ -902,13 +909,14 @@
         23700.0,
         22000.0,
         21000.0
-      ]
+      ],
+      "idea": "P의 거짓 출시 전 저가 매수."
     },
     {
       "name": "와이지-원",
       "ticker": "019210.KQ",
-      "target_cap_oku": null,
-      "safety_cap_oku": null,
+      "target_cap_oku": 7500,
+      "safety_cap_oku": 2000,
       "q1_rev": null,
       "q1_op": null,
       "q2_rev": null,
@@ -916,7 +924,7 @@
       "q3_rev": null,
       "q3_op": null,
       "q4_rev": null,
-      "q4_op": null,
+      "q4_op": 500,
       "market_cap_oku": 5428.9,
       "currency": "KRW",
       "price_native": 16170.0,
@@ -1135,13 +1143,14 @@
         16560.0,
         15800.0,
         16170.0
-      ]
+      ],
+      "idea": "일본 공작기계 데이터 턴어라운드 및 텅스텐 쇼티지"
     },
     {
       "name": "DN오토모티브",
       "ticker": "007340.KS",
-      "target_cap_oku": null,
-      "safety_cap_oku": null,
+      "target_cap_oku": 40000,
+      "safety_cap_oku": 30000,
       "q1_rev": null,
       "q1_op": null,
       "q2_rev": null,
@@ -1149,7 +1158,7 @@
       "q3_rev": null,
       "q3_op": null,
       "q4_rev": null,
-      "q4_op": null,
+      "q4_op": 4000,
       "market_cap_oku": 26502.3,
       "currency": "KRW",
       "price_native": 51200.0,
@@ -1368,7 +1377,8 @@
         42950.0,
         48050.0,
         51200.0
-      ]
+      ],
+      "idea": "중복상장 금지로 최소 시총 3조원. 그 이후는 공작기계 업황 꺾이기 전까지 유지.\n\n5/7(목)\n반도체에 대한 확증 편향과 포트의 수비적인 역할로 멘탈을 케어하기 위해 강제적으로 편입. 당장 오늘 잠에 미장 반도체 작살나고 있는데 좋은 선택이었던 것 같다. 물론 이래 놓고 DN오토모티브가 더 빠질  수도 있긴 함."
     },
     {
       "name": "아이센스",
@@ -1814,13 +1824,20 @@
         91100.0,
         87700.0,
         86400.0
-      ]
+      ],
+      "target_cap_oku": 100000,
+      "safety_cap_oku": 100,
+      "q1_op": null,
+      "q2_op": null,
+      "q3_op": null,
+      "q4_op": 20000,
+      "idea": "임상 성공 확률 매우 높음."
     },
     {
       "name": "삼성전자",
       "ticker": "005930.KS",
-      "target_cap_oku": null,
-      "safety_cap_oku": null,
+      "target_cap_oku": 30000000,
+      "safety_cap_oku": 15000000,
       "q1_rev": null,
       "q1_op": null,
       "q2_rev": null,
@@ -1828,7 +1845,7 @@
       "q3_rev": null,
       "q3_op": null,
       "q4_rev": null,
-      "q4_op": null,
+      "q4_op": 3000000,
       "market_cap_oku": 15649781.0,
       "currency": "KRW",
       "price_native": 271500.0,
@@ -2047,13 +2064,14 @@
         219500.0,
         220500.0,
         271500.0
-      ]
+      ],
+      "idea": "하이닉스 대비 디램 / 낸드 캐파 상대 우위."
     },
     {
       "name": "SK하이닉스",
       "ticker": "000660.KS",
-      "target_cap_oku": null,
-      "safety_cap_oku": null,
+      "target_cap_oku": 20000000,
+      "safety_cap_oku": 10000000,
       "q1_rev": null,
       "q1_op": null,
       "q2_rev": null,
@@ -2061,7 +2079,7 @@
       "q3_rev": null,
       "q3_op": null,
       "q4_rev": null,
-      "q4_op": null,
+      "q4_op": 2000000,
       "market_cap_oku": 11721784.4,
       "currency": "KRW",
       "price_native": 1654000.0,
@@ -2280,7 +2298,8 @@
         1222000.0,
         1286000.0,
         1654000.0
-      ]
+      ],
+      "idea": "밸류에이션이 PBR에서 PER이 될 때 초 저평가."
     },
     {
       "name": "HD한국조선해양",
@@ -2503,7 +2522,14 @@
         476000.0,
         461500.0,
         467500.0
-      ]
+      ],
+      "target_cap_oku": 690000,
+      "safety_cap_oku": 260000,
+      "q1_op": null,
+      "q2_op": null,
+      "q3_op": null,
+      "q4_op": 50000,
+      "idea": "조선업 장기 호황."
     },
     {
       "name": "파두",
@@ -2713,7 +2739,14 @@
         68100.0,
         78200.0,
         83800.0
-      ]
+      ],
+      "target_cap_oku": 16000,
+      "safety_cap_oku": 8000,
+      "q1_op": null,
+      "q2_op": null,
+      "q3_op": null,
+      "q4_op": 800,
+      "idea": "샌디스크 직접 수혜주."
     },
     {
       "name": "상신이디피",
@@ -2936,7 +2969,14 @@
         26800.0,
         26600.0,
         27300.0
-      ]
+      ],
+      "target_cap_oku": 6000,
+      "safety_cap_oku": 2000,
+      "q1_op": null,
+      "q2_op": null,
+      "q3_op": null,
+      "q4_op": 300,
+      "idea": "LG엔솔 각형 채택 시 멀티플 / 매출 4배 상향 \n(영업이익 400억원 x POR 20배)\n\n5/7(목)\n알루미늄 원자재 가격 1년 대비 급등 기사 보고 전량 매도함.\n과거 기사를 찾아보니 삼성 SDI에 비용 전가가 어렵고 오히려 CR은 지속적으로 당하고 있다고 함.\n물론 LG엔솔 각형 수주하면 그럼에도 불구하고 주가 두 배는 갈 것 같지만 1분기 실적은 봐야할 것 같다."
     },
     {
       "name": "한솔테크닉스",
@@ -3160,7 +3200,14 @@
         7430.0,
         8130.0,
         9150.0
-      ]
+      ],
+      "target_cap_oku": 9000,
+      "safety_cap_oku": 3000,
+      "q1_op": 140,
+      "q2_op": null,
+      "q3_op": null,
+      "q4_op": 460,
+      "idea": "삼성 파운드리 2나노 비메모리 프로브 카드 수혜\n\n5/7(목)\n윌테크놀러지가 갤럭시S AP 주력 비메모리인 걸 알고 과연 HPC 시장에 단기간 진입할 수 있을까 많은 고민을 했다.\n일단 현재 가장 큰 병목은 AI라고 판단해서 애매한 한솔을 짜르고 전닉을 매수했는다 팔자마자 1시간 뒤에 15%가 올랐다. 너무 아쉽지만 리밸런싱이 옳았는지는 좀 더 장기적으로 평가해야 할 것 같다."
     },
     {
       "name": "신흥에스이씨",
@@ -3615,7 +3662,14 @@
         27000.0,
         25800.0,
         27050.0
-      ]
+      ],
+      "target_cap_oku": null,
+      "safety_cap_oku": null,
+      "q1_op": null,
+      "q2_op": null,
+      "q3_op": null,
+      "q4_op": 200,
+      "idea": "PCB 드릴비트 매출액이 200억원밖에 안 되는데 너무 내러티브 주식 아닌가?"
     },
     {
       "name": "ISC",
