@@ -1643,8 +1643,8 @@ function setDiaryEditor() {
     b.classList.toggle('active', b.dataset.mode === diary.mode));
 
   const isTradeMode = diary.mode === 'trades';
-  editor.style.display = isTradeMode ? 'none' : '';
-  tradeView.style.display = isTradeMode ? '' : 'none';
+  editor.style.display = isTradeMode ? 'none' : 'block';
+  tradeView.style.display = isTradeMode ? 'block' : 'none';
   document.getElementById('diary-char-count').textContent = '';
   status.textContent = '';
 
