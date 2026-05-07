@@ -1678,7 +1678,12 @@ function renderDiaryList() {
   const list = document.getElementById('diary-entry-list');
   list.innerHTML = '';
 
-  const dailyKeys = Object.keys(diary.data.daily).filter(k => diary.data.daily[k]).sort().reverse();
+  // 일기 + 매매 일지 날짜 합집합
+  const tradeKeys = Object.keys(diary.data.trades || {}).filter(k => (diary.data.trades[k]||[]).length > 0);
+  const dailyKeys = [...new Set([
+    ...Object.keys(diary.data.daily).filter(k => diary.data.daily[k]),
+    ...tradeKeys
+  ])].sort().reverse();
   const weeklyKeys = Object.keys(diary.data.weekly).filter(k => diary.data.weekly[k]).sort().reverse();
 
   const q = diary.searchQuery.toLowerCase().trim();
