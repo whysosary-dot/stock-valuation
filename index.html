@@ -191,11 +191,21 @@
   .idea-toggle {
     flex-shrink: 0; background: none; border: none; cursor: pointer;
     color: var(--text-dim); font-size: 13px; padding: 3px 2px; line-height: 1;
-    opacity: 0.5; transition: opacity 0.15s;
+    opacity: 0.5; transition: opacity 0.15s, color 0.15s;
     margin-top: 2px;
   }
   .idea-toggle:hover { opacity: 1; color: var(--accent); }
   .idea-toggle.expanded { opacity: 0.8; }
+  .idea-toggle.has-content { color: var(--accent); opacity: 1; }
+  .line-badge {
+    flex-shrink: 0;
+    font-size: 11px; font-weight: 600;
+    background: var(--accent-soft); color: var(--accent);
+    border-radius: 999px; padding: 2px 7px;
+    margin-top: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+  }
   .text-center { text-align: center; }
   td.chart-cell { width: 120px; min-width: 120px; padding: 6px 8px; text-align: center; }
   td.chart-cell svg { display: block; margin: 0 auto; }
@@ -790,6 +800,24 @@ function renderRow(s) {
         setExpanded(!expanded);
       });
 
+      // 줄수 뱃지 + 버튼 색 업데이트
+      const updateBadge = (text) => {
+        const lines = (text || '').split('\n').filter(l => l.trim() !== '').length;
+        // 버튼 색
+        btn.classList.toggle('has-content', lines > 0);
+        // 기존 뱃지 제거
+        const old = wrap.querySelector('.line-badge');
+        if (old) old.remove();
+        // 2줄 이상이면 뱃지 추가
+        if (lines >= 2) {
+          const badge = document.createElement('span');
+          badge.className = 'line-badge';
+          badge.textContent = lines + '줄';
+          wrap.insertBefore(badge, btn);
+        }
+      };
+      updateBadge(s[c.key]);
+
       // 포커스 시 펼침 (입력 중 자동 확장)
       ta.addEventListener('focus', () => {
         ta.style.overflow = 'hidden';
@@ -799,6 +827,7 @@ function renderRow(s) {
       ta.addEventListener('blur', () => {
         s[c.key] = ta.value.trim();
         ta.value = s[c.key];
+        updateBadge(s[c.key]);
         queueSave();
         if (!expanded) collapse();
       });
