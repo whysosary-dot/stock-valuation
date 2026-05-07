@@ -816,8 +816,6 @@ function renderRow(s) {
           wrap.insertBefore(badge, btn);
         }
       };
-      updateBadge(s[c.key]);
-
       // 포커스 시 펼침 (입력 중 자동 확장)
       ta.addEventListener('focus', () => {
         ta.style.overflow = 'hidden';
@@ -837,6 +835,7 @@ function renderRow(s) {
 
       wrap.appendChild(ta);
       wrap.appendChild(btn);
+      updateBadge(s[c.key]); // btn이 wrap에 추가된 후 호출
       td.appendChild(wrap);
     } else if (c.type === 'calc') {
       let text = '—', cls = 'dim';
