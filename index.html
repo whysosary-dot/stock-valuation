@@ -355,9 +355,28 @@
     <option value="">전체 섹터</option>
   </select>
   <button id="group-toggle" class="btn" type="button" title="섹터별로 묶어서 보기">섹터별 그룹</button>
+  <button id="backup-btn" class="btn" type="button" title="입력 데이터 백업">💾 백업</button>
   <span class="spacer"></span>
   <span class="status-pill" id="save-status" title="입력 값은 이 브라우저에만 저장됩니다">로컬 저장</span>
   <span class="meta" id="meta"></span>
+</div>
+
+<!-- 백업 모달 -->
+<div id="backup-modal" style="display:none; position:fixed; inset:0; z-index:200; background:rgba(15,23,42,0.45); align-items:center; justify-content:center; padding:16px;">
+  <div style="background:#fff; border-radius:12px; padding:24px; max-width:600px; width:100%; max-height:80vh; display:flex; flex-direction:column; gap:14px; box-shadow:0 20px 60px rgba(15,23,42,0.25);">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <strong style="font-size:16px;">📦 데이터 백업</strong>
+      <button id="backup-close" style="background:none; border:none; font-size:20px; cursor:pointer; color:#6b7480; padding:0 4px;">✕</button>
+    </div>
+    <p style="margin:0; font-size:14px; color:#6b7480; line-height:1.5;">아래 내용을 전체 선택 → 복사해서 보관하세요.<br>Claude에게 붙여넣으면 GitHub 동기화로 마이그레이션 할 수 있습니다.</p>
+    <textarea id="backup-text" readonly
+      style="flex:1; min-height:280px; font-family:monospace; font-size:12px; padding:12px; border:1px solid #e3e7ee; border-radius:8px; resize:none; background:#f7f9fc; color:#1f2933; line-height:1.5; overflow:auto;"
+    ></textarea>
+    <div style="display:flex; gap:8px;">
+      <button id="backup-copy" class="btn" style="flex:1; background:#2563eb; color:#fff; border-color:#2563eb; font-weight:600;">전체 복사</button>
+      <button id="backup-close2" class="btn" style="flex:none;">닫기</button>
+    </div>
+  </div>
 </div>
 
 <div class="table-wrap">
@@ -1135,6 +1154,40 @@ async function init() {
     state.groupBySector = !state.groupBySector;
     saveUi();
     render();
+  });
+
+  // 백업 버튼
+  const backupModal = document.getElementById('backup-modal');
+  const backupText  = document.getElementById('backup-text');
+  const openBackup = () => {
+    const inputs = loadUserInputs();
+    const out = {
+      _backup_date: new Date().toISOString().slice(0,19).replace('T',' '),
+      _note: 'sv_user_inputs_v1',
+      data: inputs,
+    };
+    backupText.value = JSON.stringify(out, null, 2);
+    backupModal.style.display = 'flex';
+    setTimeout(() => { backupText.select(); }, 80);
+  };
+  document.getElementById('backup-btn').addEventListener('click', openBackup);
+  const closeBackup = () => { backupModal.style.display = 'none'; };
+  document.getElementById('backup-close').addEventListener('click', closeBackup);
+  document.getElementById('backup-close2').addEventListener('click', closeBackup);
+  backupModal.addEventListener('click', e => { if (e.target === backupModal) closeBackup(); });
+  document.getElementById('backup-copy').addEventListener('click', () => {
+    backupText.select();
+    const ok = document.execCommand('copy');
+    if (ok) {
+      document.getElementById('backup-copy').textContent = '복사됨 ✓';
+      setTimeout(() => { document.getElementById('backup-copy').textContent = '전체 복사'; }, 1800);
+    } else {
+      // execCommand 안 될 때 Clipboard API 시도
+      navigator.clipboard && navigator.clipboard.writeText(backupText.value).then(() => {
+        document.getElementById('backup-copy').textContent = '복사됨 ✓';
+        setTimeout(() => { document.getElementById('backup-copy').textContent = '전체 복사'; }, 1800);
+      });
+    }
   });
 
   // 포커스 복귀 시 자동 새로고침 (스케줄러 반영분 반영)
