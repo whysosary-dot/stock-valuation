@@ -498,6 +498,20 @@
     .table-wrap { scrollbar-width: none; -ms-overflow-style: none; }
   }
 
+  /* ── 즐겨찾기 별 버튼 ── */
+  .star-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 15px; padding: 0 3px 0 0; line-height: 1;
+    color: #d4a017; opacity: 0.2;
+    transition: opacity .15s, color .15s;
+    flex-shrink: 0; vertical-align: middle;
+  }
+  .star-btn.active { opacity: 1; color: #d4a017; }
+  .star-btn:hover { opacity: 0.7; }
+  .name-wrap { display: flex; align-items: center; gap: 1px; }
+  /* 즐겨찾기 필터 버튼 활성 색 */
+  .btn.fav-on { background: #fff8e1; border-color: #d4a017; color: #7a5400; }
+
   /* 좁은 뷰포트에서 topbar 가독성 보존 (컬럼 숨김은 하지 않음) */
   @media (max-width: 640px) {
     .topbar { padding: 11px 13px; gap: 9px; }
@@ -531,6 +545,7 @@
     <option value="">전체 섹터</option>
   </select>
   <button id="group-toggle" class="btn" type="button" title="섹터별로 묶어서 보기">섹터별 그룹</button>
+  <button id="fav-filter-btn" class="btn" type="button" title="즐겨찾기 종목만 보기">⭐ 즐겨찾기</button>
   <button id="backup-btn" class="btn" type="button" title="입력 데이터 백업">💾 백업</button>
   <button id="restore-btn" class="btn" type="button" title="백업 데이터 불러오기">📥 불러오기</button>
   <span class="spacer"></span>
@@ -658,7 +673,7 @@ const LS_PAT_KEY = 'sv_github_pat';
 const USER_FIELDS = [
   'target_cap_oku','safety_cap_oku',
   'q1_op','q2_op','q3_op','q4_op',
-  'idea'
+  'idea','favorite'
 ];
 
 /* 섹터 옵션 (드롭다운). 자유롭게 확장 가능 — 미분류는 빈값 */
@@ -717,6 +732,7 @@ let state = {
   filter: '',
   sectorFilter: '',
   groupBySector: false,
+  favoriteOnly: false,
   sortKey: '_upside',
   sortDir: 'desc',
   showQuarterly: false,  // "영업이익 합" 토글
@@ -730,6 +746,7 @@ function saveUi() {
     showQuarterly: state.showQuarterly,
     sectorFilter: state.sectorFilter,
     groupBySector: state.groupBySector,
+    favoriteOnly: state.favoriteOnly,
   }));
 }
 
@@ -937,16 +954,37 @@ function renderRow(s) {
       const naverUrl = isKorean
         ? `https://m.stock.naver.com/domestic/stock/${tickerCode}/total`
         : `https://m.stock.naver.com/worldstock/stock/${naverCode}/total`;
+
+      // ── 즐겨찾기 별 버튼 ──
+      const wrap = document.createElement('div');
+      wrap.className = 'name-wrap';
+      const star = document.createElement('button');
+      star.className = 'star-btn' + (s.favorite ? ' active' : '');
+      star.textContent = '★';
+      star.title = s.favorite ? '즐겨찾기 해제' : '즐겨찾기 추가';
+      star.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        s.favorite = s.favorite ? false : true;
+        star.className = 'star-btn' + (s.favorite ? ' active' : '');
+        star.title = s.favorite ? '즐겨찾기 해제' : '즐겨찾기 추가';
+        queueSave();
+        // 즐겨찾기 필터가 켜진 상태에서 별 해제 시 목록 재렌더
+        if (state.favoriteOnly) render();
+      });
+      wrap.appendChild(star);
+
       if (tickerCode) {
         const a = document.createElement('a');
         a.href = naverUrl;
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
         a.textContent = s[c.key] || '';
-        td.appendChild(a);
+        wrap.appendChild(a);
       } else {
-        td.textContent = s[c.key] || '';
+        wrap.appendChild(document.createTextNode(s[c.key] || ''));
       }
+      td.appendChild(wrap);
     } else if (c.type === 'chart3y') {
       td.classList.add('chart-cell');
       td.innerHTML = renderSparkline(s.price_history_3y);
@@ -1187,6 +1225,9 @@ function render() {
   tbody.classList.remove('grouped');
 
   let list = [...state.stocks];
+  if (state.favoriteOnly) {
+    list = list.filter(s => s.favorite);
+  }
   if (state.filter) {
     const q = state.filter.toLowerCase();
     list = list.filter(s =>
@@ -1250,6 +1291,7 @@ function render() {
 
   updateSectorFilterOptions();
   syncToggleButton();
+  syncFavButton();
   requestAnimationFrame(applyStickyOffsets);
 
   const m = document.getElementById('meta');
@@ -1262,6 +1304,7 @@ function render() {
   }
   if (state.usdkrw) parts.push(`USDKRW ${Number(state.usdkrw).toFixed(1)}`);
   parts.push(`${state.stocks.length}개 종목`);
+  if (state.favoriteOnly) parts.push(`⭐ 즐겨찾기 ${state.stocks.filter(s=>s.favorite).length}개`);
   if (state.sectorFilter) parts.push(`섹터: ${state.sectorFilter}`);
   m.textContent = parts.join(' · ');
 }
@@ -1301,6 +1344,12 @@ function syncToggleButton() {
   const btn = document.getElementById('group-toggle');
   if (!btn) return;
   btn.classList.toggle('toggle-on', !!state.groupBySector);
+}
+
+function syncFavButton() {
+  const btn = document.getElementById('fav-filter-btn');
+  if (!btn) return;
+  btn.classList.toggle('fav-on', !!state.favoriteOnly);
 }
 
 function applyStickyOffsets() {
@@ -1396,6 +1445,7 @@ async function init() {
   state.showQuarterly = !!ui.showQuarterly;
   state.sectorFilter = ui.sectorFilter || '';
   state.groupBySector = !!ui.groupBySector;
+  state.favoriteOnly = !!ui.favoriteOnly;
 
   try {
     const gh = await fetchFromGitHub();
@@ -1419,6 +1469,12 @@ async function init() {
 
   document.getElementById('group-toggle').addEventListener('click', () => {
     state.groupBySector = !state.groupBySector;
+    saveUi();
+    render();
+  });
+
+  document.getElementById('fav-filter-btn').addEventListener('click', () => {
+    state.favoriteOnly = !state.favoriteOnly;
     saveUi();
     render();
   });
