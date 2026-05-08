@@ -474,8 +474,7 @@
   }
   .trade-del-btn:hover { opacity: 1; color: var(--red); }
   .trade-inp.memo { flex: 1; font-size: 13px; color: var(--text-dim); }
-  /* ── 매매일지 메모 확장 ── */
-  .memo-wrap { display: flex; align-items: flex-start; gap: 4px; flex: 1; }
+  /* ── 매매일지 메모 ── */
   textarea.memo-text {
     flex: 1; font-size: 13px; color: var(--text-dim);
     background: transparent; border: 1px solid transparent;
@@ -490,15 +489,6 @@
     box-shadow: 0 0 0 3px var(--focus); color: var(--text);
   }
   textarea.memo-text::placeholder { color: #aab2bd; }
-  .memo-toggle {
-    flex-shrink: 0; background: none; border: none; cursor: pointer;
-    color: var(--text-dim); font-size: 11px; padding: 3px 2px; line-height: 1;
-    opacity: 0.4; transition: opacity 0.15s, color 0.15s;
-    margin-top: 2px;
-  }
-  .memo-toggle:hover { opacity: 1; color: var(--accent); }
-  .memo-toggle.expanded { opacity: 0.8; }
-  .memo-toggle.has-content { color: var(--accent); opacity: 1; }
   .trade-label { font-size: 13px; color: var(--text-dim); white-space: nowrap; }
   .trade-empty { padding: 40px 20px; text-align: center; color: var(--text-dim); font-size: 14px; }
   .ei-trade-badge {
@@ -1693,27 +1683,12 @@ function renderTradeView(dateStr) {
 
     // Row 3: 메모 (확장 가능한 textarea)
     const row3 = document.createElement('div'); row3.className = 'trade-row3';
-    const memoWrap = document.createElement('div'); memoWrap.className = 'memo-wrap';
     const memoTA = document.createElement('textarea'); memoTA.className = 'memo-text'; memoTA.placeholder = '매매 사유 / 메모'; memoTA.rows = 1; memoTA.value = trade.memo || '';
-    const MEMO_COLLAPSED_H = 28;
     const memoAutoResize = () => { memoTA.style.height = 'auto'; memoTA.style.height = memoTA.scrollHeight + 'px'; };
-    const memoCollapse = () => { memoTA.style.height = MEMO_COLLAPSED_H + 'px'; memoTA.style.overflow = 'hidden'; };
-    memoCollapse();
-    const memoBtn = document.createElement('button'); memoBtn.className = 'memo-toggle'; memoBtn.title = '펼치기 / 접기'; memoBtn.textContent = '▼';
-    let memoExpanded = false;
-    const setMemoExpanded = (val) => {
-      memoExpanded = val;
-      if (memoExpanded) { memoBtn.textContent = '▲'; memoBtn.classList.add('expanded'); memoAutoResize(); memoTA.style.overflow = 'hidden'; }
-      else { memoBtn.textContent = '▼'; memoBtn.classList.remove('expanded'); if (document.activeElement !== memoTA) memoCollapse(); }
-    };
-    const updateMemoBtn = (text) => { memoBtn.classList.toggle('has-content', !!(text && text.trim())); };
-    updateMemoBtn(trade.memo);
-    memoBtn.addEventListener('mousedown', (e) => { e.preventDefault(); setMemoExpanded(!memoExpanded); });
-    memoTA.addEventListener('focus', () => { memoTA.style.overflow = 'hidden'; memoAutoResize(); });
-    memoTA.addEventListener('input', () => { trade.memo = memoTA.value; saveDiaryData(diary.data); memoAutoResize(); updateMemoBtn(memoTA.value); });
-    memoTA.addEventListener('blur', () => { trade.memo = memoTA.value; saveDiaryData(diary.data); updateMemoBtn(memoTA.value); if (!memoExpanded) memoCollapse(); });
-    memoWrap.append(memoTA, memoBtn);
-    row3.append(mkLabel('메모'), memoWrap);
+    memoAutoResize();
+    memoTA.addEventListener('input', () => { trade.memo = memoTA.value; saveDiaryData(diary.data); memoAutoResize(); });
+    memoTA.addEventListener('blur', () => { trade.memo = memoTA.value; saveDiaryData(diary.data); });
+    row3.append(mkLabel('메모'), memoTA);
 
     card.append(row1, row2, row3);
     container.appendChild(card);
