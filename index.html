@@ -1954,18 +1954,10 @@ function initDiary() {
       if (!r.ok) return;
       const ghDiary = await r.json();
       if (!ghDiary || typeof ghDiary !== 'object') return;
-      let changed = false;
-      for (const section of ['daily', 'weekly', 'trades']) {
-        if (!ghDiary[section]) continue;
-        if (!diary.data[section]) diary.data[section] = {};
-        for (const [k, v] of Object.entries(ghDiary[section])) {
-          const localVal = diary.data[section][k];
-          const ghLen = Array.isArray(v) ? v.length : (v||'').length;
-          const localLen = Array.isArray(localVal) ? localVal.length : (localVal||'').length;
-          if (!localVal || ghLen > localLen) { diary.data[section][k] = v; changed = true; }
-        }
-      }
-      if (changed) { saveDiaryData(diary.data); renderAllDiaryFeeds(); }
+      // GitHub이 source of truth — 항상 GitHub 데이터로 덮어씀
+      diary.data = { daily: {}, weekly: {}, trades: {}, ...ghDiary };
+      saveDiaryData(diary.data);
+      renderAllDiaryFeeds();
     } catch (_) {}
   })();
 }
