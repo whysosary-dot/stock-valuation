@@ -1888,6 +1888,13 @@ function initDiary() {
       diary.activeTab = btn.dataset.tab;
       document.querySelectorAll('.dtab').forEach(b => b.classList.toggle('active', b === btn));
       document.querySelectorAll('.diary-feed').forEach(f => f.classList.toggle('active', f.id === `feed-${diary.activeTab}`));
+      // 탭이 보여진 후 모든 textarea 높이 재계산 (display:none 상태에서 scrollHeight=0 문제 해결)
+      requestAnimationFrame(() => {
+        document.querySelectorAll(`#feed-${diary.activeTab} textarea`).forEach(ta => {
+          ta.style.height = 'auto';
+          ta.style.height = ta.scrollHeight + 'px';
+        });
+      });
     });
   });
 
@@ -1900,6 +1907,13 @@ function initDiary() {
   });
 
   renderAllDiaryFeeds();
+  // 초기 active 탭 textarea 높이 재계산
+  requestAnimationFrame(() => {
+    document.querySelectorAll(`#feed-${diary.activeTab} textarea`).forEach(ta => {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+    });
+  });
 
   (async () => {
     try {
