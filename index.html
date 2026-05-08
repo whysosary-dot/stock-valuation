@@ -380,7 +380,7 @@
   .diary-tabs { display: flex; gap: 4px; background: var(--panel-2); border-radius: 10px; padding: 4px; }
   .dtab {
     padding: 8px 18px; border: 1.5px solid transparent; border-radius: 7px;
-    background: transparent; cursor: pointer; font-size: 14px; font-weight: 500;
+    background: transparent; cursor: pointer; font-size: 16px; font-weight: 500;
     color: var(--text-dim); transition: background .15s, color .15s, border-color .15s;
   }
   .dtab:hover { background: var(--panel); color: var(--text); }
@@ -392,7 +392,7 @@
   .dtab[data-tab="trades"].active { background: var(--tab-trades-bg); color: var(--tab-trades-color); border-color: var(--tab-trades-border); box-shadow: 0 1px 4px rgba(217,119,6,.12); }
   /* 카운트 뱃지 */
   .dtab .dtab-cnt {
-    display: inline-block; margin-left: 5px; font-size: 11px; font-weight: 700;
+    display: inline-block; margin-left: 5px; font-size: 13px; font-weight: 700;
     background: rgba(0,0,0,.07); color: inherit;
     border-radius: 999px; padding: 1px 6px; transition: background .15s;
   }
@@ -419,7 +419,7 @@
     padding: 12px 16px; border-bottom: 1px solid var(--border);
     background: var(--panel-2);
   }
-  .dcard-date { font-size: 15px; font-weight: 600; color: var(--text); flex: 1; }
+  .dcard-date { font-size: 17px; font-weight: 600; color: var(--text); flex: 1; }
   /* 피드별 날짜 색상 */
   #feed-daily  .dcard-date { color: #1d4ed8; }
   #feed-weekly .dcard-date { color: #047857; }
@@ -436,10 +436,10 @@
   #feed-daily  .dcard-today { color: #1d4ed8; background: #dbeafe; }
   #feed-weekly .dcard-today { color: #047857; background: #d1fae5; }
   #feed-trades .dcard-today { color: #92400e; background: #fde68a; }
-  .dcard-chars { font-size: 12px; color: var(--text-dim); }
+  .dcard-chars { font-size: 14px; color: var(--text-dim); }
   .dcard-del {
     background: none; border: none; cursor: pointer; color: var(--text-dim);
-    font-size: 15px; padding: 2px 5px; border-radius: 4px; opacity: 0.45;
+    font-size: 17px; padding: 2px 5px; border-radius: 4px; opacity: 0.45;
     transition: opacity .15s, color .15s;
   }
   .dcard-del:hover { opacity: 1; color: var(--red); }
@@ -447,7 +447,7 @@
   textarea.dcard-ta {
     display: block; width: 100%; box-sizing: border-box;
     padding: 16px 18px; background: transparent; border: none;
-    color: var(--text); font: inherit; font-size: 15px; font-weight: 500; line-height: 1.75;
+    color: var(--text); font: inherit; font-size: 17px; font-weight: 500; line-height: 1.75;
     resize: none; overflow: hidden; min-height: 88px;
     white-space: pre-wrap; word-break: break-word;
   }
@@ -457,23 +457,23 @@
   .diary-new-card-btn {
     width: 100%; padding: 15px; border: 2px dashed var(--border);
     border-radius: 12px; background: transparent; cursor: pointer;
-    font-size: 15px; color: var(--text-dim); margin-bottom: 16px;
+    font-size: 17px; color: var(--text-dim); margin-bottom: 16px;
     transition: border-color .15s, color .15s, background .15s;
   }
   .diary-new-card-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
   /* 빈 상태 */
-  .diary-empty-state { text-align: center; padding: 60px 20px; color: var(--text-dim); font-size: 15px; }
+  .diary-empty-state { text-align: center; padding: 60px 20px; color: var(--text-dim); font-size: 17px; }
   .diary-save-badge {
-    display: inline-block; font-size: 11px; color: #16a34a; font-weight: 500;
+    display: inline-block; font-size: 13px; color: #16a34a; font-weight: 500;
     opacity: 0; transition: opacity .3s;
   }
   .diary-save-badge.show { opacity: 1; }
   /* ── 매매일지 카드 내부 ── */
   .dcard--trades .trade-section { padding: 14px 16px 6px; }
   .trade-add-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-  .trade-add-bar strong { font-size: 15px; color: var(--text-dim); }
-  .trade-summary { font-size: 15px; color: var(--text-dim); margin-left: auto; }
-  .trade-profit { font-size: 15px; font-weight: 600; margin-left: 10px; white-space: nowrap; }
+  .trade-add-bar strong { font-size: 17px; color: var(--text-dim); }
+  .trade-summary { font-size: 17px; color: var(--text-dim); margin-left: auto; }
+  .trade-profit { font-size: 17px; font-weight: 600; margin-left: 10px; white-space: nowrap; }
   .trade-profit.gain { color: #16a34a; }
   .trade-profit.loss { color: var(--red); }
   .trade-card {
@@ -486,22 +486,22 @@
   .trade-row3 { display: flex; align-items: flex-start; gap: 8px; padding-top: 2px; }
   .trade-type-sel {
     flex-shrink: 0; padding: 7px 12px; border: none; border-radius: 6px;
-    font-size: 15px; font-weight: 700; cursor: pointer; appearance: none; -webkit-appearance: none;
+    font-size: 17px; font-weight: 700; cursor: pointer; appearance: none; -webkit-appearance: none;
   }
   .trade-type-sel.buy { background: #eaf1fe; color: var(--blue); }
   .trade-type-sel.sell { background: #fde7e7; color: var(--red); }
   .trade-inp {
     background: var(--panel-2); border: 1px solid transparent; color: var(--text);
-    padding: 7px 10px; border-radius: 6px; font: inherit; font-size: 15px;
+    padding: 7px 10px; border-radius: 6px; font: inherit; font-size: 17px;
     transition: border-color .12s, background .12s;
   }
   .trade-inp:focus { outline: none; border-color: var(--accent); background: white; box-shadow: 0 0 0 2px var(--focus); }
   .trade-inp.name { flex: 1; font-weight: 600; }
   .trade-inp.num { width: 100px; text-align: right; font-variant-numeric: tabular-nums; }
-  .trade-total { font-size: 15px; font-weight: 600; color: var(--text-dim); margin-left: auto; white-space: nowrap; }
+  .trade-total { font-size: 17px; font-weight: 600; color: var(--text-dim); margin-left: auto; white-space: nowrap; }
   .trade-del-btn {
     flex-shrink: 0; background: none; border: none; cursor: pointer;
-    color: var(--text-dim); font-size: 17px; padding: 3px 5px; border-radius: 4px;
+    color: var(--text-dim); font-size: 19px; padding: 3px 5px; border-radius: 4px;
     opacity: 0.5; transition: opacity .15s, color .15s;
   }
   .trade-del-btn:hover { opacity: 1; color: var(--red); }
@@ -510,7 +510,7 @@
     flex: 1; color: var(--text);
     background: transparent; border: 1px solid transparent;
     padding: 6px 10px; border-radius: 6px;
-    font: inherit; font-size: 15px; font-weight: 500; resize: none; overflow: hidden;
+    font: inherit; font-size: 17px; font-weight: 500; resize: none; overflow: hidden;
     line-height: 1.65; min-height: 36px;
     transition: height 0.12s ease, border-color .12s;
     white-space: pre-wrap; word-break: break-all;
@@ -521,10 +521,10 @@
     box-shadow: 0 0 0 2px var(--focus); color: var(--text);
   }
   textarea.memo-text::placeholder { color: #aab2bd; }
-  .trade-label { font-size: 15px; color: var(--text-dim); white-space: nowrap; }
-  .trade-empty { padding: 40px 20px; text-align: center; color: var(--text-dim); font-size: 15px; }
+  .trade-label { font-size: 17px; color: var(--text-dim); white-space: nowrap; }
+  .trade-empty { padding: 40px 20px; text-align: center; color: var(--text-dim); font-size: 17px; }
   .ei-trade-badge {
-    font-size: 11px; font-weight: 600; background: #fde7e7; color: var(--red);
+    font-size: 13px; font-weight: 600; background: #fde7e7; color: var(--red);
     border-radius: 4px; padding: 1px 5px; margin-left: 4px; vertical-align: middle;
   }
 
