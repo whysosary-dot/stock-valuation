@@ -2045,9 +2045,19 @@ async function ghCommitAll() {
     if (!stocksFile) throw new Error('stocks.json을 GitHub에서 찾을 수 없음');
     const stocksRaw = new TextDecoder().decode(Uint8Array.from(atob(stocksFile.content.replace(/\n/g,'')), c => c.charCodeAt(0)));
     const stocksData = JSON.parse(stocksRaw);
-    const userInputs = loadUserInputs();
+    // localStorage 대신 현재 메모리 state에서 직접 읽기 (즐겨찾기 등 미저장 변경 포함)
+    const liveInputs = {};
+    for (const s of state.stocks) {
+      if (!s.ticker) continue;
+      const fields = {};
+      for (const f of USER_FIELDS) {
+        const v = s[f];
+        if (v !== null && v !== undefined && v !== '') fields[f] = v;
+      }
+      if (Object.keys(fields).length) liveInputs[s.ticker] = fields;
+    }
     stocksData.stocks = (stocksData.stocks || []).map(s => {
-      const ui = userInputs[s.ticker] || {};
+      const ui = liveInputs[s.ticker] || {};
       const out = { ...s };
       for (const f of USER_FIELDS) { if (ui[f] !== undefined) out[f] = ui[f]; }
       return out;
