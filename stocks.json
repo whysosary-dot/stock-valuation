@@ -4577,7 +4577,8 @@
         208.27,
         198.45,
         216.01
-      ]
+      ],
+      "naver_code": "NVDA.O"
     },
     {
       "name": "인텔",
@@ -4801,7 +4802,8 @@
         99.62,
         109.62
       ],
-      "favorite": false
+      "favorite": false,
+      "naver_code": "INTC.O"
     },
     {
       "name": "AMD",
@@ -5024,7 +5026,8 @@
         347.81,
         360.54,
         408.46
-      ]
+      ],
+      "naver_code": "AMD.O"
     },
     {
       "name": "마이크론",
@@ -5248,7 +5251,8 @@
         542.21,
         707.65
       ],
-      "favorite": false
+      "favorite": false,
+      "naver_code": "MU.O"
     },
     {
       "name": "샌디스크",
@@ -5380,7 +5384,8 @@
         1187,
         1456.52
       ],
-      "favorite": false
+      "favorite": false,
+      "naver_code": "SNDK.O"
     },
     {
       "name": "키옥시아",
@@ -5519,7 +5524,8 @@
         34580,
         36410,
         44490
-      ]
+      ],
+      "naver_code": "285A.T"
     }
   ]
 }
