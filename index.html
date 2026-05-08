@@ -959,7 +959,8 @@ function renderRow(s) {
       const ticker = s.ticker || '';
       const isKorean = ticker.endsWith('.KS') || ticker.endsWith('.KQ');
       const tickerCode = ticker.split('.')[0];
-      const naverCode = s.naver_code || ticker;
+      // naver_code 없으면 tickerCode(suffix 제거) 사용 — 285A.T → 285A, NVDA → NVDA
+      const naverCode = s.naver_code || tickerCode;
       const naverUrl = isKorean
         ? `https://m.stock.naver.com/domestic/stock/${tickerCode}/total`
         : `https://m.stock.naver.com/worldstock/stock/${naverCode}/total`;
