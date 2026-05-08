@@ -52,23 +52,29 @@ python3 server.py
 
 ## 알려진 버그 / 주의사항
 
-### ⚠️ 해외 종목 네이버 링크 — 반드시 `tickerCode` 사용
-기업명 클릭 시 네이버 금융 기업 페이지로 이동하는 링크에서,
-`naverCode`는 반드시 `s.naver_code || tickerCode`를 사용해야 한다.
-`ticker` 원본을 쓰면 `285A.T`, `7203.T` 같은 suffix가 URL에 포함돼
-네이버 메인 페이지로 리다이렉트된다.
+### ⚠️ 해외 종목 네이버 링크 — `naver_code` 반드시 명시
+네이버 금융은 거래소별 접미사가 yfinance 티커와 다르다.
+**해외 종목 추가 시 반드시 stocks.json에 `naver_code`를 함께 추가해야 한다.**
+없으면 메인 페이지로 이동한다.
+
+| 거래소 | yfinance 티커 | naver_code | 예 |
+|--------|-------------|------------|-----|
+| 나스닥 | `NVDA` | `NVDA.O` | `.O` 접미사 |
+| NYSE | `BRK-B` | `BRK/B.N` | `.N` 접미사 (확인 필요) |
+| 일본 TSE | `285A.T` | `285A.T` | `.T` 그대로 |
+| 국내 KS/KQ | `005930.KS` | 불필요 | 코드에서 자동 처리 |
 
 ```javascript
-// ✅ 올바른 코드
-const tickerCode = ticker.split('.')[0];          // "285A.T" → "285A"
-const naverCode = s.naver_code || tickerCode;     // suffix 제거 버전 사용
-
-// ❌ 잘못된 코드 (반복 실수 주의)
-const naverCode = s.naver_code || ticker;         // "285A.T" 그대로 → 메인 페이지로 이동
+// index.html 링크 생성 로직
+const naverCode = s.naver_code || tickerCode;  // naver_code 없으면 suffix 제거 fallback
+const naverUrl = isKorean
+  ? `https://m.stock.naver.com/domestic/stock/${tickerCode}/total`
+  : `https://m.stock.naver.com/worldstock/stock/${naverCode}/total`;
 ```
 
-- 국내(KS/KQ): `https://m.stock.naver.com/domestic/stock/${tickerCode}/total`
-- 해외: `https://m.stock.naver.com/worldstock/stock/${naverCode}/total`
+**새 해외 종목 추가 시 체크리스트:**
+1. stocks.json에 `"naver_code": "TICKER.O"` (나스닥) 또는 `"TICKER.T"` (일본) 추가
+2. `https://m.stock.naver.com/worldstock/stock/{naver_code}/total` 브라우저에서 직접 확인
 
 ## 파일 구조
 ```
