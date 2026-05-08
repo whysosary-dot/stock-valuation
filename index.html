@@ -367,80 +367,79 @@
 
   /* ── Diary ── */
   .diary-topbar {
-    flex: none; display: flex; align-items: center; gap: 10px;
+    flex: none; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
     padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--border);
   }
-  .diary-topbar h2 { margin: 0; font-size: 16px; font-weight: 600; }
-  .diary-container { flex: 1; min-height: 0; display: flex; overflow: hidden; }
-  .diary-sidebar {
-    width: 185px; flex: none; border-right: 1px solid var(--border);
-    background: var(--panel); overflow-y: auto; -webkit-overflow-scrolling: touch;
-    display: flex; flex-direction: column; padding: 10px 0;
-  }
-  .diary-shortcut-btn {
-    margin: 0 10px 4px; padding: 9px 12px;
-    background: var(--accent-soft); border: 1px solid var(--border);
-    border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 500;
-    color: var(--accent); text-align: left; transition: background .15s;
-  }
-  .diary-shortcut-btn:hover { background: #dbe8fe; }
-  .diary-month-group { margin-top: 8px; }
-  .diary-month-label {
-    padding: 6px 14px 3px; font-size: 11px; font-weight: 700;
-    color: var(--text-dim); letter-spacing: 0.05em; text-transform: uppercase;
-  }
-  .diary-entry-item {
-    padding: 7px 14px; cursor: pointer; font-size: 13px; color: var(--text);
-    border-left: 3px solid transparent; transition: background .1s, border-color .1s;
-  }
-  .diary-entry-item:hover { background: var(--row-hover); }
-  .diary-entry-item.active { background: var(--accent-soft); border-left-color: var(--accent); color: var(--accent); font-weight: 600; }
-  .diary-entry-item .ei-date { font-size: 13px; }
-  .diary-entry-item .ei-preview { color: var(--text-dim); font-size: 12px; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .diary-main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg); }
-  .diary-header {
-    flex: none; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-    padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--border);
-  }
-  #diary-date-label { font-size: 16px; font-weight: 700; color: var(--text); flex: 1; }
-  .diary-mode-tabs { display: flex; gap: 3px; background: var(--panel-2); border-radius: 7px; padding: 3px; }
-  .diary-mode-btn {
-    padding: 5px 16px; border: none; border-radius: 5px;
+  /* 탭 버튼 */
+  .diary-tabs { display: flex; gap: 3px; background: var(--panel-2); border-radius: 8px; padding: 3px; }
+  .dtab {
+    padding: 6px 18px; border: none; border-radius: 6px;
     background: transparent; cursor: pointer; font-size: 13px; font-weight: 500;
     color: var(--text-dim); transition: background .15s, color .15s;
   }
-  .diary-mode-btn.active { background: var(--panel); color: var(--accent); box-shadow: 0 1px 4px rgba(15,23,42,0.10); }
-  .diary-editor-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 14px 16px 8px; }
-  .diary-textarea {
-    flex: 1; padding: 16px 18px; border: 1px solid var(--border); border-radius: 10px;
-    background: var(--panel); color: var(--text); font: inherit; font-size: 15px;
-    line-height: 1.75; resize: none; overflow-y: auto; -webkit-overflow-scrolling: touch;
-    transition: border-color .15s, box-shadow .15s;
+  .dtab.active { background: var(--panel); color: var(--accent); box-shadow: 0 1px 4px rgba(15,23,42,0.10); }
+  .dtab .dtab-cnt {
+    display: inline-block; margin-left: 5px; font-size: 11px; font-weight: 700;
+    background: var(--accent-soft); color: var(--accent);
+    border-radius: 999px; padding: 1px 6px;
   }
-  .diary-textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus); }
-  .diary-textarea::placeholder { color: #aab2bd; }
-  .diary-read-view {
-    flex: 1; padding: 16px 18px; border: 1px solid var(--border); border-radius: 10px;
-    background: var(--panel); color: var(--text); font-size: 15px;
-    line-height: 1.75; overflow-y: auto; -webkit-overflow-scrolling: touch;
-    white-space: pre-wrap; word-break: break-word; cursor: text;
-    transition: border-color .15s, box-shadow .15s;
+  .dtab.active .dtab-cnt { background: #c7d9fe; }
+  /* 피드 영역 */
+  .diary-feed-wrap { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+  .diary-feed {
+    display: none; position: absolute; inset: 0;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 18px 20px 40px;
   }
-  .diary-read-view:hover { border-color: var(--accent); }
-  .diary-read-view.empty { color: #aab2bd; font-style: italic; }
-  .diary-footer {
-    flex: none; display: flex; align-items: center; justify-content: space-between;
-    padding: 6px 4px 2px; font-size: 13px;
+  .diary-feed.active { display: block; }
+  /* 카드 */
+  .dcard {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; margin-bottom: 16px;
+    overflow: hidden; transition: box-shadow .15s;
   }
-  .diary-save-status { color: var(--text-dim); }
-  .diary-save-status.saved { color: #16a34a; font-weight: 500; }
-  .diary-empty { padding: 16px 14px; color: var(--text-dim); font-size: 13px; text-align: center; }
-
-  /* ── 매매 일지 ── */
-  .diary-trade-view {
-    flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
-    padding: 14px 16px;
+  .dcard:hover { box-shadow: 0 2px 10px rgba(15,23,42,0.08); }
+  .dcard-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    background: var(--panel-2);
   }
+  .dcard-date { font-size: 13px; font-weight: 700; color: var(--text); flex: 1; }
+  .dcard-today { font-size: 11px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 8px; }
+  .dcard-chars { font-size: 12px; color: var(--text-dim); }
+  .dcard-del {
+    background: none; border: none; cursor: pointer; color: var(--text-dim);
+    font-size: 15px; padding: 2px 5px; border-radius: 4px; opacity: 0.45;
+    transition: opacity .15s, color .15s;
+  }
+  .dcard-del:hover { opacity: 1; color: var(--red); }
+  /* 일기·주간 textarea */
+  textarea.dcard-ta {
+    display: block; width: 100%; box-sizing: border-box;
+    padding: 14px 16px; background: transparent; border: none;
+    color: var(--text); font: inherit; font-size: 14px; line-height: 1.75;
+    resize: none; overflow: hidden; min-height: 80px;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  textarea.dcard-ta:focus { outline: none; background: #fafbff; }
+  textarea.dcard-ta::placeholder { color: #aab2bd; }
+  /* 새 항목 버튼 */
+  .diary-new-card-btn {
+    width: 100%; padding: 14px; border: 2px dashed var(--border);
+    border-radius: 12px; background: transparent; cursor: pointer;
+    font-size: 14px; color: var(--text-dim); margin-bottom: 16px;
+    transition: border-color .15s, color .15s, background .15s;
+  }
+  .diary-new-card-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  /* 빈 상태 */
+  .diary-empty-state { text-align: center; padding: 60px 20px; color: var(--text-dim); font-size: 14px; }
+  .diary-save-badge {
+    display: inline-block; font-size: 11px; color: #16a34a; font-weight: 500;
+    opacity: 0; transition: opacity .3s;
+  }
+  .diary-save-badge.show { opacity: 1; }
+  /* ── 매매일지 카드 내부 ── */
+  .dcard--trades .trade-section { padding: 12px 14px 4px; }
   .trade-add-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
   .trade-add-bar strong { font-size: 14px; color: var(--text-dim); }
   .trade-summary { font-size: 13px; color: var(--text-dim); margin-left: auto; }
@@ -473,7 +472,6 @@
     opacity: 0.5; transition: opacity .15s, color .15s;
   }
   .trade-del-btn:hover { opacity: 1; color: var(--red); }
-  .trade-inp.memo { flex: 1; font-size: 13px; color: var(--text-dim); }
   /* ── 매매일지 메모 ── */
   textarea.memo-text {
     flex: 1; font-size: 13px; color: var(--text-dim);
@@ -494,11 +492,6 @@
   .ei-trade-badge {
     font-size: 11px; font-weight: 600; background: #fde7e7; color: var(--red);
     border-radius: 4px; padding: 1px 5px; margin-left: 4px; vertical-align: middle;
-  }
-  @media (max-width: 640px) {
-    .diary-sidebar { width: 140px; }
-    .diary-textarea { font-size: 15px; }
-    #diary-date-label { font-size: 14px; }
   }
 
   /* 데스크톱 스크롤바 */
@@ -577,37 +570,18 @@
 
 <div id="page-diary" class="page">
   <div class="diary-topbar">
-    <h2>📔 투자 일기</h2>
-    <input id="diary-search" class="filter" type="search" placeholder="일기 검색..." style="width:180px;" />
+    <div class="diary-tabs">
+      <button class="dtab active" data-tab="daily">📔 일기<span class="dtab-cnt" id="cnt-daily">0</span></button>
+      <button class="dtab" data-tab="weekly">📅 주간 전략<span class="dtab-cnt" id="cnt-weekly">0</span></button>
+      <button class="dtab" data-tab="trades">📊 매매일지<span class="dtab-cnt" id="cnt-trades">0</span></button>
+    </div>
     <span class="spacer"></span>
     <button id="diary-backup-btn" class="btn" type="button">💾 백업</button>
   </div>
-  <div class="diary-container">
-    <div class="diary-sidebar">
-      <button id="diary-today-btn" class="diary-shortcut-btn">✏️ 오늘 일기</button>
-      <button id="diary-weekly-btn" class="diary-shortcut-btn">📅 이번 주 전략</button>
-      <button id="diary-trade-btn" class="diary-shortcut-btn">📊 오늘 매매 일지</button>
-      <div id="diary-entry-list"></div>
-    </div>
-    <div class="diary-main">
-      <div class="diary-header">
-        <span id="diary-date-label">날짜를 선택하세요</span>
-        <div class="diary-mode-tabs">
-          <button class="diary-mode-btn active" data-mode="daily">일간 일기</button>
-          <button class="diary-mode-btn" data-mode="weekly">주간 전략</button>
-          <button class="diary-mode-btn" data-mode="trades">매매 일지</button>
-        </div>
-      </div>
-      <div class="diary-editor-wrap">
-        <textarea id="diary-editor" class="diary-textarea" placeholder="오늘의 투자 생각을 기록하세요..."></textarea>
-        <div id="diary-read-view" class="diary-read-view" style="display:none;"></div>
-        <div id="diary-trade-view" class="diary-trade-view" style="display:none;"></div>
-        <div class="diary-footer">
-          <span id="diary-save-status" class="diary-save-status"></span>
-          <span id="diary-char-count" class="dim"></span>
-        </div>
-      </div>
-    </div>
+  <div class="diary-feed-wrap">
+    <div id="feed-daily"  class="diary-feed active"></div>
+    <div id="feed-weekly" class="diary-feed"></div>
+    <div id="feed-trades" class="diary-feed"></div>
   </div>
 </div><!-- /page-diary -->
 
@@ -1557,11 +1531,8 @@ function saveDiaryData(data) { localStorage.setItem(DIARY_KEY, JSON.stringify(da
 
 const diary = {
   data: loadDiary(),
-  selectedDate: null,   // "2026-05-07"
-  selectedWeek: null,   // "2026-W19"
-  mode: 'daily',
-  saveTimer: null,
-  searchQuery: '',
+  activeTab: 'daily',
+  saveTimers: {},
 };
 
 function todayDateStr() {
@@ -1579,410 +1550,345 @@ function getWeekKey(dateStr) {
   return `${year}-W${String(week).padStart(2,'0')}`;
 }
 
-function formatDateFull(dateStr) {
+function formatDateHeader(dateStr) {
   const d = new Date(dateStr + 'T12:00:00');
   const DAYS = ['일','월','화','수','목','금','토'];
-  const today = todayDateStr();
-  const prefix = dateStr === today ? '오늘 · ' : '';
-  return `${prefix}${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${DAYS[d.getDay()]})`;
+  return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${DAYS[d.getDay()]})`;
 }
 
-function formatWeekFull(weekKey) {
+function formatWeekHeader(weekKey) {
   const [y, w] = weekKey.split('-W');
-  return `${y}년 ${parseInt(w)}주차 전략`;
+  const wNum = parseInt(w);
+  const jan4 = new Date(parseInt(y), 0, 4);
+  const monday = new Date(jan4.getTime() - ((jan4.getDay()||7) - 1) * 86400000 + (wNum - 1) * 7 * 86400000);
+  const sunday = new Date(monday.getTime() + 6 * 86400000);
+  const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+  return `${y}년 ${wNum}주차 (${fmt(monday)} ~ ${fmt(sunday)})`;
 }
 
-function formatDateShort(dateStr) {
-  const d = new Date(dateStr + 'T12:00:00');
-  const DAYS = ['일','월','화','수','목','금','토'];
+/* ── textarea 자동 높이 ── */
+function taAutoResize(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+
+/* ── 탭 카운트 업데이트 ── */
+function updateTabCounts() {
+  const d = diary.data;
+  document.getElementById('cnt-daily').textContent =
+    Object.keys(d.daily || {}).filter(k => d.daily[k]).length;
+  document.getElementById('cnt-weekly').textContent =
+    Object.keys(d.weekly || {}).filter(k => d.weekly[k]).length;
+  document.getElementById('cnt-trades').textContent =
+    Object.keys(d.trades || {}).filter(k => (d.trades[k]||[]).length > 0).length;
+}
+
+/* ── 저장 (디바운스) ── */
+function diarySave(key, section, value, badgeEl) {
+  clearTimeout(diary.saveTimers[key]);
+  diary.saveTimers[key] = setTimeout(() => {
+    if (value.trim()) diary.data[section][key] = value;
+    else delete diary.data[section][key];
+    saveDiaryData(diary.data);
+    updateTabCounts();
+    if (badgeEl) {
+      badgeEl.classList.add('show');
+      setTimeout(() => badgeEl.classList.remove('show'), 1500);
+    }
+  }, 500);
+}
+
+/* ── 일기 카드 생성 ── */
+function makeDailyCard(dateStr, today) {
+  const card = document.createElement('div');
+  card.className = 'dcard'; card.dataset.key = dateStr;
+
+  const header = document.createElement('div'); header.className = 'dcard-header';
+  const dateLabel = document.createElement('span'); dateLabel.className = 'dcard-date';
+  dateLabel.textContent = formatDateHeader(dateStr);
+  header.appendChild(dateLabel);
+
+  if (dateStr === today) {
+    const b = document.createElement('span'); b.className = 'dcard-today'; b.textContent = '오늘';
+    header.appendChild(b);
+  }
+  const saveBadge = document.createElement('span'); saveBadge.className = 'diary-save-badge';
+  saveBadge.textContent = '저장됨 ✓'; header.appendChild(saveBadge);
+
+  const delBtn = document.createElement('button'); delBtn.className = 'dcard-del'; delBtn.title = '삭제'; delBtn.textContent = '×';
+  delBtn.addEventListener('click', () => {
+    if (!confirm('이 일기를 삭제할까요?')) return;
+    delete diary.data.daily[dateStr]; saveDiaryData(diary.data); updateTabCounts(); renderFeedDaily();
+  });
+  header.appendChild(delBtn);
+  card.appendChild(header);
+
+  const ta = document.createElement('textarea'); ta.className = 'dcard-ta';
+  ta.placeholder = '오늘의 투자 생각을 기록하세요...';
+  ta.value = diary.data.daily[dateStr] || ''; ta.rows = 1;
+  requestAnimationFrame(() => taAutoResize(ta));
+  ta.addEventListener('input', () => { taAutoResize(ta); diarySave(dateStr, 'daily', ta.value, saveBadge); });
+  card.appendChild(ta);
+  return card;
+}
+
+/* ── 일기 피드 렌더 ── */
+function renderFeedDaily() {
+  const feed = document.getElementById('feed-daily'); feed.innerHTML = '';
   const today = todayDateStr();
-  if (dateStr === today) return `오늘 (${DAYS[d.getDay()]})`;
-  return `${d.getMonth()+1}/${d.getDate()} (${DAYS[d.getDay()]})`;
+
+  const newBtn = document.createElement('button'); newBtn.className = 'diary-new-card-btn'; newBtn.textContent = '+ 오늘 일기 작성';
+  newBtn.addEventListener('click', () => {
+    const ex = feed.querySelector(`[data-key="${today}"] textarea`);
+    if (ex) { ex.focus(); return; }
+    if (!diary.data.daily) diary.data.daily = {};
+    if (diary.data.daily[today] === undefined) diary.data.daily[today] = '';
+    renderFeedDaily();
+    setTimeout(() => { const ta = feed.querySelector(`[data-key="${today}"] textarea`); if (ta) ta.focus(); }, 50);
+  });
+  feed.appendChild(newBtn);
+
+  const keys = Object.keys(diary.data.daily || {}).sort().reverse();
+
+  if (!keys.length) {
+    const e = document.createElement('div'); e.className = 'diary-empty-state';
+    e.textContent = '아직 기록이 없어요. 위 버튼으로 오늘 일기를 써보세요!';
+    feed.appendChild(e); return;
+  }
+  keys.forEach(k => feed.appendChild(makeDailyCard(k, today)));
 }
 
-/* ── 매매 일지 렌더 ── */
-function renderTradeView(dateStr) {
-  const container = document.getElementById('diary-trade-view');
+/* ── 주간 전략 피드 렌더 ── */
+function renderFeedWeekly() {
+  const feed = document.getElementById('feed-weekly'); feed.innerHTML = '';
+  const thisWeek = getWeekKey(todayDateStr());
+
+  const newBtn = document.createElement('button'); newBtn.className = 'diary-new-card-btn'; newBtn.textContent = '+ 이번 주 전략 작성';
+  newBtn.addEventListener('click', () => {
+    const ex = feed.querySelector(`[data-key="${thisWeek}"] textarea`);
+    if (ex) { ex.focus(); return; }
+    if (!diary.data.weekly) diary.data.weekly = {};
+    if (diary.data.weekly[thisWeek] === undefined) diary.data.weekly[thisWeek] = '';
+    renderFeedWeekly();
+    setTimeout(() => { const ta = feed.querySelector(`[data-key="${thisWeek}"] textarea`); if (ta) ta.focus(); }, 50);
+  });
+  feed.appendChild(newBtn);
+
+  const keys = Object.keys(diary.data.weekly || {}).sort().reverse();
+
+  if (!keys.length) {
+    const e = document.createElement('div'); e.className = 'diary-empty-state';
+    e.textContent = '아직 주간 전략이 없어요. 위 버튼으로 이번 주 전략을 정리해보세요!';
+    feed.appendChild(e); return;
+  }
+
+  keys.forEach(k => {
+    const card = document.createElement('div'); card.className = 'dcard'; card.dataset.key = k;
+    const header = document.createElement('div'); header.className = 'dcard-header';
+    const dateLabel = document.createElement('span'); dateLabel.className = 'dcard-date';
+    dateLabel.textContent = formatWeekHeader(k); header.appendChild(dateLabel);
+    if (k === thisWeek) {
+      const b = document.createElement('span'); b.className = 'dcard-today'; b.textContent = '이번 주'; header.appendChild(b);
+    }
+    const saveBadge = document.createElement('span'); saveBadge.className = 'diary-save-badge';
+    saveBadge.textContent = '저장됨 ✓'; header.appendChild(saveBadge);
+    const delBtn = document.createElement('button'); delBtn.className = 'dcard-del'; delBtn.title = '삭제'; delBtn.textContent = '×';
+    delBtn.addEventListener('click', () => {
+      if (!confirm('이 주간 전략을 삭제할까요?')) return;
+      delete diary.data.weekly[k]; saveDiaryData(diary.data); updateTabCounts(); renderFeedWeekly();
+    });
+    header.appendChild(delBtn); card.appendChild(header);
+
+    const ta = document.createElement('textarea'); ta.className = 'dcard-ta';
+    ta.placeholder = '이번 주 투자 전략을 정리하세요...';
+    ta.value = diary.data.weekly[k] || ''; ta.rows = 1;
+    requestAnimationFrame(() => taAutoResize(ta));
+    ta.addEventListener('input', () => { taAutoResize(ta); diarySave(k, 'weekly', ta.value, saveBadge); });
+    card.appendChild(ta); feed.appendChild(card);
+  });
+}
+
+/* ── 매매 섹션 내부 렌더 ── */
+function renderTradeSection(dateStr, container) {
   container.innerHTML = '';
-  if (!dateStr) { container.innerHTML = '<div class="trade-empty">날짜를 선택하세요</div>'; return; }
   if (!diary.data.trades) diary.data.trades = {};
   const trades = diary.data.trades[dateStr] || [];
 
-  // 상단 바
-  const bar = document.createElement('div');
-  bar.className = 'trade-add-bar';
-  const totalAmt = trades.reduce((s, t) => {
-    const v = (parseFloat(String(t.qty||'').replace(/,/g,''))||0) * (parseFloat(String(t.price||'').replace(/,/g,''))||0);
-    return s + (t.type === '매수' ? v : -v);
-  }, 0);
-  bar.innerHTML = `<strong>${trades.length}건</strong>${trades.length ? `<span class="trade-summary">순매수 ${totalAmt >= 0 ? '+' : ''}${Math.round(totalAmt).toLocaleString('ko-KR')}원</span>` : ''}`;
-  const addBtn = document.createElement('button');
-  addBtn.className = 'btn';
-  addBtn.style.cssText = 'background:var(--accent);color:#fff;border-color:var(--accent);font-size:13px;padding:6px 14px;margin-left:auto;';
-  addBtn.textContent = '+ 거래 추가';
-  addBtn.addEventListener('click', () => {
-    if (!diary.data.trades[dateStr]) diary.data.trades[dateStr] = [];
-    diary.data.trades[dateStr].push({ id: uid(), type: '매수', name: '', qty: '', price: '', memo: '' });
-    saveDiaryData(diary.data);
-    renderTradeView(dateStr);
-    renderDiaryList();
-  });
-  bar.appendChild(addBtn);
-  container.appendChild(bar);
-
-  if (!trades.length) {
-    const empty = document.createElement('div');
-    empty.className = 'trade-empty';
-    empty.innerHTML = '거래 내역이 없습니다.<br>+ 거래 추가를 눌러 기록하세요.';
-    container.appendChild(empty);
-    return;
-  }
-
-  trades.forEach((trade) => {
-    const card = document.createElement('div');
-    card.className = 'trade-card';
-
-    // Row 1: 매수/매도 | 종목명 | 삭제
-    const row1 = document.createElement('div'); row1.className = 'trade-row1';
-    const typeSel = document.createElement('select'); typeSel.className = `trade-type-sel ${trade.type === '매수' ? 'buy' : 'sell'}`;
-    ['매수','매도'].forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; if (t === trade.type) o.selected = true; typeSel.appendChild(o); });
-    typeSel.addEventListener('change', () => { trade.type = typeSel.value; typeSel.className = `trade-type-sel ${trade.type === '매수' ? 'buy' : 'sell'}`; saveDiaryData(diary.data); renderDiaryList(); });
-
-    const nameInp = document.createElement('input'); nameInp.className = 'trade-inp name'; nameInp.placeholder = '종목명'; nameInp.value = trade.name || '';
-    // 자동완성 후보 (stocks 목록)
-    nameInp.setAttribute('list', 'stock-names-list');
-    nameInp.addEventListener('input', () => { trade.name = nameInp.value; saveDiaryData(diary.data); renderDiaryList(); });
-
-    const delBtn = document.createElement('button'); delBtn.className = 'trade-del-btn'; delBtn.textContent = '×'; delBtn.title = '삭제';
-    delBtn.addEventListener('click', () => {
-      diary.data.trades[dateStr] = diary.data.trades[dateStr].filter(t => t.id !== trade.id);
-      if (!diary.data.trades[dateStr].length) delete diary.data.trades[dateStr];
-      saveDiaryData(diary.data); renderTradeView(dateStr); renderDiaryList();
+  const addBar = document.createElement('div'); addBar.className = 'trade-add-bar';
+  const summary = document.createElement('span'); summary.className = 'trade-summary';
+  const calcSummary = () => {
+    let buy = 0, sell = 0;
+    trades.forEach(t => {
+      const v = (Number(String(t.qty||'').replace(/,/g,'')) || 0) * (Number(String(t.price||'').replace(/,/g,'')) || 0);
+      if (t.type === '매수') buy += v; else sell += v;
     });
-    row1.append(typeSel, nameInp, delBtn);
+    const parts = [];
+    if (buy) parts.push(`매수 ${buy.toLocaleString('ko-KR')}원`);
+    if (sell) parts.push(`매도 ${sell.toLocaleString('ko-KR')}원`);
+    summary.textContent = parts.join(' · ');
+  };
+  calcSummary();
+  addBar.appendChild(summary); container.appendChild(addBar);
 
-    // Row 2: 수량 × 가격 = 합계
-    const row2 = document.createElement('div'); row2.className = 'trade-row2';
-    const qtyInp = document.createElement('input'); qtyInp.className = 'trade-inp num'; qtyInp.placeholder = '수량'; qtyInp.value = trade.qty || ''; qtyInp.inputMode = 'decimal';
-    const priceInp = document.createElement('input'); priceInp.className = 'trade-inp num'; priceInp.placeholder = '가격'; priceInp.value = trade.price ? Number(trade.price).toLocaleString('ko-KR') : ''; priceInp.inputMode = 'decimal';
-    const totalEl = document.createElement('span'); totalEl.className = 'trade-total';
-    const calcTotal = () => {
-      const q = parseFloat(String(qtyInp.value).replace(/,/g,'')) || 0;
-      const p = parseFloat(String(priceInp.value).replace(/,/g,'')) || 0;
-      totalEl.textContent = (q && p) ? `= ${Math.round(q*p).toLocaleString('ko-KR')}원` : '';
-    };
-    calcTotal();
-    qtyInp.addEventListener('focus', () => { qtyInp.value = String(trade.qty || '').replace(/,/g,''); });
-    qtyInp.addEventListener('blur', () => { trade.qty = qtyInp.value; qtyInp.value = trade.qty ? Number(trade.qty).toLocaleString('ko-KR') : ''; saveDiaryData(diary.data); calcTotal(); });
-    qtyInp.addEventListener('input', calcTotal);
-    priceInp.addEventListener('focus', () => { priceInp.value = String(trade.price || '').replace(/,/g,''); });
-    priceInp.addEventListener('blur', () => { trade.price = priceInp.value; priceInp.value = trade.price ? Number(trade.price).toLocaleString('ko-KR') : ''; saveDiaryData(diary.data); calcTotal(); });
-    priceInp.addEventListener('input', calcTotal);
-    const mkLabel = t => { const s = document.createElement('span'); s.className = 'trade-label'; s.textContent = t; return s; };
-    row2.append(mkLabel('수량'), qtyInp, mkLabel('주  ×  가격'), priceInp, mkLabel('원'), totalEl);
-
-    // Row 3: 메모 (확장 가능한 textarea)
-    const row3 = document.createElement('div'); row3.className = 'trade-row3';
-    const memoTA = document.createElement('textarea'); memoTA.className = 'memo-text'; memoTA.placeholder = '매매 사유 / 메모'; memoTA.rows = 1; memoTA.value = trade.memo || '';
-    const memoAutoResize = () => { memoTA.style.height = 'auto'; memoTA.style.height = memoTA.scrollHeight + 'px'; };
-    memoAutoResize();
-    memoTA.addEventListener('input', () => { trade.memo = memoTA.value; saveDiaryData(diary.data); memoAutoResize(); });
-    memoTA.addEventListener('blur', () => { trade.memo = memoTA.value; saveDiaryData(diary.data); });
-    row3.append(mkLabel('메모'), memoTA);
-
-    card.append(row1, row2, row3);
-    container.appendChild(card);
-  });
-
-  // 종목명 datalist
   let dl = document.getElementById('stock-names-list');
   if (!dl) { dl = document.createElement('datalist'); dl.id = 'stock-names-list'; document.body.appendChild(dl); }
   dl.innerHTML = '';
   (state.stocks || []).forEach(s => { const o = document.createElement('option'); o.value = s.name || ''; dl.appendChild(o); });
-}
 
-function diaryAutoSave() {
-  const editor = document.getElementById('diary-editor');
-  const status = document.getElementById('diary-save-status');
-  const val = editor.value;
-
-  if (diary.mode === 'daily' && diary.selectedDate) {
-    if (val.trim()) diary.data.daily[diary.selectedDate] = val;
-    else delete diary.data.daily[diary.selectedDate];
-  } else if (diary.mode === 'weekly' && diary.selectedWeek) {
-    if (val.trim()) diary.data.weekly[diary.selectedWeek] = val;
-    else delete diary.data.weekly[diary.selectedWeek];
-  }
-  saveDiaryData(diary.data);
-  document.getElementById('diary-char-count').textContent = val ? `${val.length}자` : '';
-  status.textContent = '저장됨 ✓';
-  status.className = 'diary-save-status saved';
-  renderDiaryList();
-}
-
-function switchToReadMode() {
-  const editor = document.getElementById('diary-editor');
-  const readView = document.getElementById('diary-read-view');
-  if (editor.style.display === 'none') return; // 이미 읽기 모드
-  const val = editor.value;
-  if (val.trim()) {
-    readView.textContent = val;
-    readView.classList.remove('empty');
-  } else {
-    readView.textContent = editor.placeholder || '클릭하여 편집...';
-    readView.classList.add('empty');
-  }
-  editor.style.display = 'none';
-  readView.style.display = 'block';
-}
-
-function switchToEditMode() {
-  const editor = document.getElementById('diary-editor');
-  const readView = document.getElementById('diary-read-view');
-  readView.style.display = 'none';
-  editor.style.display = 'block';
-  editor.focus();
-}
-
-function setDiaryEditor() {
-  const editor = document.getElementById('diary-editor');
-  const tradeView = document.getElementById('diary-trade-view');
-  const readView = document.getElementById('diary-read-view');
-  const dateLabel = document.getElementById('diary-date-label');
-  const status = document.getElementById('diary-save-status');
-
-  document.querySelectorAll('.diary-mode-btn').forEach(b =>
-    b.classList.toggle('active', b.dataset.mode === diary.mode));
-
-  const isTradeMode = diary.mode === 'trades';
-  // 읽기 모드 초기화 (모드 전환 시 항상 편집 모드로)
-  readView.style.display = 'none';
-  editor.style.display = isTradeMode ? 'none' : 'block';
-  tradeView.style.display = isTradeMode ? 'block' : 'none';
-  document.getElementById('diary-char-count').textContent = '';
-  status.textContent = '';
-
-  if (isTradeMode) {
-    dateLabel.textContent = diary.selectedDate ? formatDateFull(diary.selectedDate) : '날짜를 선택하세요';
-    renderTradeView(diary.selectedDate);
-    return;
+  if (!trades.length) {
+    const empty = document.createElement('div'); empty.className = 'trade-empty'; empty.textContent = '거래 내역이 없어요';
+    container.appendChild(empty); return;
   }
 
-  let content = '';
-  if (diary.mode === 'daily' && diary.selectedDate) {
-    dateLabel.textContent = formatDateFull(diary.selectedDate);
-    content = diary.data.daily[diary.selectedDate] || '';
-    editor.placeholder = '오늘의 투자 생각을 기록하세요...';
-  } else if (diary.mode === 'weekly') {
-    if (!diary.selectedWeek && diary.selectedDate)
-      diary.selectedWeek = getWeekKey(diary.selectedDate);
-    dateLabel.textContent = formatWeekFull(diary.selectedWeek);
-    content = diary.data.weekly[diary.selectedWeek] || '';
-    editor.placeholder = '이번 주 투자 전략을 정리하세요...';
-  }
+  const mkLabel = t => { const s = document.createElement('span'); s.className = 'trade-label'; s.textContent = t; return s; };
 
-  editor.value = content;
-  document.getElementById('diary-char-count').textContent = content ? `${content.length}자` : '';
-  status.textContent = content ? '저장됨 ✓' : '';
-  status.className = content ? 'diary-save-status saved' : 'diary-save-status';
-  editor.focus();
-}
+  trades.forEach(trade => {
+    const card = document.createElement('div'); card.className = 'trade-card';
+    const row1 = document.createElement('div'); row1.className = 'trade-row1';
+    const row2 = document.createElement('div'); row2.className = 'trade-row2';
+    const row3 = document.createElement('div'); row3.className = 'trade-row3';
 
-function renderDiaryList() {
-  const list = document.getElementById('diary-entry-list');
-  list.innerHTML = '';
+    const typeSel = document.createElement('select'); typeSel.className = `trade-type-sel ${trade.type==='매수'?'buy':'sell'}`;
+    ['매수','매도'].forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; if (v===trade.type) o.selected=true; typeSel.appendChild(o); });
+    typeSel.addEventListener('change', () => { trade.type=typeSel.value; typeSel.className=`trade-type-sel ${trade.type==='매수'?'buy':'sell'}`; saveDiaryData(diary.data); });
 
-  // 일기 + 매매 일지 날짜 합집합
-  const tradeKeys = Object.keys(diary.data.trades || {}).filter(k => (diary.data.trades[k]||[]).length > 0);
-  const dailyKeys = [...new Set([
-    ...Object.keys(diary.data.daily).filter(k => diary.data.daily[k]),
-    ...tradeKeys
-  ])].sort().reverse();
-  const weeklyKeys = Object.keys(diary.data.weekly).filter(k => diary.data.weekly[k]).sort().reverse();
+    const nameInp = document.createElement('input'); nameInp.className = 'trade-inp name'; nameInp.placeholder = '종목명'; nameInp.value = trade.name||''; nameInp.setAttribute('list','stock-names-list');
+    nameInp.addEventListener('input', () => { trade.name=nameInp.value; saveDiaryData(diary.data); });
 
-  const q = diary.searchQuery.toLowerCase().trim();
-
-  // 검색 필터
-  const filteredDaily = q
-    ? dailyKeys.filter(k => (diary.data.daily[k]||'').toLowerCase().includes(q))
-    : dailyKeys;
-  const filteredWeekly = q
-    ? weeklyKeys.filter(k => (diary.data.weekly[k]||'').toLowerCase().includes(q))
-    : weeklyKeys;
-
-  if (q) {
-    const total = filteredDaily.length + filteredWeekly.length;
-    const info = document.createElement('div');
-    info.style.cssText = 'padding:8px 14px;font-size:12px;color:var(--accent);font-weight:600;';
-    info.textContent = total ? `"${q}" ${total}건` : `"${q}" 결과 없음`;
-    list.appendChild(info);
-  }
-
-  // 주간 전략 그룹
-  if (filteredWeekly.length) {
-    const grp = document.createElement('div');
-    grp.className = 'diary-month-group';
-    grp.innerHTML = `<div class="diary-month-label">주간 전략</div>`;
-    filteredWeekly.forEach(wk => {
-      const [y, w] = wk.split('-W');
-      const isActive = diary.mode === 'weekly' && diary.selectedWeek === wk;
-      const item = document.createElement('div');
-      item.className = 'diary-entry-item' + (isActive ? ' active' : '');
-      item.innerHTML = `<div class="ei-date">${y}년 ${parseInt(w)}주차</div>
-        <div class="ei-preview">${(diary.data.weekly[wk]||'').split('\n')[0].slice(0,22)}</div>`;
-      item.addEventListener('click', () => {
-        diary.selectedWeek = wk; diary.selectedDate = null; diary.mode = 'weekly';
-        setDiaryEditor(); renderDiaryList();
-      });
-      grp.appendChild(item);
+    const delBtn = document.createElement('button'); delBtn.className = 'trade-del-btn'; delBtn.textContent = '✕';
+    delBtn.addEventListener('click', () => {
+      diary.data.trades[dateStr] = diary.data.trades[dateStr].filter(t => t.id !== trade.id);
+      if (!diary.data.trades[dateStr].length) delete diary.data.trades[dateStr];
+      saveDiaryData(diary.data); updateTabCounts(); renderFeedTrades();
     });
-    list.appendChild(grp);
-  }
+    row1.append(typeSel, nameInp, delBtn);
 
-  // 일간 일기 - 월별 그룹
-  const byMonth = {};
-  filteredDaily.forEach(k => { const m = k.slice(0,7); (byMonth[m] = byMonth[m]||[]).push(k); });
-  Object.entries(byMonth).sort(([a],[b]) => b.localeCompare(a)).forEach(([month, keys]) => {
-    const [y, m] = month.split('-');
-    const grp = document.createElement('div');
-    grp.className = 'diary-month-group';
-    grp.innerHTML = `<div class="diary-month-label">${y}년 ${parseInt(m)}월</div>`;
-    keys.forEach(k => {
-      const isActive = diary.selectedDate === k && (diary.mode === 'daily' || diary.mode === 'trades');
-      const item = document.createElement('div');
-      item.className = 'diary-entry-item' + (isActive ? ' active' : '');
-      const tradeCnt = ((diary.data.trades||{})[k]||[]).length;
-      item.innerHTML = `<div class="ei-date">${formatDateShort(k)}${tradeCnt ? `<span class="ei-trade-badge">${tradeCnt}건</span>` : ''}</div>
-        <div class="ei-preview">${(diary.data.daily[k]||'').split('\n')[0].slice(0,22)}</div>`;
-      item.addEventListener('click', () => {
-        diary.selectedDate = k;
-        // trades 모드였으면 trades 유지, 아니면 daily로
-        if (diary.mode !== 'trades') diary.mode = 'daily';
-        diary.selectedWeek = getWeekKey(k);
-        setDiaryEditor(); renderDiaryList();
-      });
-      grp.appendChild(item);
-    });
-    list.appendChild(grp);
+    const qtyInp = document.createElement('input'); qtyInp.className = 'trade-inp num'; qtyInp.placeholder = '수량'; qtyInp.value = trade.qty ? Number(trade.qty).toLocaleString('ko-KR') : '';
+    const priceInp = document.createElement('input'); priceInp.className = 'trade-inp num'; priceInp.placeholder = '단가'; priceInp.value = trade.price ? Number(trade.price).toLocaleString('ko-KR') : '';
+    const totalEl = document.createElement('span'); totalEl.className = 'trade-total';
+    const calcTotal = () => {
+      const q = Number(String(qtyInp.value).replace(/,/g,''))||0;
+      const p = Number(String(priceInp.value).replace(/,/g,''))||0;
+      totalEl.textContent = (q&&p) ? `= ${(q*p).toLocaleString('ko-KR')}원` : '';
+      calcSummary();
+    };
+    qtyInp.addEventListener('focus', () => { qtyInp.value = String(trade.qty||'').replace(/,/g,''); });
+    qtyInp.addEventListener('blur', () => { trade.qty=qtyInp.value; qtyInp.value=trade.qty?Number(trade.qty).toLocaleString('ko-KR'):''; saveDiaryData(diary.data); calcTotal(); });
+    qtyInp.addEventListener('input', calcTotal);
+    priceInp.addEventListener('focus', () => { priceInp.value = String(trade.price||'').replace(/,/g,''); });
+    priceInp.addEventListener('blur', () => { trade.price=priceInp.value; priceInp.value=trade.price?Number(trade.price).toLocaleString('ko-KR'):''; saveDiaryData(diary.data); calcTotal(); });
+    priceInp.addEventListener('input', calcTotal);
+    calcTotal();
+    row2.append(mkLabel('수량'), qtyInp, mkLabel('주  ×  가격'), priceInp, mkLabel('원'), totalEl);
+
+    const memoTA = document.createElement('textarea'); memoTA.className = 'memo-text'; memoTA.placeholder = '매매 사유 / 메모'; memoTA.rows = 1; memoTA.value = trade.memo||'';
+    const memoAutoResize = () => { memoTA.style.height='auto'; memoTA.style.height=memoTA.scrollHeight+'px'; };
+    memoAutoResize();
+    memoTA.addEventListener('input', () => { trade.memo=memoTA.value; saveDiaryData(diary.data); memoAutoResize(); });
+    memoTA.addEventListener('blur', () => { trade.memo=memoTA.value; saveDiaryData(diary.data); });
+    row3.append(mkLabel('메모'), memoTA);
+
+    card.append(row1, row2, row3); container.appendChild(card);
   });
-
-  if (!filteredDaily.length && !filteredWeekly.length && !q) {
-    list.innerHTML += '<div class="diary-empty">아직 기록이 없어요</div>';
-  }
 }
 
+/* ── 매매일지 피드 렌더 ── */
+function renderFeedTrades() {
+  const feed = document.getElementById('feed-trades'); feed.innerHTML = '';
+  const today = todayDateStr();
+
+  const newBtn = document.createElement('button'); newBtn.className = 'diary-new-card-btn'; newBtn.textContent = '+ 오늘 매매 추가';
+  newBtn.addEventListener('click', () => {
+    if (!diary.data.trades) diary.data.trades = {};
+    if (!diary.data.trades[today]) diary.data.trades[today] = [];
+    diary.data.trades[today].push({ id: uid(), type: '매수', name: '', qty: '', price: '', memo: '' });
+    saveDiaryData(diary.data); updateTabCounts();
+    const ex = feed.querySelector(`[data-date="${today}"] .trade-section`);
+    if (ex) { renderTradeSection(today, ex); return; }
+    renderFeedTrades();
+  });
+  feed.appendChild(newBtn);
+
+  if (!diary.data.trades) diary.data.trades = {};
+  const keys = Object.keys(diary.data.trades)
+    .filter(k => (diary.data.trades[k]||[]).length > 0).sort().reverse();
+
+  if (!keys.length) {
+    const e = document.createElement('div'); e.className = 'diary-empty-state';
+    e.textContent = '매매 기록이 없어요. 위 버튼으로 오늘 거래를 추가해보세요!';
+    feed.appendChild(e); return;
+  }
+
+  keys.forEach(dateStr => {
+    const card = document.createElement('div'); card.className = 'dcard dcard--trades'; card.dataset.date = dateStr;
+    const header = document.createElement('div'); header.className = 'dcard-header';
+    const dateLabel = document.createElement('span'); dateLabel.className = 'dcard-date';
+    dateLabel.textContent = formatDateHeader(dateStr); header.appendChild(dateLabel);
+    if (dateStr === today) {
+      const b = document.createElement('span'); b.className = 'dcard-today'; b.textContent = '오늘'; header.appendChild(b);
+    }
+    const addBtn = document.createElement('button'); addBtn.className = 'btn'; addBtn.style.cssText = 'font-size:12px;padding:3px 10px;'; addBtn.textContent = '+ 거래 추가';
+    addBtn.addEventListener('click', () => {
+      diary.data.trades[dateStr].push({ id: uid(), type: '매수', name: '', qty: '', price: '', memo: '' });
+      saveDiaryData(diary.data); renderTradeSection(dateStr, card.querySelector('.trade-section'));
+    });
+    header.appendChild(addBtn);
+    const delBtn = document.createElement('button'); delBtn.className = 'dcard-del'; delBtn.title = '이 날 기록 전체 삭제'; delBtn.textContent = '×';
+    delBtn.addEventListener('click', () => {
+      if (!confirm('이 날 매매 기록을 전부 삭제할까요?')) return;
+      delete diary.data.trades[dateStr]; saveDiaryData(diary.data); updateTabCounts(); renderFeedTrades();
+    });
+    header.appendChild(delBtn); card.appendChild(header);
+    const section = document.createElement('div'); section.className = 'trade-section';
+    renderTradeSection(dateStr, section); card.appendChild(section);
+    feed.appendChild(card);
+  });
+}
+
+/* ── 전체 렌더 ── */
+function renderAllDiaryFeeds() {
+  renderFeedDaily(); renderFeedWeekly(); renderFeedTrades(); updateTabCounts();
+}
+
+/* ── 초기화 ── */
 function initDiary() {
-  // 오늘 일기 버튼
-  document.getElementById('diary-today-btn').addEventListener('click', () => {
-    diary.selectedDate = todayDateStr();
-    diary.selectedWeek = getWeekKey(diary.selectedDate);
-    diary.mode = 'daily';
-    setDiaryEditor(); renderDiaryList();
-  });
-  // 이번 주 전략 버튼
-  document.getElementById('diary-weekly-btn').addEventListener('click', () => {
-    diary.selectedWeek = getWeekKey(todayDateStr());
-    diary.selectedDate = null;
-    diary.mode = 'weekly';
-    setDiaryEditor(); renderDiaryList();
-  });
-  // 오늘 매매 일지 버튼
-  document.getElementById('diary-trade-btn').addEventListener('click', () => {
-    diary.selectedDate = todayDateStr();
-    diary.selectedWeek = getWeekKey(diary.selectedDate);
-    diary.mode = 'trades';
-    setDiaryEditor(); renderDiaryList();
-  });
-  // 모드 탭
-  document.querySelectorAll('.diary-mode-btn').forEach(btn => {
+  document.querySelectorAll('.dtab').forEach(btn => {
     btn.addEventListener('click', () => {
-      diary.mode = btn.dataset.mode;
-      if (diary.mode === 'weekly' && !diary.selectedWeek)
-        diary.selectedWeek = getWeekKey(diary.selectedDate || todayDateStr());
-      setDiaryEditor(); renderDiaryList();
+      diary.activeTab = btn.dataset.tab;
+      document.querySelectorAll('.dtab').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.diary-feed').forEach(f => f.classList.toggle('active', f.id === `feed-${diary.activeTab}`));
     });
   });
-  // 에디터 자동저장
-  const editor = document.getElementById('diary-editor');
-  editor.addEventListener('input', () => {
-    const status = document.getElementById('diary-save-status');
-    status.textContent = '저장 중...'; status.className = 'diary-save-status';
-    clearTimeout(diary.saveTimer);
-    diary.saveTimer = setTimeout(diaryAutoSave, 600);
-  });
-  editor.addEventListener('keydown', e => {
-    if ((e.metaKey||e.ctrlKey) && e.key==='s') { e.preventDefault(); clearTimeout(diary.saveTimer); diaryAutoSave(); }
-    if (e.key === 'Escape') { clearTimeout(diary.saveTimer); diaryAutoSave(); switchToReadMode(); }
-  });
-  // blur → 읽기 모드 (모드 탭/사이드바 클릭 시에는 setDiaryEditor가 리셋하므로 무관)
-  editor.addEventListener('blur', (e) => {
-    // 포커스가 diary 영역 내 다른 인터랙티브 요소로 이동하면 읽기 모드 전환 안 함
-    const relTarget = e.relatedTarget;
-    if (relTarget && relTarget.closest('#page-diary')) return;
-    clearTimeout(diary.saveTimer);
-    diaryAutoSave();
-    switchToReadMode();
-  });
-  // 읽기 뷰 클릭 → 편집 모드
-  document.getElementById('diary-read-view').addEventListener('click', () => {
-    switchToEditMode();
-  });
-  // 검색
-  document.getElementById('diary-search').addEventListener('input', e => {
-    diary.searchQuery = e.target.value;
-    renderDiaryList();
-  });
 
-  // 백업 버튼
   document.getElementById('diary-backup-btn').addEventListener('click', () => {
-    const out = JSON.stringify({
-      _backup_date: new Date().toISOString().slice(0,19).replace('T',' '),
-      _note: 'sv_diary_v1', data: diary.data
-    }, null, 2);
+    const out = JSON.stringify({ _backup_date: new Date().toISOString().slice(0,19).replace('T',' '), _note: 'sv_diary_v1', data: diary.data }, null, 2);
     document.getElementById('backup-modal-title').textContent = '📔 Diary 백업';
     document.getElementById('backup-text').value = out;
     document.getElementById('backup-modal').style.display = 'flex';
     setTimeout(() => document.getElementById('backup-text').select(), 80);
   });
 
-  // 초기: 오늘 날짜 선택
-  diary.selectedDate = todayDateStr();
-  diary.selectedWeek = getWeekKey(diary.selectedDate);
-  setDiaryEditor();
-  renderDiaryList();
+  renderAllDiaryFeeds();
 
-  // GitHub diary.json 로드 (다른 기기에서 커밋한 데이터 반영)
   (async () => {
     try {
       const url = `https://raw.githubusercontent.com/${GH.OWNER}/${GH.REPO}/${GH.BRANCH}/diary.json?t=${Date.now()}`;
       const r = await fetch(url);
-      if (!r.ok) return; // diary.json 없으면 무시
+      if (!r.ok) return;
       const ghDiary = await r.json();
       if (!ghDiary || typeof ghDiary !== 'object') return;
-
-      // GitHub 데이터가 더 최신이면 병합 (키 합집합으로 더 많은 데이터 보존)
       let changed = false;
       for (const section of ['daily', 'weekly', 'trades']) {
         if (!ghDiary[section]) continue;
-        if (!diary.data[section]) { diary.data[section] = {}; }
+        if (!diary.data[section]) diary.data[section] = {};
         for (const [k, v] of Object.entries(ghDiary[section])) {
-          // 로컬에 없는 키는 GitHub에서 채움
-          // 로컬에 있어도 GitHub 값이 더 길면(더 많은 내용) 덮어씀
           const localVal = diary.data[section][k];
-          const ghVal = v;
-          const ghLen = Array.isArray(ghVal) ? ghVal.length : (ghVal || '').length;
-          const localLen = Array.isArray(localVal) ? localVal.length : (localVal || '').length;
-          if (!localVal || ghLen > localLen) {
-            diary.data[section][k] = ghVal;
-            changed = true;
-          }
+          const ghLen = Array.isArray(v) ? v.length : (v||'').length;
+          const localLen = Array.isArray(localVal) ? localVal.length : (localVal||'').length;
+          if (!localVal || ghLen > localLen) { diary.data[section][k] = v; changed = true; }
         }
       }
-      if (changed) {
-        saveDiaryData(diary.data);
-        setDiaryEditor();
-        renderDiaryList();
-      }
+      if (changed) { saveDiaryData(diary.data); renderAllDiaryFeeds(); }
     } catch (_) {}
   })();
 }
