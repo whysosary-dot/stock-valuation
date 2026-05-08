@@ -2046,6 +2046,7 @@ async function ghApiPut(pat, path, contentStr, sha, message) {
 async function ghCommitAll() {
   const pat = localStorage.getItem(LS_PAT_KEY) || '';
   if (!pat) { openPatModal(); return; }
+  if (!confirm('밸류에이션 입력값과 다이어리를 GitHub에 커밋 & 푸시할까요?')) return;
 
   const btn = document.getElementById('gh-commit-btn');
   btn.disabled = true;
