@@ -1814,7 +1814,7 @@ function renderTradeSection(dateStr, container) {
 
     const memoTA = document.createElement('textarea'); memoTA.className = 'memo-text'; memoTA.placeholder = '매매 사유 / 메모'; memoTA.rows = 1; memoTA.value = trade.memo||'';
     const memoAutoResize = () => { memoTA.style.height='auto'; memoTA.style.height=memoTA.scrollHeight+'px'; };
-    memoAutoResize();
+    requestAnimationFrame(memoAutoResize);
     memoTA.addEventListener('input', () => { trade.memo=memoTA.value; saveDiaryData(diary.data); memoAutoResize(); });
     memoTA.addEventListener('blur', () => { trade.memo=memoTA.value; saveDiaryData(diary.data); });
     row3.append(mkLabel('메모'), memoTA);
