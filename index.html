@@ -1700,17 +1700,28 @@ function renderFeedDaily() {
 function renderFeedWeekly() {
   const feed = document.getElementById('feed-weekly'); feed.innerHTML = '';
   const thisWeek = getWeekKey(todayDateStr());
+  const nextWeekDate = new Date(); nextWeekDate.setDate(nextWeekDate.getDate() + 7);
+  const nextWeek = getWeekKey(`${nextWeekDate.getFullYear()}-${String(nextWeekDate.getMonth()+1).padStart(2,'0')}-${String(nextWeekDate.getDate()).padStart(2,'0')}`);
 
-  const newBtn = document.createElement('button'); newBtn.className = 'diary-new-card-btn'; newBtn.textContent = '+ 이번 주 전략 작성';
-  newBtn.addEventListener('click', () => {
-    const ex = feed.querySelector(`[data-key="${thisWeek}"] textarea`);
-    if (ex) { ex.focus(); return; }
-    if (!diary.data.weekly) diary.data.weekly = {};
-    if (diary.data.weekly[thisWeek] === undefined) diary.data.weekly[thisWeek] = '';
-    renderFeedWeekly();
-    setTimeout(() => { const ta = feed.querySelector(`[data-key="${thisWeek}"] textarea`); if (ta) ta.focus(); }, 50);
-  });
-  feed.appendChild(newBtn);
+  const btnWrap = document.createElement('div');
+  btnWrap.style.cssText = 'display:flex; gap:8px; margin-bottom:0;';
+
+  const makeWeekBtn = (label, weekKey) => {
+    const btn = document.createElement('button'); btn.className = 'diary-new-card-btn';
+    btn.style.flex = '1'; btn.style.marginBottom = '16px'; btn.textContent = label;
+    btn.addEventListener('click', () => {
+      const ex = feed.querySelector(`[data-key="${weekKey}"] textarea`);
+      if (ex) { ex.focus(); return; }
+      if (!diary.data.weekly) diary.data.weekly = {};
+      if (diary.data.weekly[weekKey] === undefined) diary.data.weekly[weekKey] = '';
+      renderFeedWeekly();
+      setTimeout(() => { const ta = feed.querySelector(`[data-key="${weekKey}"] textarea`); if (ta) ta.focus(); }, 50);
+    });
+    return btn;
+  };
+  btnWrap.appendChild(makeWeekBtn('+ 이번 주 전략 작성', thisWeek));
+  btnWrap.appendChild(makeWeekBtn('+ 다음 주 전략 작성', nextWeek));
+  feed.appendChild(btnWrap);
 
   const keys = Object.keys(diary.data.weekly || {}).sort().reverse();
 
@@ -1727,6 +1738,8 @@ function renderFeedWeekly() {
     dateLabel.textContent = formatWeekHeader(k); header.appendChild(dateLabel);
     if (k === thisWeek) {
       const b = document.createElement('span'); b.className = 'dcard-today'; b.textContent = '이번 주'; header.appendChild(b);
+    } else if (k === nextWeek) {
+      const b = document.createElement('span'); b.className = 'dcard-today'; b.textContent = '다음 주'; header.appendChild(b);
     }
     const saveBadge = document.createElement('span'); saveBadge.className = 'diary-save-badge';
     saveBadge.textContent = '저장됨 ✓'; header.appendChild(saveBadge);
