@@ -928,7 +928,7 @@
       "market_cap_oku": 5160.3,
       "currency": "KRW",
       "price_native": 15370.0,
-      "sector": "산업재",
+      "sector": "공작기계",
       "price_change_pct": -4.95,
       "price_history": [
         5603.9565,
@@ -1162,7 +1162,7 @@
       "market_cap_oku": 30191.6,
       "currency": "KRW",
       "price_native": 51600.0,
-      "sector": "자동차",
+      "sector": "공작기계",
       "price_change_pct": 0.78,
       "price_history": [
         19733.1602,
@@ -2985,7 +2985,7 @@
       "market_cap_oku": 5768.9,
       "currency": "KRW",
       "price_native": 10800.0,
-      "sector": "전자부품",
+      "sector": "반도체",
       "shares_override": 53415900,
       "price_change_pct": 18.03,
       "price_history": [
