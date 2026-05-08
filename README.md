@@ -50,6 +50,26 @@ python3 server.py
 - 하방 % = (안전마진 / 현재 시총 − 1) × 100
 - POR = 현재 시총 / (1Q~4Q **영업이익** 합)
 
+## 알려진 버그 / 주의사항
+
+### ⚠️ 해외 종목 네이버 링크 — 반드시 `tickerCode` 사용
+기업명 클릭 시 네이버 금융 기업 페이지로 이동하는 링크에서,
+`naverCode`는 반드시 `s.naver_code || tickerCode`를 사용해야 한다.
+`ticker` 원본을 쓰면 `285A.T`, `7203.T` 같은 suffix가 URL에 포함돼
+네이버 메인 페이지로 리다이렉트된다.
+
+```javascript
+// ✅ 올바른 코드
+const tickerCode = ticker.split('.')[0];          // "285A.T" → "285A"
+const naverCode = s.naver_code || tickerCode;     // suffix 제거 버전 사용
+
+// ❌ 잘못된 코드 (반복 실수 주의)
+const naverCode = s.naver_code || ticker;         // "285A.T" 그대로 → 메인 페이지로 이동
+```
+
+- 국내(KS/KQ): `https://m.stock.naver.com/domestic/stock/${tickerCode}/total`
+- 해외: `https://m.stock.naver.com/worldstock/stock/${naverCode}/total`
+
 ## 파일 구조
 ```
 stock-valuation/
