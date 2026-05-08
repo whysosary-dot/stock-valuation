@@ -472,7 +472,7 @@
   .dcard--trades .trade-section { padding: 14px 16px 6px; }
   .trade-add-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
   .trade-add-bar strong { font-size: 15px; color: var(--text-dim); }
-  .trade-summary { font-size: 14px; color: var(--text-dim); margin-left: auto; }
+  .trade-summary { font-size: 15px; color: var(--text-dim); margin-left: auto; }
   .trade-card {
     background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
     padding: 14px 16px; margin-bottom: 12px;
@@ -483,7 +483,7 @@
   .trade-row3 { display: flex; align-items: flex-start; gap: 8px; padding-top: 2px; }
   .trade-type-sel {
     flex-shrink: 0; padding: 7px 12px; border: none; border-radius: 6px;
-    font-size: 14px; font-weight: 700; cursor: pointer; appearance: none; -webkit-appearance: none;
+    font-size: 15px; font-weight: 700; cursor: pointer; appearance: none; -webkit-appearance: none;
   }
   .trade-type-sel.buy { background: #eaf1fe; color: var(--blue); }
   .trade-type-sel.sell { background: #fde7e7; color: var(--red); }
@@ -495,7 +495,7 @@
   .trade-inp:focus { outline: none; border-color: var(--accent); background: white; box-shadow: 0 0 0 2px var(--focus); }
   .trade-inp.name { flex: 1; font-weight: 600; }
   .trade-inp.num { width: 100px; text-align: right; font-variant-numeric: tabular-nums; }
-  .trade-total { font-size: 14px; font-weight: 600; color: var(--text-dim); margin-left: auto; white-space: nowrap; }
+  .trade-total { font-size: 15px; font-weight: 600; color: var(--text-dim); margin-left: auto; white-space: nowrap; }
   .trade-del-btn {
     flex-shrink: 0; background: none; border: none; cursor: pointer;
     color: var(--text-dim); font-size: 17px; padding: 3px 5px; border-radius: 4px;
@@ -504,7 +504,7 @@
   .trade-del-btn:hover { opacity: 1; color: var(--red); }
   /* ── 매매일지 메모 ── */
   textarea.memo-text {
-    flex: 1; font-size: 14px; color: var(--text-dim);
+    flex: 1; font-size: 15px; color: var(--text-dim);
     background: transparent; border: 1px solid transparent;
     padding: 6px 10px; border-radius: 6px;
     font-family: inherit; resize: none; overflow: hidden;
@@ -518,7 +518,7 @@
     box-shadow: 0 0 0 2px var(--focus); color: var(--text);
   }
   textarea.memo-text::placeholder { color: #aab2bd; }
-  .trade-label { font-size: 14px; color: var(--text-dim); white-space: nowrap; }
+  .trade-label { font-size: 15px; color: var(--text-dim); white-space: nowrap; }
   .trade-empty { padding: 40px 20px; text-align: center; color: var(--text-dim); font-size: 15px; }
   .ei-trade-badge {
     font-size: 11px; font-weight: 600; background: #fde7e7; color: var(--red);
@@ -1858,7 +1858,7 @@ function renderFeedTrades() {
     if (dateStr === today) {
       const b = document.createElement('span'); b.className = 'dcard-today'; b.textContent = '오늘'; header.appendChild(b);
     }
-    const addBtn = document.createElement('button'); addBtn.className = 'btn'; addBtn.style.cssText = 'font-size:12px;padding:3px 10px;'; addBtn.textContent = '+ 거래 추가';
+    const addBtn = document.createElement('button'); addBtn.className = 'btn'; addBtn.style.cssText = 'font-size:14px;padding:5px 12px;'; addBtn.textContent = '+ 거래 추가';
     addBtn.addEventListener('click', () => {
       diary.data.trades[dateStr].push({ id: uid(), type: '매수', name: '', qty: '', price: '', memo: '' });
       saveDiaryData(diary.data); renderTradeSection(dateStr, card.querySelector('.trade-section'));
