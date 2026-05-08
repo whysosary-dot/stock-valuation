@@ -219,6 +219,8 @@
     color: var(--accent); text-decoration: underline;
   }
   .current-cap { color: var(--text); font-weight: 600; }
+  /* 현재/목표/안전시총 컬럼 최소 너비 — 큰 값(1000조원급) 잘림 방지 */
+  td.cap-col, th.cap-col { min-width: 140px; }
 
   .num { font-variant-numeric: tabular-nums; }
   .up { color: var(--blue); font-weight: 600; }
@@ -697,9 +699,9 @@ const COLS = [
   { key: '_chart',          label: '1년 차트',       type: 'chart',   sortable: false, align: 'center' },
   { key: 'price_change_pct', label: '등락률',        type: 'change-pct',  sortable: true,  align: 'center' },
   { key: 'price_native',    label: '현재주가',      type: 'current-price', sortable: true },
-  { key: 'market_cap_oku',  label: '현재시총 (억)',  type: 'current', sortable: true },
-  { key: 'target_cap_oku',  label: '목표시총 (억)',  type: 'num',     sortable: true },
-  { key: 'safety_cap_oku',  label: '안전시총 (억)',  type: 'num',     sortable: true },
+  { key: 'market_cap_oku',  label: '현재시총 (억)',  type: 'current', sortable: true, capCol: true },
+  { key: 'target_cap_oku',  label: '목표시총 (억)',  type: 'num',     sortable: true, capCol: true },
+  { key: 'safety_cap_oku',  label: '안전시총 (억)',  type: 'num',     sortable: true, capCol: true },
   { key: '_op_sum',         label: '영업이익 합',    type: 'calc',    sortable: false, toggle: 'quarterly' },
   { key: 'q1_op',           label: '1Q 영업이익',    type: 'num',     sortable: true, group: 'q' },
   { key: 'q2_op',           label: '2Q 영업이익',    type: 'num',     sortable: true, group: 'q' },
@@ -911,9 +913,10 @@ function renderHeader() {
   tr.innerHTML = '';
   COLS.forEach((c, ci) => {
     const th = document.createElement('th');
-    if (ci <= 3) { th.classList.add('col-sticky'); th.dataset.stickyIdx = String(ci); }
-    if (ci === 3) th.classList.add('col-sticky-end');
+    if (ci <= 1) { th.classList.add('col-sticky'); th.dataset.stickyIdx = String(ci); }
+    if (ci === 1) th.classList.add('col-sticky-end');
     th.textContent = c.label;
+    if (c.capCol) th.classList.add('cap-col');
     if (c.align === 'left') th.classList.add('text-left');
     if (c.group) th.setAttribute('data-col', c.group);
     if (c.toggle === 'quarterly') {
@@ -944,8 +947,9 @@ function renderRow(s) {
   tr.dataset.id = s._id;
   COLS.forEach((c, ci) => {
     const td = document.createElement('td');
-    if (ci <= 3) { td.classList.add('col-sticky'); td.dataset.stickyIdx = String(ci); }
-    if (ci === 3) td.classList.add('col-sticky-end');
+    if (ci <= 1) { td.classList.add('col-sticky'); td.dataset.stickyIdx = String(ci); }
+    if (ci === 1) td.classList.add('col-sticky-end');
+    if (c.capCol) td.classList.add('cap-col');
     if (c.align === 'left') td.classList.add('text-left');
     if (c.align === 'center') td.classList.add('text-center');
     if (c.group) td.setAttribute('data-col', c.group);
