@@ -7741,7 +7741,7 @@
       "name": "플루언스 에너지",
       "ticker": "FLNC",
       "market_cap_oku": 46894.9,
-      "sector": "에너지저장(BESS)",
+      "sector": "에너지",
       "currency": "USD",
       "price_native": 24.16,
       "price_change_pct": 29.47,
@@ -7958,7 +7958,8 @@
         13.38,
         12.19,
         24.16
-      ]
+      ],
+      "naver_code": "FLNC.O"
     }
   ]
 }
