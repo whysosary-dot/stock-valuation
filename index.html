@@ -621,6 +621,7 @@
   <button class="page-tab-btn" data-page="tptracker">🎯 TP Tracker</button>
   <button class="page-tab-btn" data-page="screener">🔍 KR Screener</button>
   <button class="page-tab-btn" data-page="dart">📋 Dart</button>
+  <button class="page-tab-btn" data-page="news">📰 News</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
   <div class="tabs-spacer"></div>
   <button id="gh-settings-btn" class="gh-settings-btn" title="GitHub 토큰 설정">⚙️</button>
@@ -699,6 +700,16 @@
     title="DART Monitoring"
   ></iframe>
 </div><!-- /page-dart -->
+
+<div id="page-news" class="page">
+  <iframe
+    id="news-frame"
+    src="https://whysosary-dot.github.io/stock-sites/"
+    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
+    loading="lazy"
+    title="Stock News"
+  ></iframe>
+</div><!-- /page-news -->
 
 <div id="page-diary" class="page">
   <div class="diary-topbar">
@@ -1670,6 +1681,10 @@ document.querySelectorAll('.page-tab-btn').forEach(btn => {
     if (page === 'dart') {
       const fr = document.getElementById('dart-frame');
       if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/dart-monitoring/';
+    }
+    if (page === 'news') {
+      const fr = document.getElementById('news-frame');
+      if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/stock-sites/';
     }
   });
 });
