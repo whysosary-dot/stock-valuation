@@ -369,9 +369,12 @@
 
   /* ── Diary ── */
   .diary-topbar {
-    flex: none; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    flex: none; display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
     padding: 12px 16px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: visible;
   }
+  .diary-topbar .diary-tabs { flex: none; }
+  .diary-topbar .spacer { flex: 1; min-width: 8px; }
   /* ── 탭 색상 변수 ── */
   .diary-tabs {
     --tab-daily-color:   #2563eb; --tab-daily-bg:   #eff4ff; --tab-daily-border:   #bfcffe;
@@ -470,6 +473,19 @@
     opacity: 0; transition: opacity .3s;
   }
   .diary-save-badge.show { opacity: 1; }
+  /* ── 다이어리 검색창 ── */
+  .diary-search-inp {
+    flex: 0 0 180px;
+    padding: 7px 12px; border: 1.5px solid var(--border);
+    border-radius: 8px; background: var(--panel-2);
+    color: var(--text); font: inherit; font-size: 14px;
+    transition: border-color .15s, box-shadow .15s;
+    display: block;
+  }
+  .diary-search-inp:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .diary-search-inp::placeholder { color: var(--text-dim); }
+  .dcard.search-hidden { display: none; }
+  .dcard-highlight { background: #fef08a; border-radius: 2px; }
   /* ── 매매일지 카드 내부 ── */
   .dcard--trades .trade-section { padding: 14px 16px 6px; }
   .trade-add-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
@@ -612,6 +628,7 @@
       <button class="dtab" data-tab="trades">📊 매매일지<span class="dtab-cnt" id="cnt-trades">0</span></button>
     </div>
     <span class="spacer"></span>
+    <input id="diary-search" class="diary-search-inp" type="search" placeholder="🔍 내용 검색..." autocomplete="off" />
     <button id="diary-backup-btn" class="btn" type="button">💾 백업</button>
   </div>
   <div class="diary-feed-wrap">
@@ -1931,6 +1948,44 @@ function initDiary() {
     });
   });
 
+  /* ── 검색 기능 ── */
+  function applyDiarySearch(query) {
+    const q = query.trim().toLowerCase();
+    const activeTab = diary.activeTab || 'daily';
+    const feed = document.getElementById(`feed-${activeTab}`);
+    if (!feed) return;
+    feed.querySelectorAll('.dcard').forEach(card => {
+      if (!q) {
+        card.classList.remove('search-hidden');
+        // 하이라이트 제거
+        card.querySelectorAll('.dcard-highlight').forEach(el => {
+          el.replaceWith(document.createTextNode(el.textContent));
+        });
+        return;
+      }
+      // 카드 안 텍스트 검색 (textarea 값 + 입력 필드 값)
+      const texts = [
+        ...Array.from(card.querySelectorAll('textarea')).map(t => t.value),
+        ...Array.from(card.querySelectorAll('input[type!=hidden]')).map(t => t.value),
+        card.querySelector('.dcard-date')?.textContent || '',
+      ].join(' ').toLowerCase();
+      card.classList.toggle('search-hidden', !texts.includes(q));
+    });
+  }
+
+  document.getElementById('diary-search').addEventListener('input', e => {
+    applyDiarySearch(e.target.value);
+  });
+
+  // 탭 전환 시 검색어 유지하며 재적용
+  const _origSwitchTab = () => {};
+  document.querySelectorAll('.dtab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const sq = document.getElementById('diary-search').value;
+      if (sq) setTimeout(() => applyDiarySearch(sq), 30);
+    });
+  });
+
   document.getElementById('diary-backup-btn').addEventListener('click', () => {
     const out = JSON.stringify({ _backup_date: new Date().toISOString().slice(0,19).replace('T',' '), _note: 'sv_diary_v1', data: diary.data }, null, 2);
     document.getElementById('backup-modal-title').textContent = '📔 Diary 백업';
@@ -1940,6 +1995,11 @@ function initDiary() {
   });
 
   renderAllDiaryFeeds();
+  // 렌더 후 검색어 재적용
+  requestAnimationFrame(() => {
+    const sq = document.getElementById('diary-search').value;
+    if (sq) applyDiarySearch(sq);
+  });
   // 초기 active 탭 textarea 높이 재계산
   requestAnimationFrame(() => {
     document.querySelectorAll(`#feed-${diary.activeTab} textarea`).forEach(ta => {
@@ -1959,6 +2019,10 @@ function initDiary() {
       diary.data = { daily: {}, weekly: {}, trades: {}, ...ghDiary };
       saveDiaryData(diary.data);
       renderAllDiaryFeeds();
+      requestAnimationFrame(() => {
+        const sq = document.getElementById('diary-search').value;
+        if (sq) applyDiarySearch(sq);
+      });
     } catch (_) {}
   })();
 }
