@@ -615,6 +615,7 @@
   <button class="page-tab-btn active" data-page="valuation">📊 Stock Valuation</button>
   <button class="page-tab-btn" data-page="calendar">📅 Calendar</button>
   <button class="page-tab-btn" data-page="index">📈 Index</button>
+  <button class="page-tab-btn" data-page="tptracker">🎯 TP Tracker</button>
   <button class="page-tab-btn" data-page="screener">🔍 KR Screener</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
   <div class="tabs-spacer"></div>
@@ -664,6 +665,16 @@
     title="Invest Index"
   ></iframe>
 </div><!-- /page-index -->
+
+<div id="page-tptracker" class="page">
+  <iframe
+    id="tptracker-frame"
+    src="https://whysosary-dot.github.io/tp-tracker/"
+    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
+    loading="lazy"
+    title="TP Tracker"
+  ></iframe>
+</div><!-- /page-tptracker -->
 
 <div id="page-screener" class="page">
   <iframe
@@ -1633,6 +1644,10 @@ document.querySelectorAll('.page-tab-btn').forEach(btn => {
     if (page === 'index') {
       const fr = document.getElementById('index-frame');
       if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/invest-index/';
+    }
+    if (page === 'tptracker') {
+      const fr = document.getElementById('tptracker-frame');
+      if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/tp-tracker/';
     }
     if (page === 'screener') {
       const fr = document.getElementById('screener-frame');
