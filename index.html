@@ -324,10 +324,11 @@
   /* ── 페이지 탭 ── */
   .page-tabs {
     flex: none; display: flex; align-items: center;
+    flex-wrap: wrap;
     background: var(--panel); border-bottom: 1px solid var(--border);
-    padding: 0 16px; gap: 0;
+    padding: 0 8px; gap: 0;
   }
-  .page-tabs .tabs-spacer { flex: 1; }
+  .page-tabs .tabs-spacer { flex: 1; min-width: 8px; }
   .gh-commit-btn {
     display: flex; align-items: center; gap: 6px;
     background: var(--accent); color: #fff; border: none;
@@ -360,7 +361,7 @@
     border-bottom: 3px solid transparent; margin-bottom: -1px;
     cursor: pointer; font-size: 14px; font-weight: 500;
     color: var(--text-dim); transition: color .15s, border-color .15s;
-    white-space: nowrap;
+    white-space: nowrap; flex-shrink: 0;
   }
   .page-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
   .page-tab-btn:hover:not(.active) { color: var(--text); }
