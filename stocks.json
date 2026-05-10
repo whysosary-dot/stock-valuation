@@ -5526,6 +5526,96 @@
         44490.0
       ],
       "naver_code": "285A.T"
+    },
+    {
+      "name": "한중엔시에스",
+      "ticker": "107640.KQ",
+      "market_cap_oku": 5674.7,
+      "currency": "KRW",
+      "price_native": 62600.0,
+      "price_change_pct": -2.19
+    },
+    {
+      "name": "서진시스템",
+      "ticker": "178320.KQ",
+      "market_cap_oku": 42024.9,
+      "currency": "KRW",
+      "price_native": 66100.0,
+      "price_change_pct": -2.94
+    },
+    {
+      "name": "하이록코리아",
+      "ticker": "013030.KQ",
+      "market_cap_oku": 5119.1,
+      "currency": "KRW",
+      "price_native": 43500.0,
+      "price_change_pct": -1.36
+    },
+    {
+      "name": "한전기술",
+      "ticker": "052690.KS",
+      "market_cap_oku": 66043.5,
+      "currency": "KRW",
+      "price_native": 173600.0,
+      "price_change_pct": -6.36
+    },
+    {
+      "name": "에이피알",
+      "ticker": "278470.KS",
+      "market_cap_oku": 162481.6,
+      "currency": "KRW",
+      "price_native": 434000.0,
+      "price_change_pct": 8.09
+    },
+    {
+      "name": "HD현대중공업",
+      "ticker": "329180.KS",
+      "market_cap_oku": 690644.9,
+      "currency": "KRW",
+      "price_native": 658000.0,
+      "price_change_pct": -5.05
+    },
+    {
+      "name": "인바디",
+      "ticker": "065680.KQ",
+      "market_cap_oku": 3295.8,
+      "currency": "KRW",
+      "price_native": 41000.0,
+      "price_change_pct": 8.18
+    },
+    {
+      "name": "LIG디펜스앤에어로스페이스",
+      "ticker": "079550.KS",
+      "market_cap_oku": 183500.1,
+      "currency": "KRW",
+      "price_native": 840000.0,
+      "price_change_pct": -3.0
+    },
+    {
+      "name": "스피어",
+      "ticker": "347700.KQ",
+      "market_cap_oku": 19583.4,
+      "currency": "KRW",
+      "price_native": 41650.0,
+      "price_change_pct": 2.71
+    },
+    {
+      "name": "고려아연",
+      "ticker": "010130.KS",
+      "market_cap_oku": 283481.0,
+      "currency": "KRW",
+      "price_native": 1559000.0,
+      "price_change_pct": -0.06
+    },
+    {
+      "name": "엘앤에프",
+      "ticker": "066970.KQ",
+      "market_cap_oku": 0
+    },
+    {
+      "name": "지에프아이",
+      "ticker": "478780.KQ",
+      "market_cap_oku": 0
     }
   ]
 }
