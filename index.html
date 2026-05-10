@@ -617,6 +617,7 @@
   <button class="page-tab-btn" data-page="index">📈 Index</button>
   <button class="page-tab-btn" data-page="tptracker">🎯 TP Tracker</button>
   <button class="page-tab-btn" data-page="screener">🔍 KR Screener</button>
+  <button class="page-tab-btn" data-page="dart">📋 Dart</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
   <div class="tabs-spacer"></div>
   <button id="gh-settings-btn" class="gh-settings-btn" title="GitHub 토큰 설정">⚙️</button>
@@ -685,6 +686,16 @@
     title="KR Stock Screener"
   ></iframe>
 </div><!-- /page-screener -->
+
+<div id="page-dart" class="page">
+  <iframe
+    id="dart-frame"
+    src="https://whysosary-dot.github.io/dart-monitoring/"
+    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
+    loading="lazy"
+    title="DART Monitoring"
+  ></iframe>
+</div><!-- /page-dart -->
 
 <div id="page-diary" class="page">
   <div class="diary-topbar">
@@ -1652,6 +1663,10 @@ document.querySelectorAll('.page-tab-btn').forEach(btn => {
     if (page === 'screener') {
       const fr = document.getElementById('screener-frame');
       if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/stock-screener/';
+    }
+    if (page === 'dart') {
+      const fr = document.getElementById('dart-frame');
+      if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/dart-monitoring/';
     }
   });
 });
