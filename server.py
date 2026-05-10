@@ -156,17 +156,32 @@ def _fetch_marketcap_krw(ticker: str, usdkrw: float, shares_adjustment: float = 
             market_cap_krw = float(market_cap_native) * usdkrw
 
         # 네이버 금융 종목 코드 계산 (해외주식용)
+        # 네이버 worldstock URL은 거래소 suffix 필수: NVDA.O / META.N / 285A.T 등
         naver_code = None
         if not (ticker.endswith('.KS') or ticker.endswith('.KQ')):
             exchange = (full_info.get('exchange') or '').upper()
-            if exchange in ('NMS', 'NGM', 'NCM', 'NASDAQ'):
+            if exchange in ('NMS', 'NGM', 'NCM', 'NASDAQ', 'NASDAQGS', 'NASDAQGM', 'NASDAQCM'):
                 naver_code = ticker + '.O'
             elif exchange in ('NYQ', 'NYSE'):
                 naver_code = ticker + '.N'
-            elif exchange in ('AMX', 'AMEX'):
+            elif exchange in ('AMX', 'AMEX', 'ASE'):
                 naver_code = ticker + '.A'
+            elif ticker.endswith('.T'):
+                naver_code = ticker          # 도쿄: 285A.T 그대로
+            elif ticker.endswith('.HK'):
+                naver_code = ticker          # 홍콩: 그대로
+            elif '.' in ticker:
+                naver_code = ticker          # 이미 거래소 suffix 포함
             else:
-                naver_code = ticker  # fallback
+                # 거래소 미확인 → currency로 추정
+                if currency == 'USD':
+                    naver_code = ticker + '.O'   # 미국 기본값: 나스닥
+                elif currency == 'JPY':
+                    naver_code = ticker + '.T'   # 일본 기본값: 도쿄
+                elif currency == 'HKD':
+                    naver_code = ticker + '.HK'  # 홍콩 기본값
+                else:
+                    naver_code = ticker + '.O'   # 최후 폴백: 나스닥
 
         # 등락률 계산
         price_change_pct = None
