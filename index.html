@@ -622,6 +622,8 @@
   <button class="page-tab-btn" data-page="screener">🔍 KR Screener</button>
   <button class="page-tab-btn" data-page="dart">📋 Dart</button>
   <button class="page-tab-btn" data-page="news">📰 News</button>
+  <button class="page-tab-btn" data-page="usmarket">🇺🇸 US Market</button>
+  <button class="page-tab-btn" data-page="krmarket">🇰🇷 KR Market</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
   <div class="tabs-spacer"></div>
   <button id="gh-settings-btn" class="gh-settings-btn" title="GitHub 토큰 설정">⚙️</button>
@@ -710,6 +712,26 @@
     title="Stock News"
   ></iframe>
 </div><!-- /page-news -->
+
+<div id="page-usmarket" class="page">
+  <iframe
+    id="usmarket-frame"
+    src="https://whysosary-dot.github.io/us-market-briefing/"
+    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
+    loading="lazy"
+    title="US Market Briefing"
+  ></iframe>
+</div><!-- /page-usmarket -->
+
+<div id="page-krmarket" class="page">
+  <iframe
+    id="krmarket-frame"
+    src="https://whysosary-dot.github.io/kr-market-briefing/"
+    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
+    loading="lazy"
+    title="KR Market Briefing"
+  ></iframe>
+</div><!-- /page-krmarket -->
 
 <div id="page-diary" class="page">
   <div class="diary-topbar">
@@ -1685,6 +1707,14 @@ document.querySelectorAll('.page-tab-btn').forEach(btn => {
     if (page === 'news') {
       const fr = document.getElementById('news-frame');
       if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/stock-sites/';
+    }
+    if (page === 'usmarket') {
+      const fr = document.getElementById('usmarket-frame');
+      if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/us-market-briefing/';
+    }
+    if (page === 'krmarket') {
+      const fr = document.getElementById('krmarket-frame');
+      if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/kr-market-briefing/';
     }
   });
 });
