@@ -117,8 +117,10 @@ def main():
             s["currency"] = r["currency"]
             s["price_native"] = r.get("price_native")
             s["price_change_pct"] = r.get("price_change_pct")
-            if r.get("naver_code"):
-                s["naver_code"] = r.get("naver_code")
+            new_nc = r.get("naver_code")
+            # suffix 있는 코드만 저장 (suffix 없는 폴백으로 기존 값 덮어쓰기 방지)
+            if new_nc and ('.' in new_nc or not s.get("naver_code")):
+                s["naver_code"] = new_nc
             s["price_history"] = _fetch_price_history(ticker, '1y')
             s["price_history_3y"] = _fetch_price_history(ticker, '3y')
             ok_count += 1
