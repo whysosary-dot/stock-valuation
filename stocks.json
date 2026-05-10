@@ -5533,7 +5533,8 @@
       "market_cap_oku": 5674.7,
       "currency": "KRW",
       "price_native": 62600.0,
-      "price_change_pct": -2.19
+      "price_change_pct": -2.19,
+      "sector": "2차전지"
     },
     {
       "name": "서진시스템",
@@ -5541,7 +5542,8 @@
       "market_cap_oku": 42024.9,
       "currency": "KRW",
       "price_native": 66100.0,
-      "price_change_pct": -2.94
+      "price_change_pct": -2.94,
+      "sector": "2차전지"
     },
     {
       "name": "하이록코리아",
@@ -5549,7 +5551,8 @@
       "market_cap_oku": 5119.1,
       "currency": "KRW",
       "price_native": 43500.0,
-      "price_change_pct": -1.36
+      "price_change_pct": -1.36,
+      "sector": "피팅/밸브"
     },
     {
       "name": "한전기술",
@@ -5557,7 +5560,8 @@
       "market_cap_oku": 66043.5,
       "currency": "KRW",
       "price_native": 173600.0,
-      "price_change_pct": -6.36
+      "price_change_pct": -6.36,
+      "sector": "에너지"
     },
     {
       "name": "에이피알",
@@ -5565,7 +5569,8 @@
       "market_cap_oku": 162481.6,
       "currency": "KRW",
       "price_native": 434000.0,
-      "price_change_pct": 8.09
+      "price_change_pct": 8.09,
+      "sector": "미용"
     },
     {
       "name": "HD현대중공업",
@@ -5573,7 +5578,8 @@
       "market_cap_oku": 690644.9,
       "currency": "KRW",
       "price_native": 658000.0,
-      "price_change_pct": -5.05
+      "price_change_pct": -5.05,
+      "sector": "조선"
     },
     {
       "name": "인바디",
@@ -5581,7 +5587,8 @@
       "market_cap_oku": 3295.8,
       "currency": "KRW",
       "price_native": 41000.0,
-      "price_change_pct": 8.18
+      "price_change_pct": 8.18,
+      "sector": "미용"
     },
     {
       "name": "LIG디펜스앤에어로스페이스",
@@ -5589,7 +5596,8 @@
       "market_cap_oku": 183500.1,
       "currency": "KRW",
       "price_native": 840000.0,
-      "price_change_pct": -3.0
+      "price_change_pct": -3.0,
+      "sector": "항공우주/방산"
     },
     {
       "name": "스피어",
@@ -5597,7 +5605,8 @@
       "market_cap_oku": 19583.4,
       "currency": "KRW",
       "price_native": 41650.0,
-      "price_change_pct": 2.71
+      "price_change_pct": 2.71,
+      "sector": "항공우주/방산"
     },
     {
       "name": "고려아연",
@@ -5605,17 +5614,20 @@
       "market_cap_oku": 283481.0,
       "currency": "KRW",
       "price_native": 1559000.0,
-      "price_change_pct": -0.06
+      "price_change_pct": -0.06,
+      "sector": "원자재"
     },
     {
       "name": "엘앤에프",
       "ticker": "066970.KQ",
-      "market_cap_oku": 0
+      "market_cap_oku": 0,
+      "sector": "2차전지"
     },
     {
       "name": "지에프아이",
       "ticker": "478780.KQ",
-      "market_cap_oku": 0
+      "market_cap_oku": 0,
+      "sector": "2차전지"
     }
   ]
 }
