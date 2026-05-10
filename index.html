@@ -624,6 +624,7 @@
   <button class="page-tab-btn" data-page="news">📰 News</button>
   <button class="page-tab-btn" data-page="usmarket">🇺🇸 US Market</button>
   <button class="page-tab-btn" data-page="krmarket">🇰🇷 KR Market</button>
+  <button class="page-tab-btn" data-page="awake">🔔 Awake</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
   <div class="tabs-spacer"></div>
   <button id="gh-settings-btn" class="gh-settings-btn" title="GitHub 토큰 설정">⚙️</button>
@@ -732,6 +733,16 @@
     title="KR Market Briefing"
   ></iframe>
 </div><!-- /page-krmarket -->
+
+<div id="page-awake" class="page">
+  <iframe
+    id="awake-frame"
+    src="https://whysosary-dot.github.io/awake-disclosure/"
+    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
+    loading="lazy"
+    title="Awake Disclosure"
+  ></iframe>
+</div><!-- /page-awake -->
 
 <div id="page-diary" class="page">
   <div class="diary-topbar">
@@ -1715,6 +1726,10 @@ document.querySelectorAll('.page-tab-btn').forEach(btn => {
     if (page === 'krmarket') {
       const fr = document.getElementById('krmarket-frame');
       if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/kr-market-briefing/';
+    }
+    if (page === 'awake') {
+      const fr = document.getElementById('awake-frame');
+      if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/awake-disclosure/';
     }
   });
 });
