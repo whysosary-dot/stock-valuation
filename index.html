@@ -614,6 +614,7 @@
 <nav class="page-tabs">
   <button class="page-tab-btn active" data-page="valuation">📊 Stock Valuation</button>
   <button class="page-tab-btn" data-page="calendar">📅 Calendar</button>
+  <button class="page-tab-btn" data-page="index">📈 Index</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
   <div class="tabs-spacer"></div>
   <button id="gh-settings-btn" class="gh-settings-btn" title="GitHub 토큰 설정">⚙️</button>
@@ -652,6 +653,16 @@
     title="Investment Calendar"
   ></iframe>
 </div><!-- /page-calendar -->
+
+<div id="page-index" class="page">
+  <iframe
+    id="index-frame"
+    src="https://whysosary-dot.github.io/invest-index/"
+    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
+    loading="lazy"
+    title="Invest Index"
+  ></iframe>
+</div><!-- /page-index -->
 
 <div id="page-diary" class="page">
   <div class="diary-topbar">
@@ -1605,9 +1616,12 @@ document.querySelectorAll('.page-tab-btn').forEach(btn => {
     document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
     if (page === 'diary') renderAllDiaryFeeds();
     if (page === 'calendar') {
-      // iframe이 아직 로드되지 않은 경우 src를 세팅해 로드 시작
       const fr = document.getElementById('calendar-frame');
       if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/investment-calendar/';
+    }
+    if (page === 'index') {
+      const fr = document.getElementById('index-frame');
+      if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/invest-index/';
     }
   });
 });
