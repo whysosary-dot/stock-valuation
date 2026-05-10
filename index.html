@@ -485,7 +485,29 @@
   .diary-search-inp:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   .diary-search-inp::placeholder { color: var(--text-dim); }
   .dcard.search-hidden { display: none; }
-  .dcard-highlight { background: #fef08a; border-radius: 2px; }
+  /* ── 검색 하이라이트 ── */
+  .search-mark {
+    background: #fef08a;
+    color: #1a1a1a;
+    border-radius: 2px;
+    padding: 0 2px;
+    font-weight: 600;
+  }
+  .search-snippet-bar {
+    padding: 8px 18px 10px;
+    border-top: 1px dashed var(--border);
+    background: #fffdf0;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .search-snippet-bar .snippet-item {
+    display: block;
+    margin-bottom: 4px;
+  }
+  .search-snippet-bar .snippet-item:last-child { margin-bottom: 0; }
   /* ── 매매일지 카드 내부 ── */
   .dcard--trades .trade-section { padding: 14px 16px 6px; }
   .trade-add-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
@@ -1949,31 +1971,73 @@ function initDiary() {
   });
 
   /* ── 검색 기능 ── */
+
+  /* q 주변 스니펫 DOM 노드 배열 반환 (하이라이트 포함) */
+  function makeSnippets(text, q) {
+    const lower = text.toLowerCase();
+    const result = [];
+    let searchFrom = 0;
+    while (result.length < 3) {
+      const idx = lower.indexOf(q, searchFrom);
+      if (idx === -1) break;
+      const start = Math.max(0, idx - 45);
+      const end   = Math.min(text.length, idx + q.length + 45);
+      const pre   = (start > 0 ? '…' : '') + text.slice(start, idx).replace(/\n/g, ' ');
+      const hit   = text.slice(idx, idx + q.length);
+      const post  = text.slice(idx + q.length, end).replace(/\n/g, ' ') + (end < text.length ? '…' : '');
+      const span  = document.createElement('span');
+      span.className = 'snippet-item';
+      span.appendChild(document.createTextNode(pre));
+      const mark = document.createElement('mark');
+      mark.className = 'search-mark';
+      mark.textContent = hit;
+      span.appendChild(mark);
+      span.appendChild(document.createTextNode(post));
+      result.push(span);
+      searchFrom = idx + q.length;
+    }
+    return result;
+  }
+
   function applyDiarySearch(query) {
     const q = query.trim().toLowerCase();
     const activeTab = diary.activeTab || 'daily';
     const feed = document.getElementById(`feed-${activeTab}`);
     if (!feed) return;
     feed.querySelectorAll('.dcard').forEach(card => {
+      // 기존 스니펫 바 제거
+      card.querySelectorAll('.search-snippet-bar').forEach(el => el.remove());
       if (!q) {
         card.classList.remove('search-hidden');
         return;
       }
-      // textarea 값 수집
-      const parts = [];
-      card.querySelectorAll('textarea').forEach(ta => parts.push(ta.value));
-      // input 값 수집 (type=hidden 제외)
-      card.querySelectorAll('input').forEach(inp => {
-        if (inp.type !== 'hidden') parts.push(inp.value);
-      });
-      // select 값 수집
-      card.querySelectorAll('select').forEach(sel => parts.push(sel.value));
-      // 날짜 헤더
+      // 검색 대상 텍스트 수집
+      const sources = [];
+      card.querySelectorAll('textarea').forEach(ta => { if (ta.value) sources.push(ta.value); });
+      card.querySelectorAll('input').forEach(inp => { if (inp.type !== 'hidden' && inp.value) sources.push(inp.value); });
+      card.querySelectorAll('select').forEach(sel => { if (sel.value) sources.push(sel.value); });
       const dateEl = card.querySelector('.dcard-date');
-      if (dateEl) parts.push(dateEl.textContent);
+      if (dateEl) sources.push(dateEl.textContent);
 
-      const haystack = parts.join(' ').toLowerCase();
-      card.classList.toggle('search-hidden', !haystack.includes(q));
+      const haystack = sources.join('\n').toLowerCase();
+      if (!haystack.includes(q)) {
+        card.classList.add('search-hidden');
+        return;
+      }
+      card.classList.remove('search-hidden');
+
+      // 스니펫 바 생성 (최대 3개 발췌)
+      const allSnippets = [];
+      for (const src of sources) {
+        makeSnippets(src, q).forEach(s => allSnippets.push(s));
+        if (allSnippets.length >= 3) break;
+      }
+      if (allSnippets.length) {
+        const bar = document.createElement('div');
+        bar.className = 'search-snippet-bar';
+        allSnippets.slice(0, 3).forEach(s => bar.appendChild(s));
+        card.appendChild(bar);
+      }
     });
   }
 
