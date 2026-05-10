@@ -1957,19 +1957,23 @@ function initDiary() {
     feed.querySelectorAll('.dcard').forEach(card => {
       if (!q) {
         card.classList.remove('search-hidden');
-        // 하이라이트 제거
-        card.querySelectorAll('.dcard-highlight').forEach(el => {
-          el.replaceWith(document.createTextNode(el.textContent));
-        });
         return;
       }
-      // 카드 안 텍스트 검색 (textarea 값 + 입력 필드 값)
-      const texts = [
-        ...Array.from(card.querySelectorAll('textarea')).map(t => t.value),
-        ...Array.from(card.querySelectorAll('input[type!=hidden]')).map(t => t.value),
-        card.querySelector('.dcard-date')?.textContent || '',
-      ].join(' ').toLowerCase();
-      card.classList.toggle('search-hidden', !texts.includes(q));
+      // textarea 값 수집
+      const parts = [];
+      card.querySelectorAll('textarea').forEach(ta => parts.push(ta.value));
+      // input 값 수집 (type=hidden 제외)
+      card.querySelectorAll('input').forEach(inp => {
+        if (inp.type !== 'hidden') parts.push(inp.value);
+      });
+      // select 값 수집
+      card.querySelectorAll('select').forEach(sel => parts.push(sel.value));
+      // 날짜 헤더
+      const dateEl = card.querySelector('.dcard-date');
+      if (dateEl) parts.push(dateEl.textContent);
+
+      const haystack = parts.join(' ').toLowerCase();
+      card.classList.toggle('search-hidden', !haystack.includes(q));
     });
   }
 
@@ -1978,11 +1982,10 @@ function initDiary() {
   });
 
   // 탭 전환 시 검색어 유지하며 재적용
-  const _origSwitchTab = () => {};
   document.querySelectorAll('.dtab').forEach(btn => {
     btn.addEventListener('click', () => {
       const sq = document.getElementById('diary-search').value;
-      if (sq) setTimeout(() => applyDiarySearch(sq), 30);
+      if (sq) setTimeout(() => applyDiarySearch(sq), 50);
     });
   });
 
