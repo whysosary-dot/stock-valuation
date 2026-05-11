@@ -1780,7 +1780,7 @@ const TAB_REPOS = {
 const TAB_VISIT_KEY    = 'sv_tab_lastvisit_v1';
 const TAB_COMMIT_KEY   = 'sv_tab_commit_cache_v1';
 const TAB_VISIT_VER    = 4; // 마이그레이션 버전 (bump → 모든 기기 last-visit 자동 리셋)
-const COMMIT_TTL_MS    = 30 * 60 * 1000; // 30분 (rate limit 보호)
+const COMMIT_TTL_MS    = 5 * 60 * 1000;  // 5분 (백그라운드 폴링에만 적용)
 const EPOCH_ISO        = '1970-01-01T00:00:00.000Z';
 
 function loadVisitMap() {
@@ -1832,11 +1832,11 @@ function markTabVisited(page) {
   if (btn) btn.classList.remove('has-update');
 }
 
-async function fetchLatestCommitISO(repo, path) {
+async function fetchLatestCommitISO(repo, path, forceFresh = false) {
   const cacheKey = path ? `${repo}|${path}` : repo;
   const cache = loadCommitCache();
   const cached = cache[cacheKey];
-  if (cached && (Date.now() - cached.fetchedAt) < COMMIT_TTL_MS) {
+  if (!forceFresh && cached && (Date.now() - cached.fetchedAt) < COMMIT_TTL_MS) {
     return cached.iso;
   }
   try {
@@ -1866,12 +1866,13 @@ async function fetchLatestCommitISO(repo, path) {
   } catch { return null; }
 }
 
-async function refreshTabUpdateDots() {
+async function refreshTabUpdateDots(opts = {}) {
+  const forceFresh = !!opts.forceFresh;
   const visitMap = loadVisitMap();
   const activePage = document.querySelector('.page-tab-btn.active')?.dataset.page;
   const entries = Object.entries(TAB_REPOS);
   await Promise.all(entries.map(async ([page, conf]) => {
-    const iso = await fetchLatestCommitISO(conf.repo, conf.path);
+    const iso = await fetchLatestCommitISO(conf.repo, conf.path, forceFresh);
     if (!iso) return;
     const btn = document.querySelector(`.page-tab-btn[data-page="${page}"]`);
     if (!btn) return;
@@ -1886,9 +1887,10 @@ async function refreshTabUpdateDots() {
   }));
 }
 
-// 페이지 로드 시 1회 + 30분마다 백그라운드 갱신 (rate limit 보호)
-refreshTabUpdateDots();
-setInterval(refreshTabUpdateDots, 30 * 60 * 1000);
+// 페이지 로드 시: 캐시 무시하고 fresh fetch (방금 푸시한 커밋도 즉시 반영)
+// 이후 10분마다 백그라운드 갱신 (5분 캐시 TTL과 결합해 신선도 유지)
+refreshTabUpdateDots({ forceFresh: true });
+setInterval(() => refreshTabUpdateDots(), 10 * 60 * 1000);
 
 /* ═══════════════════════════════════
    Diary
