@@ -460,7 +460,7 @@
     transition: opacity .15s, color .15s;
   }
   .dcard-del:hover { opacity: 1; color: var(--red); }
-  /* 일기·주간 textarea */
+  /* 일기·주간 textarea (legacy) */
   textarea.dcard-ta {
     display: block; width: 100%; box-sizing: border-box;
     padding: 16px 18px; background: transparent; border: none;
@@ -470,6 +470,40 @@
   }
   textarea.dcard-ta:focus { outline: none; background: #fafbff; }
   textarea.dcard-ta::placeholder { color: #aab2bd; }
+  /* 일기·주간 contenteditable 본문 */
+  .dcard-ce {
+    display: block; width: 100%; box-sizing: border-box;
+    padding: 16px 18px; background: transparent;
+    color: var(--text); font: inherit; font-size: 15px; line-height: 1.6;
+    min-height: 60px; outline: none;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .dcard-ce:focus { background: #fafbff; }
+  .dcard-ce:empty::before {
+    content: attr(data-placeholder); color: #aab2bd; pointer-events: none;
+  }
+  /* 서식 툴바 */
+  .dcard-fmt {
+    display: flex; gap: 6px; padding: 6px 12px;
+    border-bottom: 1px dashed var(--border);
+    background: rgba(0,0,0,0.015);
+    flex-wrap: wrap;
+  }
+  .fmt-btn {
+    padding: 4px 10px; font-size: 12px; font-weight: 600;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 5px; cursor: pointer; color: var(--text-dim);
+    transition: background .12s, color .12s, border-color .12s;
+    -webkit-user-select: none; user-select: none;
+    min-width: 28px;
+  }
+  .fmt-btn:hover { background: var(--panel-2); color: var(--text); border-color: var(--accent); }
+  .fmt-btn:active { transform: translateY(1px); }
+  .fmt-btn.fmt-bold { font-weight: 800; }
+  .fmt-btn.fmt-red  { color: #dc2626; border-color: #fecaca; }
+  .fmt-btn.fmt-red:hover  { background: #fee2e2; color: #b91c1c; }
+  .fmt-btn.fmt-blue { color: #2563eb; border-color: #bfdbfe; }
+  .fmt-btn.fmt-blue:hover { background: #dbeafe; color: #1d4ed8; }
   /* 새 항목 버튼 */
   .diary-new-card-btn {
     width: 100%; padding: 15px; border: 2px dashed var(--border);
@@ -1946,6 +1980,47 @@ function taAutoResize(ta) {
   ta.style.height = ta.scrollHeight + 'px';
 }
 
+/* ── 서식 헬퍼 (contenteditable용) ── */
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function detectHtml(s) {
+  return typeof s === 'string' && /<\/?(b|i|u|span|br|div|p|font|strong|em)\b/i.test(s);
+}
+// 플레인 텍스트는 HTML 이스케이프 후 줄바꿈을 <br>로
+function normalizeToEditorHtml(s) {
+  if (!s) return '';
+  return detectHtml(s) ? s : escapeHtml(s).replace(/\n/g, '<br>');
+}
+// editor의 내용이 공백뿐인지
+function ceIsEmpty(editor) {
+  return !(editor.textContent || '').trim();
+}
+// 서식 툴바 생성
+function makeFormatToolbar(editor) {
+  const bar = document.createElement('div');
+  bar.className = 'dcard-fmt';
+  const make = (label, cls, title, fn) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'fmt-btn ' + cls; b.title = title; b.textContent = label;
+    // 버튼 클릭 시 선택영역을 잃지 않도록
+    b.addEventListener('mousedown', e => e.preventDefault());
+    b.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+    b.addEventListener('click', () => {
+      editor.focus();
+      fn();
+      // 변경 후 input 이벤트가 자동으로 안 뜨는 브라우저 대비
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    return bar.appendChild(b);
+  };
+  make('B',     'fmt-bold', '굵게',       () => document.execCommand('bold'));
+  make('빨강',  'fmt-red',  '빨강 글자색', () => document.execCommand('foreColor', false, '#dc2626'));
+  make('파랑',  'fmt-blue', '파랑 글자색', () => document.execCommand('foreColor', false, '#2563eb'));
+  make('지우기','',         '서식 제거',   () => document.execCommand('removeFormat'));
+  return bar;
+}
+
 /* ── 탭 카운트 업데이트 ── */
 function updateTabCounts() {
   const d = diary.data;
@@ -1997,12 +2072,16 @@ function makeDailyCard(dateStr, today) {
   header.appendChild(delBtn);
   card.appendChild(header);
 
-  const ta = document.createElement('textarea'); ta.className = 'dcard-ta';
-  ta.placeholder = '오늘의 투자 생각을 기록하세요...';
-  ta.value = diary.data.daily[dateStr] || ''; ta.rows = 1;
-  requestAnimationFrame(() => taAutoResize(ta));
-  ta.addEventListener('input', () => { taAutoResize(ta); diarySave(dateStr, 'daily', ta.value, saveBadge); });
-  card.appendChild(ta);
+  const ce = document.createElement('div');
+  ce.className = 'dcard-ce';
+  ce.contentEditable = 'true';
+  ce.setAttribute('data-placeholder', '오늘의 투자 생각을 기록하세요...');
+  ce.innerHTML = normalizeToEditorHtml(diary.data.daily[dateStr] || '');
+  ce.addEventListener('input', () => {
+    diarySave(dateStr, 'daily', ceIsEmpty(ce) ? '' : ce.innerHTML, saveBadge);
+  });
+  card.appendChild(makeFormatToolbar(ce));
+  card.appendChild(ce);
   return card;
 }
 
@@ -2013,12 +2092,12 @@ function renderFeedDaily() {
 
   const newBtn = document.createElement('button'); newBtn.className = 'diary-new-card-btn'; newBtn.textContent = '+ 오늘 일기 작성';
   newBtn.addEventListener('click', () => {
-    const ex = feed.querySelector(`[data-key="${today}"] textarea`);
+    const ex = feed.querySelector(`[data-key="${today}"] .dcard-ce`);
     if (ex) { ex.focus(); return; }
     if (!diary.data.daily) diary.data.daily = {};
     if (diary.data.daily[today] === undefined) diary.data.daily[today] = '';
     renderFeedDaily();
-    setTimeout(() => { const ta = feed.querySelector(`[data-key="${today}"] textarea`); if (ta) ta.focus(); }, 50);
+    setTimeout(() => { const ce = feed.querySelector(`[data-key="${today}"] .dcard-ce`); if (ce) ce.focus(); }, 50);
   });
   feed.appendChild(newBtn);
 
@@ -2046,12 +2125,12 @@ function renderFeedWeekly() {
     const btn = document.createElement('button'); btn.className = 'diary-new-card-btn';
     btn.style.flex = '1'; btn.style.marginBottom = '16px'; btn.textContent = label;
     btn.addEventListener('click', () => {
-      const ex = feed.querySelector(`[data-key="${weekKey}"] textarea`);
+      const ex = feed.querySelector(`[data-key="${weekKey}"] .dcard-ce`);
       if (ex) { ex.focus(); return; }
       if (!diary.data.weekly) diary.data.weekly = {};
       if (diary.data.weekly[weekKey] === undefined) diary.data.weekly[weekKey] = '';
       renderFeedWeekly();
-      setTimeout(() => { const ta = feed.querySelector(`[data-key="${weekKey}"] textarea`); if (ta) ta.focus(); }, 50);
+      setTimeout(() => { const ce = feed.querySelector(`[data-key="${weekKey}"] .dcard-ce`); if (ce) ce.focus(); }, 50);
     });
     return btn;
   };
@@ -2086,12 +2165,17 @@ function renderFeedWeekly() {
     });
     header.appendChild(delBtn); card.appendChild(header);
 
-    const ta = document.createElement('textarea'); ta.className = 'dcard-ta';
-    ta.placeholder = '이번 주 투자 전략을 정리하세요...';
-    ta.value = diary.data.weekly[k] || ''; ta.rows = 1;
-    requestAnimationFrame(() => taAutoResize(ta));
-    ta.addEventListener('input', () => { taAutoResize(ta); diarySave(k, 'weekly', ta.value, saveBadge); });
-    card.appendChild(ta); feed.appendChild(card);
+    const ce = document.createElement('div');
+    ce.className = 'dcard-ce';
+    ce.contentEditable = 'true';
+    ce.setAttribute('data-placeholder', '이번 주 투자 전략을 정리하세요...');
+    ce.innerHTML = normalizeToEditorHtml(diary.data.weekly[k] || '');
+    ce.addEventListener('input', () => {
+      diarySave(k, 'weekly', ceIsEmpty(ce) ? '' : ce.innerHTML, saveBadge);
+    });
+    card.appendChild(makeFormatToolbar(ce));
+    card.appendChild(ce);
+    feed.appendChild(card);
   });
 }
 
@@ -2349,6 +2433,7 @@ function initDiary() {
       // 검색 대상 텍스트 수집
       const sources = [];
       card.querySelectorAll('textarea').forEach(ta => { if (ta.value) sources.push(ta.value); });
+      card.querySelectorAll('.dcard-ce').forEach(ce => { const t = (ce.textContent || ''); if (t.trim()) sources.push(t); });
       card.querySelectorAll('input').forEach(inp => { if (inp.type !== 'hidden' && inp.value) sources.push(inp.value); });
       card.querySelectorAll('select').forEach(sel => { if (sel.value) sources.push(sel.value); });
       const dateEl = card.querySelector('.dcard-date');
