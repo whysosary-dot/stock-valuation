@@ -1766,7 +1766,7 @@ const TAB_REPOS = {
 };
 const TAB_VISIT_KEY    = 'sv_tab_lastvisit_v1';
 const TAB_COMMIT_KEY   = 'sv_tab_commit_cache_v1';
-const TAB_VISIT_VER    = 2; // 마이그레이션 버전
+const TAB_VISIT_VER    = 3; // 마이그레이션 버전 (bump → 모든 기기 last-visit 자동 리셋)
 const COMMIT_TTL_MS    = 10 * 60 * 1000; // 10분
 const EPOCH_ISO        = '1970-01-01T00:00:00.000Z';
 
@@ -1788,6 +1788,7 @@ function saveCommitCache(c) { localStorage.setItem(TAB_COMMIT_KEY, JSON.stringif
   let m = loadVisitMap();
   if ((m._v || 1) < TAB_VISIT_VER) {
     m = { _v: TAB_VISIT_VER };
+    localStorage.removeItem(TAB_COMMIT_KEY); // commit 캐시도 함께 비워 최신 커밋 재조회
   }
   let changed = (m._v !== TAB_VISIT_VER);
   m._v = TAB_VISIT_VER;
