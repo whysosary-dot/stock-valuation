@@ -1698,53 +1698,66 @@ async function init() {
 init();
 
 /* ═══════════════════════════════════
-   탭 전환
+   탭 전환 (브라우저 히스토리 연동)
 ═══════════════════════════════════ */
+const IFRAME_TAB_SRC = {
+  calendar:  'https://whysosary-dot.github.io/investment-calendar/',
+  index:     'https://whysosary-dot.github.io/invest-index/',
+  tptracker: 'https://whysosary-dot.github.io/tp-tracker/',
+  screener:  'https://whysosary-dot.github.io/stock-screener/',
+  dart:      'https://whysosary-dot.github.io/dart-monitoring/',
+  news:      'https://whysosary-dot.github.io/stock-sites/',
+  usmarket:  'https://whysosary-dot.github.io/us-market-briefing/',
+  krmarket:  'https://whysosary-dot.github.io/kr-market-briefing/',
+  awake:     'https://whysosary-dot.github.io/awake-disclosure/',
+};
+
+function activatePage(page, opts = {}) {
+  const btn = document.querySelector(`.page-tab-btn[data-page="${page}"]`);
+  if (!btn) return;
+  document.querySelectorAll('.page-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
+  markTabVisited(page);
+  if (page === 'diary') renderAllDiaryFeeds();
+  const src = IFRAME_TAB_SRC[page];
+  if (src) {
+    const fr = document.getElementById(`${page}-frame`);
+    if (fr && !fr.src) fr.src = src;
+  }
+  if (!opts.skipHistory) {
+    const desired = page === 'valuation' ? '' : '#' + page;
+    const current = location.hash;
+    if (current !== desired) {
+      // 첫 번째 탭 전환은 push (뒤로가기로 돌아올 수 있게), 같은 탭 재클릭은 replace
+      history.pushState({ page }, '', desired || (location.pathname + location.search));
+    }
+  }
+}
+
+// 탭 클릭
 document.querySelectorAll('.page-tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const page = btn.dataset.page;
-    document.querySelectorAll('.page-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
-    document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
-    markTabVisited(page);
-    if (page === 'diary') renderAllDiaryFeeds();
-    if (page === 'calendar') {
-      const fr = document.getElementById('calendar-frame');
-      if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/investment-calendar/';
-    }
-    if (page === 'index') {
-      const fr = document.getElementById('index-frame');
-      if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/invest-index/';
-    }
-    if (page === 'tptracker') {
-      const fr = document.getElementById('tptracker-frame');
-      if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/tp-tracker/';
-    }
-    if (page === 'screener') {
-      const fr = document.getElementById('screener-frame');
-      if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/stock-screener/';
-    }
-    if (page === 'dart') {
-      const fr = document.getElementById('dart-frame');
-      if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/dart-monitoring/';
-    }
-    if (page === 'news') {
-      const fr = document.getElementById('news-frame');
-      if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/stock-sites/';
-    }
-    if (page === 'usmarket') {
-      const fr = document.getElementById('usmarket-frame');
-      if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/us-market-briefing/';
-    }
-    if (page === 'krmarket') {
-      const fr = document.getElementById('krmarket-frame');
-      if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/kr-market-briefing/';
-    }
-    if (page === 'awake') {
-      const fr = document.getElementById('awake-frame');
-      if (fr && !fr.src) fr.src = 'https://whysosary-dot.github.io/awake-disclosure/';
-    }
-  });
+  btn.addEventListener('click', () => activatePage(btn.dataset.page));
 });
+
+// 브라우저 뒤로/앞으로
+window.addEventListener('popstate', (e) => {
+  const fromState = e.state && e.state.page;
+  const fromHash  = (location.hash || '').replace(/^#/, '');
+  const page = fromState || fromHash || 'valuation';
+  if (document.querySelector(`.page-tab-btn[data-page="${page}"]`)) {
+    activatePage(page, { skipHistory: true });
+  }
+});
+
+// 초기 로드: URL에 해시가 있으면 그 탭 활성화 + 초기 상태에 valuation을 기록
+(function initFromHash() {
+  history.replaceState({ page: 'valuation' }, '', location.pathname + location.search + location.hash);
+  const initial = (location.hash || '').replace(/^#/, '');
+  if (initial && document.querySelector(`.page-tab-btn[data-page="${initial}"]`)) {
+    activatePage(initial, { skipHistory: true });
+    history.replaceState({ page: initial }, '', '#' + initial);
+  }
+})();
 
 /* ═══════════════════════════════════
    탭 업데이트 인디케이터 (마지막 방문 이후 GitHub 업데이트 시 ● 표시)
