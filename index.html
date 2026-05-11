@@ -1766,8 +1766,8 @@ const TAB_REPOS = {
 };
 const TAB_VISIT_KEY    = 'sv_tab_lastvisit_v1';
 const TAB_COMMIT_KEY   = 'sv_tab_commit_cache_v1';
-const TAB_VISIT_VER    = 3; // 마이그레이션 버전 (bump → 모든 기기 last-visit 자동 리셋)
-const COMMIT_TTL_MS    = 10 * 60 * 1000; // 10분
+const TAB_VISIT_VER    = 4; // 마이그레이션 버전 (bump → 모든 기기 last-visit 자동 리셋)
+const COMMIT_TTL_MS    = 30 * 60 * 1000; // 30분 (rate limit 보호)
 const EPOCH_ISO        = '1970-01-01T00:00:00.000Z';
 
 function loadVisitMap() {
@@ -1829,10 +1829,19 @@ async function fetchLatestCommitISO(repo, path) {
   try {
     const qs = new URLSearchParams({ per_page: '1' });
     if (path) qs.set('path', path);
-    const r = await fetch(`https://api.github.com/repos/${repo}/commits?${qs}`, {
-      headers: { 'Accept': 'application/vnd.github+json' }
-    });
-    if (!r.ok) return null;
+    const headers = { 'Accept': 'application/vnd.github+json' };
+    // 다이어리용 PAT가 있으면 인증해서 rate limit을 5000/hr로 확장
+    const pat = (localStorage.getItem('sv_github_pat') || '').trim();
+    if (pat) headers['Authorization'] = `Bearer ${pat}`;
+    const r = await fetch(`https://api.github.com/repos/${repo}/commits?${qs}`, { headers });
+    if (!r.ok) {
+      // 403/429 = rate limit. 짧게 negative-cache(2분)해서 폭주 방지
+      if (r.status === 403 || r.status === 429) {
+        cache[cacheKey] = { iso: null, fetchedAt: Date.now() - COMMIT_TTL_MS + 2*60*1000 };
+        saveCommitCache(cache);
+      }
+      return null;
+    }
     const arr = await r.json();
     if (!Array.isArray(arr) || !arr[0]) return null;
     const iso = arr[0].commit?.committer?.date || arr[0].commit?.author?.date || null;
@@ -1864,9 +1873,9 @@ async function refreshTabUpdateDots() {
   }));
 }
 
-// 페이지 로드 시 1회 + 5분마다 백그라운드 갱신
+// 페이지 로드 시 1회 + 30분마다 백그라운드 갱신 (rate limit 보호)
 refreshTabUpdateDots();
-setInterval(refreshTabUpdateDots, 5 * 60 * 1000);
+setInterval(refreshTabUpdateDots, 30 * 60 * 1000);
 
 /* ═══════════════════════════════════
    Diary
