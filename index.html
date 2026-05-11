@@ -365,6 +365,17 @@
   }
   .page-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
   .page-tab-btn:hover:not(.active) { color: var(--text); }
+  .page-tab-btn .update-dot {
+    display: none; width: 8px; height: 8px; background: #10b981;
+    border-radius: 50%; margin-right: 6px; vertical-align: 1px;
+    box-shadow: 0 0 0 2px rgba(16,185,129,0.18);
+    animation: updateDotPulse 2.4s ease-in-out infinite;
+  }
+  .page-tab-btn.has-update .update-dot { display: inline-block; }
+  @keyframes updateDotPulse {
+    0%,100% { box-shadow: 0 0 0 2px rgba(16,185,129,0.18); }
+    50%     { box-shadow: 0 0 0 4px rgba(16,185,129,0.32); }
+  }
   .page { display: none; flex: 1; min-height: 0; flex-direction: column; }
   .page.active { display: flex; }
 
@@ -1694,6 +1705,7 @@ document.querySelectorAll('.page-tab-btn').forEach(btn => {
     const page = btn.dataset.page;
     document.querySelectorAll('.page-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
     document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
+    markTabVisited(page);
     if (page === 'diary') renderAllDiaryFeeds();
     if (page === 'calendar') {
       const fr = document.getElementById('calendar-frame');
@@ -1733,6 +1745,127 @@ document.querySelectorAll('.page-tab-btn').forEach(btn => {
     }
   });
 });
+
+/* ═══════════════════════════════════
+   탭 업데이트 인디케이터 (마지막 방문 이후 GitHub 업데이트 시 ● 표시)
+═══════════════════════════════════ */
+// 각 탭별: repo 전체 최신 커밋 추적 또는 특정 파일 경로의 최신 커밋만 추적
+// stock-valuation repo는 stocks.json / diary.json을 함께 보관하므로 path 필터 필수
+const TAB_REPOS = {
+  valuation: { repo: 'whysosary-dot/stock-valuation', path: 'stocks.json' },
+  calendar:  { repo: 'whysosary-dot/investment-calendar' },
+  index:     { repo: 'whysosary-dot/invest-index' },
+  tptracker: { repo: 'whysosary-dot/tp-tracker' },
+  screener:  { repo: 'whysosary-dot/stock-screener' },
+  dart:      { repo: 'whysosary-dot/dart-monitoring' },
+  news:      { repo: 'whysosary-dot/stock-sites' },
+  usmarket:  { repo: 'whysosary-dot/us-market-briefing' },
+  krmarket:  { repo: 'whysosary-dot/kr-market-briefing' },
+  awake:     { repo: 'whysosary-dot/awake-disclosure' },
+  diary:     { repo: 'whysosary-dot/stock-valuation', path: 'diary.json' },
+};
+const TAB_VISIT_KEY    = 'sv_tab_lastvisit_v1';
+const TAB_COMMIT_KEY   = 'sv_tab_commit_cache_v1';
+const TAB_VISIT_VER    = 2; // 마이그레이션 버전
+const COMMIT_TTL_MS    = 10 * 60 * 1000; // 10분
+const EPOCH_ISO        = '1970-01-01T00:00:00.000Z';
+
+function loadVisitMap() {
+  try { return JSON.parse(localStorage.getItem(TAB_VISIT_KEY) || '{}'); }
+  catch { return {}; }
+}
+function saveVisitMap(m) { localStorage.setItem(TAB_VISIT_KEY, JSON.stringify(m)); }
+
+function loadCommitCache() {
+  try { return JSON.parse(localStorage.getItem(TAB_COMMIT_KEY) || '{}'); }
+  catch { return {}; }
+}
+function saveCommitCache(c) { localStorage.setItem(TAB_COMMIT_KEY, JSON.stringify(c)); }
+
+// 방문 기록이 없는 탭은 epoch(0)로 시작 → 미방문 탭에 있는 모든 GitHub 업데이트가 dot으로 표시됨
+// v1 → v2 마이그레이션: v1에서 'now'로 잘못 초기화된 기록을 epoch으로 리셋
+(function initVisitMap() {
+  let m = loadVisitMap();
+  if ((m._v || 1) < TAB_VISIT_VER) {
+    m = { _v: TAB_VISIT_VER };
+  }
+  let changed = (m._v !== TAB_VISIT_VER);
+  m._v = TAB_VISIT_VER;
+  for (const k of Object.keys(TAB_REPOS)) {
+    if (!m[k]) { m[k] = EPOCH_ISO; changed = true; }
+  }
+  if (changed) saveVisitMap(m);
+})();
+
+// 각 page-tab-btn에 dot span 주입
+(function injectDots() {
+  document.querySelectorAll('.page-tab-btn').forEach(btn => {
+    const page = btn.dataset.page;
+    if (!TAB_REPOS[page]) return;
+    if (btn.querySelector('.update-dot')) return;
+    const dot = document.createElement('span');
+    dot.className = 'update-dot';
+    btn.insertBefore(dot, btn.firstChild);
+  });
+})();
+
+function markTabVisited(page) {
+  if (!TAB_REPOS[page]) return;
+  const m = loadVisitMap();
+  m[page] = new Date().toISOString();
+  saveVisitMap(m);
+  const btn = document.querySelector(`.page-tab-btn[data-page="${page}"]`);
+  if (btn) btn.classList.remove('has-update');
+}
+
+async function fetchLatestCommitISO(repo, path) {
+  const cacheKey = path ? `${repo}|${path}` : repo;
+  const cache = loadCommitCache();
+  const cached = cache[cacheKey];
+  if (cached && (Date.now() - cached.fetchedAt) < COMMIT_TTL_MS) {
+    return cached.iso;
+  }
+  try {
+    const qs = new URLSearchParams({ per_page: '1' });
+    if (path) qs.set('path', path);
+    const r = await fetch(`https://api.github.com/repos/${repo}/commits?${qs}`, {
+      headers: { 'Accept': 'application/vnd.github+json' }
+    });
+    if (!r.ok) return null;
+    const arr = await r.json();
+    if (!Array.isArray(arr) || !arr[0]) return null;
+    const iso = arr[0].commit?.committer?.date || arr[0].commit?.author?.date || null;
+    if (iso) {
+      cache[cacheKey] = { iso, fetchedAt: Date.now() };
+      saveCommitCache(cache);
+    }
+    return iso;
+  } catch { return null; }
+}
+
+async function refreshTabUpdateDots() {
+  const visitMap = loadVisitMap();
+  const activePage = document.querySelector('.page-tab-btn.active')?.dataset.page;
+  const entries = Object.entries(TAB_REPOS);
+  await Promise.all(entries.map(async ([page, conf]) => {
+    const iso = await fetchLatestCommitISO(conf.repo, conf.path);
+    if (!iso) return;
+    const btn = document.querySelector(`.page-tab-btn[data-page="${page}"]`);
+    if (!btn) return;
+    const visitedAt = visitMap[page];
+    const isUpdated = visitedAt ? (new Date(iso) > new Date(visitedAt)) : true;
+    // 현재 활성 탭은 보고 있는 것이므로 즉시 방문 처리
+    if (isUpdated && page === activePage) {
+      markTabVisited(page);
+    } else {
+      btn.classList.toggle('has-update', isUpdated);
+    }
+  }));
+}
+
+// 페이지 로드 시 1회 + 5분마다 백그라운드 갱신
+refreshTabUpdateDots();
+setInterval(refreshTabUpdateDots, 5 * 60 * 1000);
 
 /* ═══════════════════════════════════
    Diary
