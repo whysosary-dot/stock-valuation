@@ -366,15 +366,15 @@
   .page-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
   .page-tab-btn:hover:not(.active) { color: var(--text); }
   .page-tab-btn .update-dot {
-    display: none; width: 8px; height: 8px; background: #10b981;
-    border-radius: 50%; margin-right: 6px; vertical-align: 1px;
-    box-shadow: 0 0 0 2px rgba(16,185,129,0.18);
+    display: none; width: 4px; height: 4px; background: #10b981;
+    border-radius: 50%; margin-right: 4px; vertical-align: 2px;
+    box-shadow: 0 0 0 1px rgba(16,185,129,0.18);
     animation: updateDotPulse 2.4s ease-in-out infinite;
   }
   .page-tab-btn.has-update .update-dot { display: inline-block; }
   @keyframes updateDotPulse {
-    0%,100% { box-shadow: 0 0 0 2px rgba(16,185,129,0.18); }
-    50%     { box-shadow: 0 0 0 4px rgba(16,185,129,0.32); }
+    0%,100% { box-shadow: 0 0 0 1px rgba(16,185,129,0.18); }
+    50%     { box-shadow: 0 0 0 2px rgba(16,185,129,0.32); }
   }
   .page { display: none; flex: 1; min-height: 0; flex-direction: column; }
   .page.active { display: flex; }
