@@ -853,7 +853,7 @@
     <span class="spacer"></span>
     <input id="diary-search" class="diary-search-inp" type="search" placeholder="🔍 내용 검색..." autocomplete="off" />
     <button id="diary-fmt-bold-red" class="diary-fmt-btn" type="button" title="선택한 글자를 볼드+빨간색으로"><span style="font-weight:700;color:var(--red);">B</span></button>
-    <button id="diary-fmt-clear" class="diary-fmt-btn clear" type="button" title="선택한 영역의 강조 해제 (원래 스타일로 원복)">✕</button>
+    <button id="diary-fmt-clear" class="diary-fmt-btn clear" type="button" title="선택한 부분만 원래 스타일로 원복 (검정·기본 굵기)"><span style="font-weight:400;color:var(--text);">B</span></button>
     <button id="diary-pull-btn" class="btn" type="button" title="GitHub 의 최신 다이어리 내용을 이 기기로 가져옵니다 (현재 내용 덮어씀)">🔄 가져오기</button>
     <button id="diary-backup-btn" class="btn" type="button">💾 백업</button>
   </div>
@@ -2147,7 +2147,9 @@ function applyBoldRedToggle() {
   try { updateTabCounts(); } catch(_) {}
 }
 
-// 선택 영역과 교차하는 모든 강조 span 을 unwrap — "원래 스타일로 원복"
+// 드래그한 정확한 영역만 강조 해제. 강조 span 의 일부에 걸친 경우엔
+// extractContents 가 wrapper 를 자동 split 하므로, 추출된 fragment 의 강조 span 만
+// unwrap 한 뒤 다시 삽입한다 → 드래그 바깥은 강조 그대로 유지.
 function clearBoldRedInRange() {
   const sel = window.getSelection();
   if (!sel || !sel.rangeCount || sel.isCollapsed) return;
@@ -2157,23 +2159,33 @@ function clearBoldRedInRange() {
   const editable = startEl && startEl.closest('[contenteditable="true"]');
   if (!editable) return;
 
-  // 강조 span 후보: 마커 또는 빨강+볼드 스타일. range 와 교차하는 것만.
-  const targets = [...editable.querySelectorAll('span')].filter(sp => {
-    const isMark  = sp.getAttribute('data-diary-br') === '1';
-    const isStyle = _looksLikeBoldRed(sp.getAttribute('style') || '');
-    if (!isMark && !isStyle) return false;
-    try { return range.intersectsNode(sp); } catch(_) { return false; }
-  });
-  if (!targets.length) return;
+  // 1) 선택 영역을 fragment 로 추출 (boundary wrapper 자동 split)
+  let frag;
+  try { frag = range.extractContents(); }
+  catch (e) { console.warn('[diary] extract failed', e); return; }
 
-  // unwrap
+  // 2) fragment 내부의 강조 span 만 unwrap (텍스트는 그대로)
+  const targets = [...frag.querySelectorAll('span')].filter(sp => {
+    return sp.getAttribute('data-diary-br') === '1'
+        || _looksLikeBoldRed(sp.getAttribute('style') || '');
+  });
   targets.forEach(sp => {
     const parent = sp.parentNode;
     while (sp.firstChild) parent.insertBefore(sp.firstChild, sp);
     parent.removeChild(sp);
   });
 
-  // selection 초기화 (정확히 복원 어려움)
+  // 3) 원래 위치에 fragment 재삽입
+  range.insertNode(frag);
+
+  // 4) split 후 비게 된 wrapper span 정리 (양쪽 끝이 비어있을 수 있음)
+  editable.querySelectorAll('span').forEach(sp => {
+    const isBR = sp.getAttribute('data-diary-br') === '1'
+              || _looksLikeBoldRed(sp.getAttribute('style') || '');
+    if (isBR && !sp.textContent) sp.remove();
+  });
+
+  // 5) 선택 영역 초기화
   try { sel.removeAllRanges(); } catch(_) {}
 
   editable.dispatchEvent(new Event('input', { bubbles: true }));
