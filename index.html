@@ -2147,6 +2147,7 @@ function applyBoldRedToggle() {
    Diary
 ═══════════════════════════════════ */
 const DIARY_KEY = 'sv_diary_v1';
+const DIARY_GH_SHA_KEY = 'sv_diary_gh_sha_v1'; // GitHub 마지막 동기화 시점의 blob SHA
 
 function loadDiary() {
   try { return JSON.parse(localStorage.getItem(DIARY_KEY) || '{"daily":{},"weekly":{}}'); }
@@ -2787,7 +2788,7 @@ function initDiary() {
       pullBtn.disabled = true;
       pullBtn.textContent = '🔄 가져오는 중…';
       try {
-        let ghDiary = null;
+        let ghDiary = null, pulledSha = '';
         // 1차: GitHub API (캐시 짧음, 거의 즉시 반영). public repo 라 PAT 없이도 가능.
         try {
           const r1 = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/diary.json?ref=${GH.BRANCH}&t=${Date.now()}`, {
@@ -2796,6 +2797,7 @@ function initDiary() {
           });
           if (r1.ok) {
             const meta = await r1.json();
+            pulledSha = meta && meta.sha ? String(meta.sha) : '';
             if (meta && meta.content) {
               const raw = new TextDecoder().decode(Uint8Array.from(atob(String(meta.content).replace(/\n/g,'')), c => c.charCodeAt(0)));
               ghDiary = JSON.parse(raw);
@@ -2815,6 +2817,8 @@ function initDiary() {
           trades: ghDiary.trades || {},
         };
         saveDiaryData(diary.data);
+        // 가져온 SHA 저장 — 자동 머지가 다음 새로고침에 또 덮어쓰지 않음
+        if (pulledSha) localStorage.setItem(DIARY_GH_SHA_KEY, pulledSha);
         renderAllDiaryFeeds();
         const sq = document.getElementById('diary-search').value;
         if (sq) applyDiarySearch(sq);
@@ -2855,9 +2859,14 @@ function initDiary() {
   window.addEventListener('pagehide', () => _diaryAbort.abort(), { once: true });
   (async () => {
     try {
-      // 1차: GitHub Contents API (캐시 짧음, 커밋 직후에도 즉시 최신 반영)
-      // 2차: raw.githubusercontent.com (max-age=300, 5분 캐싱이라 푸시 직후엔 옛 응답 가능)
-      let ghDiary = null;
+      // 정책: GitHub diary.json 의 blob SHA 를 추적해서
+      //   - 새 커밋(SHA 변경) 있을 때만 GitHub 우선으로 머지 → 다른 기기 변경 흡수
+      //   - SHA 동일 → 머지 스킵, localStorage 그대로 → 미커밋 변경 보존
+      // ☁️커밋 시에도 새 SHA 를 저장해서 같은 기기 커밋 직후 새로고침은 머지 안 함.
+      const lastSha = localStorage.getItem(DIARY_GH_SHA_KEY) || '';
+
+      // 1차: GitHub Contents API (캐시 짧음, blob SHA 함께 얻음)
+      let ghDiary = null, ghSha = '';
       try {
         const r1 = await fetch(
           `https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/diary.json?ref=${GH.BRANCH}&t=${Date.now()}`,
@@ -2865,6 +2874,9 @@ function initDiary() {
         );
         if (r1.ok) {
           const meta = await r1.json();
+          ghSha = meta && meta.sha ? String(meta.sha) : '';
+          // SHA 가 마지막 동기화 시점과 같으면 — 새 커밋 없음 → 머지 없이 종료
+          if (ghSha && lastSha && ghSha === lastSha) return;
           if (meta && meta.content) {
             const raw = new TextDecoder().decode(Uint8Array.from(atob(String(meta.content).replace(/\n/g,'')), c => c.charCodeAt(0)));
             ghDiary = JSON.parse(raw);
@@ -2873,7 +2885,11 @@ function initDiary() {
       } catch(e) {
         if (e && e.name === 'AbortError') return;
       }
+
+      // 2차 fallback: raw (SHA 못 얻으니 보수적으로 머지 진행. 단 lastSha 가 없을 때만
+      // — lastSha 가 있는데 API 가 실패한 상태에서 raw 옛 응답으로 덮어쓰지 않도록)
       if (!ghDiary) {
+        if (lastSha) return; // 마지막 SHA 가 있는데 API 가 실패 → 안전하게 미머지
         const r = await fetch(
           `https://raw.githubusercontent.com/${GH.OWNER}/${GH.REPO}/${GH.BRANCH}/diary.json?t=${Date.now()}`,
           { signal: _diaryAbort.signal, cache: 'no-store' }
@@ -2887,12 +2903,8 @@ function initDiary() {
                       + Object.keys(ghDiary.weekly||{}).length
                       + Object.keys(ghDiary.trades||{}).length;
       if (!ghHasData) return;
-      // stock-valuation 과 동일 정책: GitHub(커밋된) 우선, GitHub 에 해당 키가
-      // 없을 때만 localStorage fallback. 다른 기기에서 ☁️커밋&푸시한 변경이
-      // 페이지 로드만으로 자동 흡수된다.
-      // (트레이드오프: 이 기기에서 같은 날짜 일기를 수정 중인데 아직 커밋
-      //  안 한 상태에서 새로고침하면 다른 기기 버전으로 덮어써짐. valuation
-      //  과 같은 작업 모델 — 한 번에 한 기기에서만 활발히 입력.)
+
+      // 새 커밋 발견 → GitHub 우선 머지 (같은 키는 GitHub 값으로, GitHub 에 없는 키만 localStorage 보존)
       const snapshot = loadDiary();
       diary.data = {
         daily:  { ...(snapshot.daily  || {}), ...(ghDiary.daily  || {}) },
@@ -2900,6 +2912,7 @@ function initDiary() {
         trades: { ...(snapshot.trades || {}), ...(ghDiary.trades || {}) },
       };
       saveDiaryData(diary.data);
+      if (ghSha) localStorage.setItem(DIARY_GH_SHA_KEY, ghSha);
       renderAllDiaryFeeds();
       requestAnimationFrame(() => {
         const sq = document.getElementById('diary-search').value;
@@ -3014,9 +3027,12 @@ async function ghCommitAll() {
 
     // ── 2. diary.json : localStorage 다이어리 전체 커밋 ──
     const diaryFile = await ghApiGet(pat, 'diary.json');
-    await ghApiPut(pat, 'diary.json', JSON.stringify(diary.data, null, 2),
+    const diaryPutRes = await ghApiPut(pat, 'diary.json', JSON.stringify(diary.data, null, 2),
       diaryFile ? diaryFile.sha : null,
       `sync: 다이어리 업데이트 ${today}`);
+    // 새 blob SHA 저장 → 같은 기기에서 커밋 직후 새로고침해도 머지 스킵 (미커밋 변경 보존)
+    const newDiarySha = diaryPutRes && diaryPutRes.content && diaryPutRes.content.sha;
+    if (newDiarySha) localStorage.setItem(DIARY_GH_SHA_KEY, String(newDiarySha));
 
     toast('✅ GitHub 커밋 완료!', 'ok', 3500);
   } catch (e) {
