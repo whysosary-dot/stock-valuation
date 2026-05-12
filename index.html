@@ -1995,6 +1995,9 @@ function sanitizeDiaryHTML(html) {
             const v = attr.value.trim();
             if (!/^(https?:|mailto:)/i.test(v)) child.removeAttribute('href');
             else { child.setAttribute('target','_blank'); child.setAttribute('rel','noopener'); }
+          } else if (attr.name === 'data-diary-br' && child.tagName === 'SPAN') {
+            // 강조 탭이 식별하는 마커 — 보존
+            if (attr.value !== '1') child.removeAttribute(attr.name);
           } else {
             child.removeAttribute(attr.name);
           }
@@ -2007,7 +2010,15 @@ function sanitizeDiaryHTML(html) {
   return tmpl.innerHTML;
 }
 
+// 빨강+볼드 스타일 식별 (마커가 없는 legacy 데이터도 인식)
+function _looksLikeBoldRed(styleStr) {
+  if (!styleStr) return false;
+  return /font-weight\s*:\s*(?:bold|700|800|900)/i.test(styleStr)
+      && /color\s*:\s*(?:#e23a3a|#E23A3A|rgb\(\s*226\s*,\s*58\s*,\s*58\s*\)|red)/i.test(styleStr);
+}
+
 // 기존 plain text 데이터(태그 없는) → 안전한 HTML로 정규화. HTML이면 sanitize만.
+// 추가: 빨강+볼드 style 가진 span 에 data-diary-br='1' 마커 자동 부여 (legacy 마이그레이션).
 function normalizeDiaryValue(stored) {
   if (!stored) return '';
   const s = String(stored);
@@ -2015,7 +2026,16 @@ function normalizeDiaryValue(stored) {
     // plain text — escape + 줄바꿈 변환
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\r?\n/g, '<br>');
   }
-  return sanitizeDiaryHTML(s);
+  // legacy 마이그레이션: 마커 없는 빨강+볼드 span 에 마커 부여
+  const tmpl = document.createElement('template');
+  tmpl.innerHTML = s;
+  tmpl.content.querySelectorAll('span').forEach(sp => {
+    const style = sp.getAttribute('style') || '';
+    if (_looksLikeBoldRed(style) && sp.getAttribute('data-diary-br') !== '1') {
+      sp.setAttribute('data-diary-br', '1');
+    }
+  });
+  return sanitizeDiaryHTML(tmpl.innerHTML);
 }
 
 // contenteditable element 공통 설정 — paste 시 외부 HTML 차단, plain text로 변환
@@ -2151,9 +2171,9 @@ function updateTabCounts() {
     Object.keys(d.weekly || {}).filter(k => d.weekly[k]).length;
   document.getElementById('cnt-trades').textContent =
     Object.keys(d.trades || {}).filter(k => (d.trades[k]||[]).length > 0).length;
-  // 강조 — 전체 텍스트에서 wrapper span 개수
+  // 강조 — _extractHighlights 사용 (마커 + 스타일 fallback 모두 인식)
   let hi = 0;
-  const countIn = (html) => { if (!html) return; const m = String(html).match(/data-diary-br="1"/g); if (m) hi += m.length; };
+  const countIn = (html) => { hi += _extractHighlights(html).length; };
   Object.values(d.daily  || {}).forEach(countIn);
   Object.values(d.weekly || {}).forEach(countIn);
   Object.values(d.trades || {}).forEach(arr => (arr || []).forEach(t => countIn(t.memo)));
@@ -2522,13 +2542,15 @@ function _diaryDateSortKey(date) {
 }
 
 function _extractHighlights(html) {
-  // sanitize 단계에서 우리가 만든 wrapper 는 항상 data-diary-br="1" 가 붙어있다.
-  // 사용자가 직접 외부 HTML 페이스트로 비슷한 스타일을 넣었더라도 attachEditable 의
-  // paste 차단으로 들어올 수 없다. 그래서 이 selector 만 보면 충분.
+  // 마커(data-diary-br='1') 또는 동등한 스타일(빨강+볼드) 가진 span 모두 인식.
+  // legacy 데이터(마커 없는 것)와도 호환.
   if (!html) return [];
   const div = document.createElement('div');
   div.innerHTML = String(html);
-  return [...div.querySelectorAll('span[data-diary-br="1"]')].map(sp => sp.outerHTML);
+  return [...div.querySelectorAll('span')].filter(sp => {
+    if (sp.getAttribute('data-diary-br') === '1') return true;
+    return _looksLikeBoldRed(sp.getAttribute('style') || '');
+  }).map(sp => sp.outerHTML);
 }
 
 function renderFeedHighlights() {
