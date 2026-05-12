@@ -601,6 +601,29 @@
   }
   .diary-fmt-btn:hover { background: #fde7e7; border-color: var(--red); }
   .diary-fmt-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── 강조 탭 카드 ── */
+  .highlight-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 18px; margin-bottom: 10px;
+  }
+  .highlight-meta {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    font-size: 12.5px; color: var(--text-dim); margin-bottom: 8px;
+  }
+  .highlight-date { font-weight: 600; color: var(--text-2); }
+  .highlight-tag {
+    padding: 2px 8px; background: var(--panel-2);
+    border-radius: 4px; font-size: 11.5px; color: var(--text-dim);
+  }
+  .highlight-tag.daily   { background: #e0f0ff; color: #1e6fb8; }
+  .highlight-tag.weekly  { background: #e8f4e0; color: #4d8c2c; }
+  .highlight-tag.trades  { background: #fff0e0; color: #b86b1e; }
+  .highlight-body {
+    font-size: 15px; line-height: 1.7; color: var(--text);
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .highlight-card:hover { border-color: var(--accent); cursor: pointer; }
   .trade-label { font-size: 14px; color: var(--text-dim); white-space: nowrap; }
   .trade-empty { padding: 40px 20px; text-align: center; color: var(--text-dim); font-size: 15px; }
   .ei-trade-badge {
@@ -788,6 +811,7 @@
       <button class="dtab active" data-tab="daily">📔 일기<span class="dtab-cnt" id="cnt-daily">0</span></button>
       <button class="dtab" data-tab="weekly">📅 주간 전략<span class="dtab-cnt" id="cnt-weekly">0</span></button>
       <button class="dtab" data-tab="trades">📊 매매일지<span class="dtab-cnt" id="cnt-trades">0</span></button>
+      <button class="dtab" data-tab="highlights">🔴 강조<span class="dtab-cnt" id="cnt-highlights">0</span></button>
     </div>
     <span class="spacer"></span>
     <input id="diary-search" class="diary-search-inp" type="search" placeholder="🔍 내용 검색..." autocomplete="off" />
@@ -798,6 +822,7 @@
     <div id="feed-daily"  class="diary-feed active"></div>
     <div id="feed-weekly" class="diary-feed"></div>
     <div id="feed-trades" class="diary-feed"></div>
+    <div id="feed-highlights" class="diary-feed"></div>
   </div>
 </div><!-- /page-diary -->
 
@@ -2059,6 +2084,8 @@ function applyBoldRedToggle() {
   }
   // 자동 저장 트리거
   editable.dispatchEvent(new Event('input', { bubbles: true }));
+  // 카운트만 즉시 갱신 (강조 탭 본문은 그 탭으로 이동할 때 새로 그림)
+  try { updateTabCounts(); } catch(_) {}
 }
 
 /* ═══════════════════════════════════
@@ -2124,6 +2151,14 @@ function updateTabCounts() {
     Object.keys(d.weekly || {}).filter(k => d.weekly[k]).length;
   document.getElementById('cnt-trades').textContent =
     Object.keys(d.trades || {}).filter(k => (d.trades[k]||[]).length > 0).length;
+  // 강조 — 전체 텍스트에서 wrapper span 개수
+  let hi = 0;
+  const countIn = (html) => { if (!html) return; const m = String(html).match(/data-diary-br="1"/g); if (m) hi += m.length; };
+  Object.values(d.daily  || {}).forEach(countIn);
+  Object.values(d.weekly || {}).forEach(countIn);
+  Object.values(d.trades || {}).forEach(arr => (arr || []).forEach(t => countIn(t.memo)));
+  const elHi = document.getElementById('cnt-highlights');
+  if (elHi) elHi.textContent = hi;
 }
 
 /* ── 저장 (디바운스) — value 는 HTML 일 수도 plain text 일 수도 있음 ── */
@@ -2473,9 +2508,101 @@ function renderFeedTrades() {
   });
 }
 
+/* ── 강조 탭: 빨강+볼드 처리된 문장만 모아 보기 ── */
+function _diaryDateSortKey(date) {
+  // weekly 키(YYYY-WNN) 는 그 주 월요일 날짜로 환산해 daily 키와 비교 가능하게
+  const m = String(date).match(/^(\d{4})-W(\d{2})$/);
+  if (m) {
+    const y = +m[1], w = +m[2];
+    const jan4 = new Date(y, 0, 4);
+    const monday = new Date(jan4.getTime() - ((jan4.getDay() || 7) - 1) * 86400000 + (w - 1) * 7 * 86400000);
+    return `${monday.getFullYear()}-${String(monday.getMonth()+1).padStart(2,'0')}-${String(monday.getDate()).padStart(2,'0')}`;
+  }
+  return String(date);
+}
+
+function _extractHighlights(html) {
+  // sanitize 단계에서 우리가 만든 wrapper 는 항상 data-diary-br="1" 가 붙어있다.
+  // 사용자가 직접 외부 HTML 페이스트로 비슷한 스타일을 넣었더라도 attachEditable 의
+  // paste 차단으로 들어올 수 없다. 그래서 이 selector 만 보면 충분.
+  if (!html) return [];
+  const div = document.createElement('div');
+  div.innerHTML = String(html);
+  return [...div.querySelectorAll('span[data-diary-br="1"]')].map(sp => sp.outerHTML);
+}
+
+function renderFeedHighlights() {
+  const feed = document.getElementById('feed-highlights');
+  if (!feed) return;
+  feed.innerHTML = '';
+
+  const items = []; // {date, sortKey, sectionKey, sectionLabel, extraTag, htmlSnippet}
+
+  Object.entries(diary.data.daily || {}).forEach(([k, v]) => {
+    _extractHighlights(v).forEach(snippet => {
+      items.push({ date: k, sortKey: _diaryDateSortKey(k), sectionKey: 'daily', sectionLabel: '일기', extraTag: '', htmlSnippet: snippet });
+    });
+  });
+  Object.entries(diary.data.weekly || {}).forEach(([k, v]) => {
+    _extractHighlights(v).forEach(snippet => {
+      items.push({ date: k, sortKey: _diaryDateSortKey(k), sectionKey: 'weekly', sectionLabel: '주간', extraTag: '', htmlSnippet: snippet });
+    });
+  });
+  Object.entries(diary.data.trades || {}).forEach(([dateStr, trades]) => {
+    (trades || []).forEach(t => {
+      _extractHighlights(t.memo).forEach(snippet => {
+        items.push({ date: dateStr, sortKey: _diaryDateSortKey(dateStr), sectionKey: 'trades', sectionLabel: '매매', extraTag: t.name || '', htmlSnippet: snippet });
+      });
+    });
+  });
+
+  // 최신순
+  items.sort((a, b) => (b.sortKey || '').localeCompare(a.sortKey || ''));
+
+  if (!items.length) {
+    const e = document.createElement('div'); e.className = 'diary-empty-state';
+    e.innerHTML = '강조 표시한 문장이 아직 없어요.<br>일기 · 주간전략 · 매매메모에서 글자를 드래그한 뒤 상단의 <strong style="color:var(--red)">B</strong> 버튼을 눌러 강조해보세요.';
+    feed.appendChild(e); return;
+  }
+
+  items.forEach(it => {
+    const card = document.createElement('div');
+    card.className = 'highlight-card';
+    card.dataset.section = it.sectionKey;
+    card.dataset.date = it.date;
+
+    const meta = document.createElement('div'); meta.className = 'highlight-meta';
+    const dateSpan = document.createElement('span'); dateSpan.className = 'highlight-date';
+    if (/^\d{4}-W\d{2}$/.test(it.date))           dateSpan.textContent = formatWeekHeader(it.date);
+    else if (/^\d{4}-\d{2}-\d{2}$/.test(it.date)) dateSpan.textContent = formatDateHeader(it.date);
+    else                                          dateSpan.textContent = it.date;
+    meta.appendChild(dateSpan);
+
+    const tagSpan = document.createElement('span'); tagSpan.className = `highlight-tag ${it.sectionKey}`;
+    tagSpan.textContent = it.sectionLabel + (it.extraTag ? ` · ${it.extraTag}` : '');
+    meta.appendChild(tagSpan);
+
+    const body = document.createElement('div'); body.className = 'highlight-body';
+    // _extractHighlights 가 반환하는 outerHTML 은 이미 sanitize 된 데이터에서 추출.
+    body.innerHTML = it.htmlSnippet;
+
+    card.appendChild(meta);
+    card.appendChild(body);
+
+    // 카드 클릭 → 해당 원본 탭으로 이동 (단순 안내)
+    card.addEventListener('click', () => {
+      const target = it.sectionKey;
+      const btn = document.querySelector(`.dtab[data-tab="${target}"]`);
+      if (btn) btn.click();
+    });
+
+    feed.appendChild(card);
+  });
+}
+
 /* ── 전체 렌더 ── */
 function renderAllDiaryFeeds() {
-  renderFeedDaily(); renderFeedWeekly(); renderFeedTrades(); updateTabCounts();
+  renderFeedDaily(); renderFeedWeekly(); renderFeedTrades(); renderFeedHighlights(); updateTabCounts();
 }
 
 /* ── 초기화 ── */
@@ -2485,6 +2612,8 @@ function initDiary() {
       diary.activeTab = btn.dataset.tab;
       document.querySelectorAll('.dtab').forEach(b => b.classList.toggle('active', b === btn));
       document.querySelectorAll('.diary-feed').forEach(f => f.classList.toggle('active', f.id === `feed-${diary.activeTab}`));
+      // 강조 탭은 들어올 때마다 최신 상태로 새로 그림
+      if (diary.activeTab === 'highlights') renderFeedHighlights();
       // 탭이 보여진 후 모든 textarea 높이 재계산 (display:none 상태에서 scrollHeight=0 문제 해결)
       requestAnimationFrame(() => {
         document.querySelectorAll(`#feed-${diary.activeTab} textarea`).forEach(ta => {
