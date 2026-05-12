@@ -2091,49 +2091,130 @@ function applyBoldRedToggle() {
   try { updateTabCounts(); } catch(_) {}
 }
 
-// 드래그한 정확한 영역만 강조 해제. 강조 span 의 일부에 걸친 경우엔
-// extractContents 가 wrapper 를 자동 split 하므로, 추출된 fragment 의 강조 span 만
-// unwrap 한 뒤 다시 삽입한다 → 드래그 바깥은 강조 그대로 유지.
+// 드래그한 부분의 강조 해제.
+// 정확히 드래그 영역만 푸는 알고리즘:
+// 1) 선택과 교차하는 강조 span 후보 수집
+// 2) 각 span 마다 선택 영역 안에 들어가는 부분만 잘라서 span 밖으로 빼냄
+// 3) span 이 비게 되면 제거
 function clearBoldRedInRange() {
   const sel = window.getSelection();
-  if (!sel || !sel.rangeCount || sel.isCollapsed) return;
+  if (!sel || !sel.rangeCount || sel.isCollapsed) {
+    console.warn('[diary] clear: no active selection');
+    return;
+  }
   const range = sel.getRangeAt(0);
   const anc = range.commonAncestorContainer;
   const startEl = anc.nodeType === 1 ? anc : anc.parentElement;
   const editable = startEl && startEl.closest('[contenteditable="true"]');
-  if (!editable) return;
+  if (!editable) {
+    console.warn('[diary] clear: selection not in editable');
+    return;
+  }
 
-  // 1) 선택 영역을 fragment 로 추출 (boundary wrapper 자동 split)
-  let frag;
-  try { frag = range.extractContents(); }
-  catch (e) { console.warn('[diary] extract failed', e); return; }
-
-  // 2) fragment 내부의 강조 span 만 unwrap (텍스트는 그대로)
-  const targets = [...frag.querySelectorAll('span')].filter(sp => {
-    return sp.getAttribute('data-diary-br') === '1'
-        || _looksLikeBoldRed(sp.getAttribute('style') || '');
+  // 강조 span 후보 (마커 또는 빨강+볼드 스타일) — 선택과 교차
+  const spans = [...editable.querySelectorAll('span')].filter(sp => {
+    const isMark  = sp.getAttribute('data-diary-br') === '1';
+    const isStyle = _looksLikeBoldRed(sp.getAttribute('style') || '');
+    if (!isMark && !isStyle) return false;
+    try { return range.intersectsNode(sp); } catch(_) { return false; }
   });
-  targets.forEach(sp => {
-    const parent = sp.parentNode;
-    while (sp.firstChild) parent.insertBefore(sp.firstChild, sp);
-    parent.removeChild(sp);
+  if (!spans.length) {
+    console.warn('[diary] clear: no highlight span intersects selection');
+    return;
+  }
+
+  // 각 span 별로 정밀 처리
+  spans.forEach(span => {
+    // span 전체가 선택 안에 완전히 포함되나? → 그냥 unwrap
+    const spanFullyIn =
+      range.isPointInRange(span, 0) &&
+      range.isPointInRange(span, span.childNodes.length);
+    // (isPointInRange 가 일부 환경에서 throw 가능 — try)
+    let fullIn = false;
+    try {
+      fullIn = range.isPointInRange(span, 0) && range.isPointInRange(span, span.childNodes.length);
+    } catch(_) { fullIn = false; }
+
+    if (fullIn) {
+      const parent = span.parentNode;
+      while (span.firstChild) parent.insertBefore(span.firstChild, span);
+      parent.removeChild(span);
+      return;
+    }
+
+    // 부분 선택 — span 안의 모든 텍스트를 모아서 3등분 (강조 span 안엔 텍스트만 있다고 가정)
+    const fullText = span.textContent || '';
+    // span 시작점이 range 안에 있나 / 끝점이 range 안에 있나
+    let startInRange = false, endInRange = false;
+    try { startInRange = range.isPointInRange(span, 0); } catch(_) {}
+    try { endInRange   = range.isPointInRange(span, span.childNodes.length); } catch(_) {}
+
+    // 잘라낼 텍스트 위치 결정 — selection 의 startContainer/endContainer 가 이 span 내부일 때
+    let cutStart = 0, cutEnd = fullText.length;
+    if (span.contains(range.startContainer)) {
+      // span 안에서 시작 → offset 계산: textContent 누적 길이 + startOffset
+      cutStart = _offsetWithin(span, range.startContainer, range.startOffset);
+    } else if (startInRange) {
+      cutStart = 0;
+    } else {
+      cutStart = 0; // 보수적 default
+    }
+    if (span.contains(range.endContainer)) {
+      cutEnd = _offsetWithin(span, range.endContainer, range.endOffset);
+    } else if (endInRange) {
+      cutEnd = fullText.length;
+    } else {
+      cutEnd = fullText.length;
+    }
+    if (cutStart < 0) cutStart = 0;
+    if (cutEnd > fullText.length) cutEnd = fullText.length;
+    if (cutEnd <= cutStart) return; // 선택과 안 겹침
+
+    const before = fullText.slice(0, cutStart);
+    const middle = fullText.slice(cutStart, cutEnd);
+    const after  = fullText.slice(cutEnd);
+
+    // before 는 원래 span 에 남기고, middle 은 텍스트노드, after 는 새 span
+    span.textContent = before;
+    const midNode = document.createTextNode(middle);
+    let afterSpan = null;
+    if (after) {
+      afterSpan = span.cloneNode(false);  // 같은 속성/스타일 복제, 자식 없음
+      afterSpan.textContent = after;
+    }
+    // before 가 비었으면 원래 span 제거
+    if (!before) {
+      const parent = span.parentNode;
+      parent.insertBefore(midNode, span);
+      if (afterSpan) parent.insertBefore(afterSpan, span);
+      parent.removeChild(span);
+    } else {
+      span.parentNode.insertBefore(midNode, span.nextSibling);
+      if (afterSpan) span.parentNode.insertBefore(afterSpan, midNode.nextSibling);
+    }
   });
 
-  // 3) 원래 위치에 fragment 재삽입
-  range.insertNode(frag);
-
-  // 4) split 후 비게 된 wrapper span 정리 (양쪽 끝이 비어있을 수 있음)
+  // 정리: 비어있는 강조 span 제거
   editable.querySelectorAll('span').forEach(sp => {
-    const isBR = sp.getAttribute('data-diary-br') === '1'
-              || _looksLikeBoldRed(sp.getAttribute('style') || '');
+    const isBR = sp.getAttribute('data-diary-br') === '1' || _looksLikeBoldRed(sp.getAttribute('style') || '');
     if (isBR && !sp.textContent) sp.remove();
   });
 
-  // 5) 선택 영역 초기화
   try { sel.removeAllRanges(); } catch(_) {}
-
   editable.dispatchEvent(new Event('input', { bubbles: true }));
   try { updateTabCounts(); } catch(_) {}
+}
+
+// span 안의 특정 노드/offset 까지 텍스트 누적 길이
+function _offsetWithin(root, node, offset) {
+  let acc = 0;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  let cur;
+  while ((cur = walker.nextNode())) {
+    if (cur === node) return acc + offset;
+    acc += (cur.nodeValue || '').length;
+  }
+  return acc;
 }
 
 /* ═══════════════════════════════════
