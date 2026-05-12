@@ -413,20 +413,26 @@
   /* 강조 탭 활성 */
   .dtab[data-tab="highlights"].active { background: #fde7e7; color: #e23a3a; border-color: #f5b5b5; box-shadow: 0 1px 4px rgba(226,58,58,.12); }
 
-  /* ── 모바일 반응형: 좁은 화면에서 탭/툴바 줄바꿈 + 가로 스크롤 ── */
+  /* ── 모바일 반응형: 좁은 화면에서 탭/툴바 줄바꿈 + 가로 스크롤 ──
+     ⚠️ specificity 주의: 위쪽의 `.diary-topbar .diary-tabs { flex: none }` 보다 명확히 이기도록
+        미디어쿼리 안에서도 같은 두-클래스 selector 로 작성한다. */
   @media (max-width: 700px) {
     .diary-topbar { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
-    .diary-tabs {
+    .diary-topbar .diary-tabs {
       flex: 1 1 100%;
       overflow-x: auto; flex-wrap: nowrap;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
+      max-width: 100%;
+      min-width: 0;
     }
-    .diary-tabs::-webkit-scrollbar { display: none; }
-    .dtab { flex: 0 0 auto; font-size: 13px; padding: 6px 11px; white-space: nowrap; }
+    .diary-topbar .diary-tabs::-webkit-scrollbar { display: none; }
+    .diary-topbar .dtab { flex: 0 0 auto; font-size: 13px; padding: 6px 11px; white-space: nowrap; }
     .diary-topbar .spacer { display: none; }
-    .diary-search-inp { flex: 1 1 100%; }
-    .diary-fmt-btn, #diary-backup-btn, #diary-pull-btn { flex: 0 0 auto; font-size: 13px; padding: 6px 10px; }
+    .diary-topbar .diary-search-inp { flex: 1 1 100%; }
+    .diary-topbar .diary-fmt-btn,
+    .diary-topbar #diary-backup-btn,
+    .diary-topbar #diary-pull-btn { flex: 0 0 auto; font-size: 13px; padding: 6px 10px; }
   }
   /* 카운트 뱃지 */
   .dtab .dtab-cnt {
