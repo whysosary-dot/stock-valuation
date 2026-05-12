@@ -2598,23 +2598,15 @@ async function ghCommitAll() {
 document.getElementById('gh-commit-btn').addEventListener('click', ghCommitAll);
 
 /* ═══════════════════════════════════
-   Telegram Feed  — 페이지 로드 시 1회 fetch, 이후 클릭은 캐시만 사용
+   Telegram Feed  — 완전 동기/localStorage 기반. 페이지 로드 시 fetch 없음
 ═══════════════════════════════════ */
 (function() {
+  const LS_KEY = 'tg_msgs_v1';
   const RAW_URL = 'https://raw.githubusercontent.com/whysosary-dot/stock-valuation/main/telegram.json';
 
-  // 페이지 로드 시 한 번만 fetch (다이어리와 동일한 패턴)
-  let _cachedMsgs = [];
-  let _loadPromise = null;
-  function preload() {
-    if (_loadPromise) return _loadPromise;
-    _loadPromise = fetch(RAW_URL + '?t=' + Date.now())
-      .then(r => r.ok ? r.json() : [])
-      .then(data => { _cachedMsgs = Array.isArray(data) ? data : []; return _cachedMsgs; })
-      .catch(() => { _cachedMsgs = []; return []; });
-    return _loadPromise;
+  function loadLocal() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; }
   }
-  preload(); // 페이지 로드 즉시 시작
 
   function fmtDate(ts) {
     const d = new Date(ts * 1000);
@@ -2626,84 +2618,80 @@ document.getElementById('gh-commit-btn').addEventListener('click', ghCommitAll);
     return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  // 캐시된 데이터로 렌더 (fetch 없음 — 클릭 이벤트에서 절대 fetch 안 함)
-  function showCached() {
+  function renderMessages(all) {
     const feed = document.getElementById('tg-feed');
     const status = document.getElementById('tg-status');
     if (!feed) return;
-    renderMessages(_cachedMsgs, feed, status);
-  }
-
-  function renderMessages(all, feed, status) {
     feed.innerHTML = '';
-    if (all.length === 0) {
-      feed.innerHTML = '<div class="tg-empty">메시지가 없습니다.<br>채널에 새 메시지를 올리면 여기에 표시됩니다.</div>';
+    if (!all || all.length === 0) {
+      feed.innerHTML = '<div class="tg-empty">메시지가 없습니다.<br>↻ 버튼을 눌러 불러오세요.</div>';
       if (status) status.textContent = '';
       return;
     }
     if (status) status.textContent = `${all.length}개`;
-
     all.forEach(post => {
       const div = document.createElement('div');
       div.className = 'tg-msg';
       let html = `<div class="tg-msg-date">${fmtDate(post.date)}</div>`;
-
       if (post._photo_url) {
-        html += `<img class="tg-msg-photo" src="${post._photo_url}" loading="lazy" alt="사진">`;
+        html += `<img class="tg-msg-photo" src="${escHtml(post._photo_url)}" loading="lazy" alt="사진">`;
         if (post.caption) html += `<div class="tg-msg-caption">${escHtml(post.caption)}</div>`;
       } else if (post.text) {
         html += `<div class="tg-msg-text">${escHtml(post.text)}</div>`;
-      } else if (post.document) {
-        const name = post.document.file_name || '파일';
-        html += `<a class="tg-msg-doc" href="#" data-fileid="${post.document.file_id}">📎 ${escHtml(name)}</a>`;
-        if (post.caption) html += `<div class="tg-msg-caption">${escHtml(post.caption)}</div>`;
       } else if (post.caption) {
         html += `<div class="tg-msg-caption">${escHtml(post.caption)}</div>`;
       }
-
       div.innerHTML = html;
-
-      // 사진 클릭 → 라이트박스
       const img = div.querySelector('.tg-msg-photo');
       if (img) {
         img.addEventListener('click', () => {
           const lb = document.createElement('div');
           lb.className = 'tg-lightbox';
-          lb.innerHTML = `<img src="${post._photo_url}">`;
+          lb.innerHTML = `<img src="${escHtml(post._photo_url)}">`;
           lb.addEventListener('click', () => lb.remove());
           document.body.appendChild(lb);
         });
       }
-
-      // 문서 다운로드
-      const docLink = div.querySelector('[data-fileid]');
-      if (docLink) {
-        docLink.addEventListener('click', async (e) => {
-          e.preventDefault();
-          const url = await resolvePhotoUrl(docLink.dataset.fileid);
-          if (url) window.open(url, '_blank');
-        });
-      }
-
       feed.appendChild(div);
     });
   }
 
-  // 탭 전환: 로드 완료되면 즉시 렌더, 아직 로딩 중이면 완료 후 렌더
+  // 탭 전환: localStorage에서 동기적으로 즉시 렌더 (fetch 없음)
   window.tgActivate = function() {
-    const feed = document.getElementById('tg-feed');
-    if (!feed) return;
-    if (_cachedMsgs.length > 0) {
-      showCached();
-    } else {
-      feed.innerHTML = '<div class="tg-loading">불러오는 중…</div>';
-      _loadPromise && _loadPromise.then(() => showCached());
-    }
+    renderMessages(loadLocal());
   };
 
-  // ↻ 버튼: 캐시만 다시 렌더 (fetch 없음)
-  document.getElementById('tg-refresh-btn')?.addEventListener('click', () => {
-    showCached();
+  // ↻ 버튼: Promise.race로 타임아웃 보장, 완료 후 localStorage 저장 + 렌더
+  let _fetching = false;
+  document.getElementById('tg-refresh-btn')?.addEventListener('click', function() {
+    if (_fetching) return;
+    _fetching = true;
+    const btn = this;
+    const status = document.getElementById('tg-status');
+    btn.disabled = true;
+    if (status) status.textContent = '가져오는 중…';
+
+    Promise.race([
+      fetch(RAW_URL + '?t=' + Date.now()).then(r => r.ok ? r.json() : null),
+      new Promise(resolve => setTimeout(() => resolve(null), 10000))
+    ])
+    .then(data => {
+      if (Array.isArray(data)) {
+        localStorage.setItem(LS_KEY, JSON.stringify(data));
+        renderMessages(data);
+      } else {
+        renderMessages(loadLocal());
+        if (status) status.textContent = '불러오기 실패 (캐시 표시)';
+      }
+    })
+    .catch(() => {
+      renderMessages(loadLocal());
+      if (status) status.textContent = '오류 (캐시 표시)';
+    })
+    .finally(() => {
+      _fetching = false;
+      btn.disabled = false;
+    });
   });
 })();
 </script>
