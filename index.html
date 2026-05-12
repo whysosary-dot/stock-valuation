@@ -413,23 +413,33 @@
   /* 강조 탭 활성 */
   .dtab[data-tab="highlights"].active { background: #fde7e7; color: #e23a3a; border-color: #f5b5b5; box-shadow: 0 1px 4px rgba(226,58,58,.12); }
 
-  /* ── 모바일 반응형: 좁은 화면에서 탭/툴바 줄바꿈 + 가로 스크롤 ──
-     ⚠️ specificity 주의: 위쪽의 `.diary-topbar .diary-tabs { flex: none }` 보다 명확히 이기도록
-        미디어쿼리 안에서도 같은 두-클래스 selector 로 작성한다. */
+  /* ── 모바일 반응형 (max-width: 700px) ──
+     iOS Safari 에서 flex + overflow-x:auto 가 가끔 작동하지 않는다.
+     display:block + white-space:nowrap + inline-block 자식 패턴이 가장 신뢰성 있다.
+     specificity / source-order 이슈를 확실히 피하기 위해 !important 사용. */
   @media (max-width: 700px) {
-    .diary-topbar { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+    .diary-topbar { flex-wrap: wrap !important; gap: 8px; padding: 10px 12px; }
     .diary-topbar .diary-tabs {
-      flex: 1 1 100%;
-      overflow-x: auto; flex-wrap: nowrap;
-      -webkit-overflow-scrolling: touch;
+      display: block !important;
+      flex: 1 1 100% !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+      white-space: nowrap !important;
       scrollbar-width: none;
-      max-width: 100%;
-      min-width: 0;
     }
-    .diary-topbar .diary-tabs::-webkit-scrollbar { display: none; }
-    .diary-topbar .dtab { flex: 0 0 auto; font-size: 13px; padding: 6px 11px; white-space: nowrap; }
-    .diary-topbar .spacer { display: none; }
-    .diary-topbar .diary-search-inp { flex: 1 1 100%; }
+    .diary-topbar .diary-tabs::-webkit-scrollbar { display: none !important; }
+    .diary-topbar .dtab {
+      display: inline-block !important;
+      flex: 0 0 auto !important;
+      font-size: 13px;
+      padding: 6px 11px;
+      white-space: nowrap !important;
+      vertical-align: middle;
+    }
+    .diary-topbar .spacer { display: none !important; }
+    .diary-topbar .diary-search-inp { flex: 1 1 100% !important; min-width: 0; }
     .diary-topbar .diary-fmt-btn,
     .diary-topbar #diary-backup-btn,
     .diary-topbar #diary-pull-btn { flex: 0 0 auto; font-size: 13px; padding: 6px 10px; }
@@ -2855,12 +2865,17 @@ function initDiary() {
                       + Object.keys(ghDiary.weekly||{}).length
                       + Object.keys(ghDiary.trades||{}).length;
       if (!ghHasData) return;
-      // localStorage(최신)와 GitHub(커밋된) 병합 — 같은 날짜는 localStorage 우선
-      const snapshot = loadDiary(); // abort 직전까지의 최신 localStorage 값
+      // stock-valuation 과 동일 정책: GitHub(커밋된) 우선, GitHub 에 해당 키가
+      // 없을 때만 localStorage fallback. 다른 기기에서 ☁️커밋&푸시한 변경이
+      // 페이지 로드만으로 자동 흡수된다.
+      // (트레이드오프: 이 기기에서 같은 날짜 일기를 수정 중인데 아직 커밋
+      //  안 한 상태에서 새로고침하면 다른 기기 버전으로 덮어써짐. valuation
+      //  과 같은 작업 모델 — 한 번에 한 기기에서만 활발히 입력.)
+      const snapshot = loadDiary();
       diary.data = {
-        daily:  { ...(ghDiary.daily  || {}), ...(snapshot.daily  || {}) },
-        weekly: { ...(ghDiary.weekly || {}), ...(snapshot.weekly || {}) },
-        trades: { ...(ghDiary.trades || {}), ...(snapshot.trades || {}) },
+        daily:  { ...(snapshot.daily  || {}), ...(ghDiary.daily  || {}) },
+        weekly: { ...(snapshot.weekly || {}), ...(ghDiary.weekly || {}) },
+        trades: { ...(snapshot.trades || {}), ...(ghDiary.trades || {}) },
       };
       saveDiaryData(diary.data);
       renderAllDiaryFeeds();
