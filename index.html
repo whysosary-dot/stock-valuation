@@ -2855,10 +2855,32 @@ function initDiary() {
   window.addEventListener('pagehide', () => _diaryAbort.abort(), { once: true });
   (async () => {
     try {
-      const url = `https://raw.githubusercontent.com/${GH.OWNER}/${GH.REPO}/${GH.BRANCH}/diary.json?t=${Date.now()}`;
-      const r = await fetch(url, { signal: _diaryAbort.signal, cache: 'no-store' });
-      if (!r.ok) return;
-      const ghDiary = await r.json();
+      // 1차: GitHub Contents API (캐시 짧음, 커밋 직후에도 즉시 최신 반영)
+      // 2차: raw.githubusercontent.com (max-age=300, 5분 캐싱이라 푸시 직후엔 옛 응답 가능)
+      let ghDiary = null;
+      try {
+        const r1 = await fetch(
+          `https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/diary.json?ref=${GH.BRANCH}&t=${Date.now()}`,
+          { signal: _diaryAbort.signal, cache: 'no-store', headers: { Accept: 'application/vnd.github+json' } }
+        );
+        if (r1.ok) {
+          const meta = await r1.json();
+          if (meta && meta.content) {
+            const raw = new TextDecoder().decode(Uint8Array.from(atob(String(meta.content).replace(/\n/g,'')), c => c.charCodeAt(0)));
+            ghDiary = JSON.parse(raw);
+          }
+        }
+      } catch(e) {
+        if (e && e.name === 'AbortError') return;
+      }
+      if (!ghDiary) {
+        const r = await fetch(
+          `https://raw.githubusercontent.com/${GH.OWNER}/${GH.REPO}/${GH.BRANCH}/diary.json?t=${Date.now()}`,
+          { signal: _diaryAbort.signal, cache: 'no-store' }
+        );
+        if (!r.ok) return;
+        ghDiary = await r.json();
+      }
       if (!ghDiary || typeof ghDiary !== 'object') return;
       // GitHub 데이터가 비어있으면 localStorage 보존 (네트워크 오류·빈 응답 방어)
       const ghHasData = Object.keys(ghDiary.daily||{}).length
