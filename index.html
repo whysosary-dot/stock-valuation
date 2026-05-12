@@ -2475,7 +2475,7 @@ function initDiary() {
   (async () => {
     try {
       const url = `https://raw.githubusercontent.com/${GH.OWNER}/${GH.REPO}/${GH.BRANCH}/diary.json?t=${Date.now()}`;
-      const r = await fetch(url, { signal: _diaryAbort.signal });
+      const r = await fetch(url, { signal: _diaryAbort.signal, cache: 'no-store' });
       if (!r.ok) return;
       const ghDiary = await r.json();
       if (!ghDiary || typeof ghDiary !== 'object') return;
@@ -2709,11 +2709,16 @@ document.getElementById('gh-commit-btn').addEventListener('click', ghCommitAll);
     btn.disabled = true;
     if (status) status.textContent = '가져오는 중…';
 
+    // raw.githubusercontent.com 은 max-age=300 (5분) 으로 응답해서 Safari 디스크
+     // 캐시가 끈질기게 옛 응답을 잡고 있을 수 있다. cache:'no-store' 로 명시적 우회.
     Promise.race([
-      fetch(RAW_URL + '?t=' + Date.now()).then(r => r.ok ? r.json() : null),
-      new Promise(resolve => setTimeout(() => resolve(null), 10000))
+      fetch(RAW_URL + '?t=' + Date.now(), { cache: 'no-store' })
+        .then(r => r.ok ? r.json().then(j => ({ ok:true, data:j })) : { ok:false, status:r.status })
+        .catch(e => ({ ok:false, err: String(e) })),
+      new Promise(resolve => setTimeout(() => resolve({ ok:false, err:'timeout' }), 10000))
     ])
-    .then(data => {
+    .then(res => {
+      const data = res.ok ? res.data : null;
       if (Array.isArray(data) && data.length > 0) {
         // 데이터 있을 때만 캐시 덮어쓰기
         localStorage.setItem(LS_KEY, JSON.stringify(data));
@@ -2728,8 +2733,13 @@ document.getElementById('gh-commit-btn').addEventListener('click', ghCommitAll);
           ? `${cached.length}개 (서버 비어있음 · 캐시)`
           : '서버에 메시지 없음';
       } else {
+        // 실패 사유를 status 에 그대로 노출 — 디버그용
         renderMessages(loadLocal());
-        if (status) status.textContent = '불러오기 실패 (캐시 표시)';
+        const tag = res.ok === false
+          ? (res.err ? `오류:${res.err}` : `HTTP ${res.status||'?'}`)
+          : '응답 비배열';
+        if (status) status.textContent = `불러오기 실패 (${tag}) · 캐시 표시`;
+        console.warn('[telegram] fetch fail', res);
       }
     })
     .catch(() => {
