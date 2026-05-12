@@ -570,6 +570,9 @@
   .trade-profit.gain { color: #16a34a; }
   .trade-profit.loss { color: var(--red); }
   .trade-unclosed { font-size: 13px; font-weight: 500; white-space: nowrap; color: #7c3aed; cursor: default; }
+  .trade-realized { font-size: 14px; font-weight: 700; white-space: nowrap; }
+  .trade-realized.gain { color: #16a34a; }
+  .trade-realized.loss { color: var(--red); }
   .trade-stats { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
   .trade-card {
     background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
@@ -2451,6 +2454,7 @@ function renderTradeSection(dateStr, container) {
   const summary = document.createElement('span'); summary.className = 'trade-summary';
   const profitEl = document.createElement('span'); profitEl.className = 'trade-profit';
   const unclosedEl = document.createElement('span'); unclosedEl.className = 'trade-unclosed';
+  const realizedEl = document.createElement('span'); realizedEl.className = 'trade-realized';
 
   const calcSummary = () => {
     let totalBuy = 0, totalSell = 0;
@@ -2475,11 +2479,11 @@ function renderTradeSection(dateStr, container) {
     summary.textContent = parts.join(' · ');
 
     // 순현금흐름
+    const netCashFlow = totalSell - totalBuy;
     if (totalBuy > 0 || totalSell > 0) {
-      const net = totalSell - totalBuy;
-      const sign = net >= 0 ? '+' : '';
-      profitEl.textContent = `순현금흐름 ${sign}${net.toLocaleString('ko-KR')}원`;
-      profitEl.className = 'trade-profit ' + (net >= 0 ? 'gain' : 'loss');
+      const sign = netCashFlow >= 0 ? '+' : '';
+      profitEl.textContent = `순현금흐름 ${sign}${netCashFlow.toLocaleString('ko-KR')}원`;
+      profitEl.className = 'trade-profit ' + (netCashFlow >= 0 ? 'gain' : 'loss');
       profitEl.style.display = '';
     } else {
       profitEl.style.display = 'none';
@@ -2504,14 +2508,27 @@ function renderTradeSection(dateStr, container) {
     } else {
       unclosedEl.style.display = 'none';
     }
+
+    // 순이익: 매도금액 - 순현금흐름 - 미청산포지션
+    if (totalSell > 0) {
+      const realized = totalSell - netCashFlow - unclosedTotal;
+      const sign = realized >= 0 ? '+' : '';
+      realizedEl.textContent = `순이익 ${sign}${realized.toLocaleString('ko-KR')}원`;
+      realizedEl.className = 'trade-realized ' + (realized >= 0 ? 'gain' : 'loss');
+      realizedEl.title = '매도금액 - 순현금흐름 - 미청산포지션';
+      realizedEl.style.display = '';
+    } else {
+      realizedEl.style.display = 'none';
+    }
   };
 
   profitEl.style.display = 'none';
   unclosedEl.style.display = 'none';
+  realizedEl.style.display = 'none';
   calcSummary();
 
   const statsWrap = document.createElement('div'); statsWrap.className = 'trade-stats';
-  statsWrap.appendChild(profitEl); statsWrap.appendChild(unclosedEl);
+  statsWrap.appendChild(profitEl); statsWrap.appendChild(unclosedEl); statsWrap.appendChild(realizedEl);
   addBar.appendChild(summary); addBar.appendChild(statsWrap); container.appendChild(addBar);
 
   let dl = document.getElementById('stock-names-list');
