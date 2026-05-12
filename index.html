@@ -440,9 +440,7 @@
     }
     .diary-topbar .spacer { display: none !important; }
     .diary-topbar .diary-search-inp { flex: 1 1 100% !important; min-width: 0; }
-    .diary-topbar .diary-fmt-btn,
-    .diary-topbar #diary-backup-btn,
-    .diary-topbar #diary-pull-btn { flex: 0 0 auto; font-size: 13px; padding: 6px 10px; }
+    .diary-topbar .diary-fmt-btn { flex: 0 0 auto; font-size: 13px; padding: 6px 10px; }
   }
   /* 카운트 뱃지 */
   .dtab .dtab-cnt {
@@ -738,7 +736,6 @@
   </select>
   <button id="group-toggle" class="btn" type="button" title="섹터별로 묶어서 보기">섹터별 그룹</button>
   <button id="fav-filter-btn" class="btn" type="button" title="즐겨찾기 종목만 보기">⭐ 즐겨찾기</button>
-  <button id="backup-btn" class="btn" type="button" title="입력 데이터 백업">💾 백업</button>
   <span class="spacer"></span>
   <span class="status-pill" id="save-status" title="입력 값은 이 브라우저에만 저장됩니다">로컬 저장</span>
   <span class="meta" id="meta"></span>
@@ -854,8 +851,6 @@
     <input id="diary-search" class="diary-search-inp" type="search" placeholder="🔍 내용 검색..." autocomplete="off" />
     <button id="diary-fmt-bold-red" class="diary-fmt-btn" type="button" title="선택한 글자를 볼드+빨간색으로"><span style="font-weight:700;color:var(--red);">B</span></button>
     <button id="diary-fmt-clear" class="diary-fmt-btn clear" type="button" title="선택한 부분만 원래 스타일로 원복 (검정·기본 굵기)"><span style="font-weight:400;color:var(--text);">B</span></button>
-    <button id="diary-pull-btn" class="btn" type="button" title="GitHub 의 최신 다이어리 내용을 이 기기로 가져옵니다 (현재 내용 덮어씀)">🔄 가져오기</button>
-    <button id="diary-backup-btn" class="btn" type="button">💾 백업</button>
   </div>
   <div class="diary-feed-wrap">
     <div id="feed-daily"  class="diary-feed active"></div>
@@ -866,22 +861,6 @@
 </div><!-- /page-diary -->
 
 <!-- ── 공용 모달 (position:fixed → 탭 밖에 위치해야 함) ── -->
-
-<div id="backup-modal" style="display:none; position:fixed; inset:0; z-index:200; background:rgba(15,23,42,0.45); align-items:center; justify-content:center; padding:16px;">
-  <div style="background:#fff; border-radius:12px; padding:24px; max-width:600px; width:100%; max-height:80vh; display:flex; flex-direction:column; gap:14px; box-shadow:0 20px 60px rgba(15,23,42,0.25);">
-    <div style="display:flex; align-items:center; justify-content:space-between;">
-      <strong id="backup-modal-title" style="font-size:16px;">📦 데이터 백업</strong>
-      <button id="backup-close" style="background:none; border:none; font-size:20px; cursor:pointer; color:#6b7480; padding:0 4px;">✕</button>
-    </div>
-    <p style="margin:0; font-size:14px; color:#6b7480; line-height:1.5;">아래 내용을 전체 선택 → 복사해서 보관하세요.<br>Claude에게 붙여넣으면 GitHub 동기화로 마이그레이션 할 수 있습니다.</p>
-    <textarea id="backup-text" readonly
-      style="flex:1; min-height:280px; font-family:monospace; font-size:12px; padding:12px; border:1px solid #e3e7ee; border-radius:8px; resize:none; background:#f7f9fc; color:#1f2933; line-height:1.5; overflow:auto;"></textarea>
-    <div style="display:flex; gap:8px;">
-      <button id="backup-copy" class="btn" style="flex:1; background:#2563eb; color:#fff; border-color:#2563eb; font-weight:600;">전체 복사</button>
-      <button id="backup-close2" class="btn" style="flex:none;">닫기</button>
-    </div>
-  </div>
-</div>
 
 <!-- PAT 설정 모달 -->
 <div id="pat-modal" style="display:none; position:fixed; inset:0; z-index:300; background:rgba(15,23,42,0.45); align-items:center; justify-content:center; padding:16px;">
@@ -1732,41 +1711,6 @@ async function init() {
     saveUi();
     render();
   });
-
-  // 백업 버튼
-  const backupModal = document.getElementById('backup-modal');
-  const backupText  = document.getElementById('backup-text');
-  const openBackup = () => {
-    const inputs = loadUserInputs();
-    const out = {
-      _backup_date: new Date().toISOString().slice(0,19).replace('T',' '),
-      _note: 'sv_user_inputs_v1',
-      data: inputs,
-    };
-    backupText.value = JSON.stringify(out, null, 2);
-    backupModal.style.display = 'flex';
-    setTimeout(() => { backupText.select(); }, 80);
-  };
-  document.getElementById('backup-btn').addEventListener('click', openBackup);
-  const closeBackup = () => { backupModal.style.display = 'none'; };
-  document.getElementById('backup-close').addEventListener('click', closeBackup);
-  document.getElementById('backup-close2').addEventListener('click', closeBackup);
-  backupModal.addEventListener('click', e => { if (e.target === backupModal) closeBackup(); });
-  document.getElementById('backup-copy').addEventListener('click', () => {
-    backupText.select();
-    const ok = document.execCommand('copy');
-    if (ok) {
-      document.getElementById('backup-copy').textContent = '복사됨 ✓';
-      setTimeout(() => { document.getElementById('backup-copy').textContent = '전체 복사'; }, 1800);
-    } else {
-      // execCommand 안 될 때 Clipboard API 시도
-      navigator.clipboard && navigator.clipboard.writeText(backupText.value).then(() => {
-        document.getElementById('backup-copy').textContent = '복사됨 ✓';
-        setTimeout(() => { document.getElementById('backup-copy').textContent = '전체 복사'; }, 1800);
-      });
-    }
-  });
-
 
   // 포커스 복귀 시 자동 새로고침 (스케줄러 반영분 반영)
   let lastReload = Date.now();
@@ -2837,67 +2781,6 @@ function initDiary() {
     });
   }
 
-  // 🔄 GitHub 에서 가져오기 — 다른 기기에서 ☁️ 커밋&푸시한 내용 즉시 반영
-  const pullBtn = document.getElementById('diary-pull-btn');
-  if (pullBtn) {
-    pullBtn.addEventListener('click', async () => {
-      if (!confirm('GitHub 의 최신 다이어리 내용을 이 기기로 가져옵니다.\n\n이 기기에서만 작성하고 아직 ☁️ 커밋&푸시하지 않은 내용은 사라집니다.\n\n진행할까요?')) return;
-      const origLabel = pullBtn.textContent;
-      pullBtn.disabled = true;
-      pullBtn.textContent = '🔄 가져오는 중…';
-      try {
-        let ghDiary = null, pulledSha = '';
-        // 1차: GitHub API (캐시 짧음, 거의 즉시 반영). public repo 라 PAT 없이도 가능.
-        try {
-          const r1 = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/diary.json?ref=${GH.BRANCH}&t=${Date.now()}`, {
-            cache: 'no-store',
-            headers: { Accept: 'application/vnd.github+json' }
-          });
-          if (r1.ok) {
-            const meta = await r1.json();
-            pulledSha = meta && meta.sha ? String(meta.sha) : '';
-            if (meta && meta.content) {
-              const raw = new TextDecoder().decode(Uint8Array.from(atob(String(meta.content).replace(/\n/g,'')), c => c.charCodeAt(0)));
-              ghDiary = JSON.parse(raw);
-            }
-          }
-        } catch(_) {}
-        // 2차 fallback: raw.githubusercontent.com (max-age=300, 최대 5분 지연 가능)
-        if (!ghDiary) {
-          const r2 = await fetch(`https://raw.githubusercontent.com/${GH.OWNER}/${GH.REPO}/${GH.BRANCH}/diary.json?t=${Date.now()}`, { cache: 'no-store' });
-          if (!r2.ok) throw new Error(`HTTP ${r2.status}`);
-          ghDiary = await r2.json();
-        }
-        if (!ghDiary || typeof ghDiary !== 'object') throw new Error('응답 형식 비정상');
-        diary.data = {
-          daily:  ghDiary.daily  || {},
-          weekly: ghDiary.weekly || {},
-          trades: ghDiary.trades || {},
-        };
-        saveDiaryData(diary.data);
-        // 가져온 SHA 저장 — 자동 머지가 다음 새로고침에 또 덮어쓰지 않음
-        if (pulledSha) localStorage.setItem(DIARY_GH_SHA_KEY, pulledSha);
-        renderAllDiaryFeeds();
-        const sq = document.getElementById('diary-search').value;
-        if (sq) applyDiarySearch(sq);
-        const n = Object.keys(diary.data.daily).length + Object.keys(diary.data.weekly).length + Object.keys(diary.data.trades).length;
-        toast(`✅ GitHub 다이어리 가져옴 (${n}개 항목)`, 'ok', 3000);
-      } catch (e) {
-        toast('❌ 가져오기 실패: ' + e.message, 'err', 4500);
-      } finally {
-        pullBtn.disabled = false;
-        pullBtn.textContent = origLabel;
-      }
-    });
-  }
-
-  document.getElementById('diary-backup-btn').addEventListener('click', () => {
-    const out = JSON.stringify({ _backup_date: new Date().toISOString().slice(0,19).replace('T',' '), _note: 'sv_diary_v1', data: diary.data }, null, 2);
-    document.getElementById('backup-modal-title').textContent = '📔 Diary 백업';
-    document.getElementById('backup-text').value = out;
-    document.getElementById('backup-modal').style.display = 'flex';
-    setTimeout(() => document.getElementById('backup-text').select(), 80);
-  });
 
   renderAllDiaryFeeds();
   // 렌더 후 검색어 재적용
