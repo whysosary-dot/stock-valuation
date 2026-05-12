@@ -2598,17 +2598,23 @@ async function ghCommitAll() {
 document.getElementById('gh-commit-btn').addEventListener('click', ghCommitAll);
 
 /* ═══════════════════════════════════
-   Telegram Feed  (브라우저 → GitHub JSON만 읽기. Telegram API 직접 호출 없음)
+   Telegram Feed  — 페이지 로드 시 1회 fetch, 이후 클릭은 캐시만 사용
 ═══════════════════════════════════ */
 (function() {
-  const RAW_URL = `https://raw.githubusercontent.com/whysosary-dot/stock-valuation/main/telegram.json`;
+  const RAW_URL = 'https://raw.githubusercontent.com/whysosary-dot/stock-valuation/main/telegram.json';
 
-  // GitHub raw에서 telegram.json 로드 (캐시 버스팅)
-  async function loadFromGitHub() {
-    const r = await fetch(RAW_URL + `?t=${Date.now()}`);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
+  // 페이지 로드 시 한 번만 fetch (다이어리와 동일한 패턴)
+  let _cachedMsgs = [];
+  let _loadPromise = null;
+  function preload() {
+    if (_loadPromise) return _loadPromise;
+    _loadPromise = fetch(RAW_URL + '?t=' + Date.now())
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { _cachedMsgs = Array.isArray(data) ? data : []; return _cachedMsgs; })
+      .catch(() => { _cachedMsgs = []; return []; });
+    return _loadPromise;
   }
+  preload(); // 페이지 로드 즉시 시작
 
   function fmtDate(ts) {
     const d = new Date(ts * 1000);
@@ -2620,20 +2626,12 @@ document.getElementById('gh-commit-btn').addEventListener('click', ghCommitAll);
     return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  // GitHub JSON 로드 후 렌더 (탭 활성화 & 새로고침 공용)
-  async function loadAndRender(showLoading) {
+  // 캐시된 데이터로 렌더 (fetch 없음 — 클릭 이벤트에서 절대 fetch 안 함)
+  function showCached() {
     const feed = document.getElementById('tg-feed');
     const status = document.getElementById('tg-status');
     if (!feed) return;
-    if (showLoading) feed.innerHTML = '<div class="tg-loading">불러오는 중…</div>';
-    try {
-      const msgs = await loadFromGitHub();
-      const all = Array.isArray(msgs) ? msgs : [];
-      renderMessages(all, feed, status);
-    } catch(e) {
-      feed.innerHTML = '<div class="tg-empty">불러오기 실패. 잠시 후 다시 시도하세요.</div>';
-      if (status) status.textContent = '';
-    }
+    renderMessages(_cachedMsgs, feed, status);
   }
 
   function renderMessages(all, feed, status) {
@@ -2691,14 +2689,21 @@ document.getElementById('gh-commit-btn').addEventListener('click', ghCommitAll);
     });
   }
 
-  // 탭 전환 시: GitHub JSON 로드
+  // 탭 전환: 로드 완료되면 즉시 렌더, 아직 로딩 중이면 완료 후 렌더
   window.tgActivate = function() {
-    loadAndRender(true);
+    const feed = document.getElementById('tg-feed');
+    if (!feed) return;
+    if (_cachedMsgs.length > 0) {
+      showCached();
+    } else {
+      feed.innerHTML = '<div class="tg-loading">불러오는 중…</div>';
+      _loadPromise && _loadPromise.then(() => showCached());
+    }
   };
 
-  // 새로고침 버튼
+  // ↻ 버튼: 캐시만 다시 렌더 (fetch 없음)
   document.getElementById('tg-refresh-btn')?.addEventListener('click', () => {
-    loadAndRender(true);
+    showCached();
   });
 })();
 </script>
