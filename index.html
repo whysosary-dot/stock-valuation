@@ -2,6 +2,9 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Stock Valuation Dashboard</title>
 <!-- iOS 홈화면 아이콘 (계산기 스타일) -->
@@ -2461,8 +2464,17 @@ function initDiary() {
       if (!r.ok) return;
       const ghDiary = await r.json();
       if (!ghDiary || typeof ghDiary !== 'object') return;
-      // GitHub이 source of truth — 항상 GitHub 데이터로 덮어씀
-      diary.data = { daily: {}, weekly: {}, trades: {}, ...ghDiary };
+      // GitHub 데이터가 비어있으면 localStorage 보존 (네트워크 오류·빈 응답 방어)
+      const ghHasData = Object.keys(ghDiary.daily||{}).length
+                      + Object.keys(ghDiary.weekly||{}).length
+                      + Object.keys(ghDiary.trades||{}).length;
+      if (!ghHasData) return;
+      // localStorage(최신)와 GitHub(커밋된) 병합 — 같은 날짜는 localStorage 우선
+      diary.data = {
+        daily:  { ...(ghDiary.daily  || {}), ...(diary.data.daily  || {}) },
+        weekly: { ...(ghDiary.weekly || {}), ...(diary.data.weekly || {}) },
+        trades: { ...(ghDiary.trades || {}), ...(diary.data.trades || {}) },
+      };
       saveDiaryData(diary.data);
       renderAllDiaryFeeds();
       requestAnimationFrame(() => {
