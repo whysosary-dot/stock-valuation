@@ -635,6 +635,9 @@
   }
   .diary-fmt-btn:hover { background: #fde7e7; border-color: var(--red); }
   .diary-fmt-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  /* 강조 해제 버튼 — 회색 톤 */
+  .diary-fmt-btn.clear { color: var(--text-dim); font-weight: 600; }
+  .diary-fmt-btn.clear:hover { background: var(--panel-2); border-color: var(--text-dim); }
 
   /* ── 강조 탭 카드 ── */
   .highlight-card {
@@ -849,7 +852,8 @@
     </div>
     <span class="spacer"></span>
     <input id="diary-search" class="diary-search-inp" type="search" placeholder="🔍 내용 검색..." autocomplete="off" />
-    <button id="diary-fmt-bold-red" class="diary-fmt-btn" type="button" title="선택한 글자를 볼드+빨간색으로 (다시 누르면 해제)"><span style="font-weight:700;color:var(--red);">B</span></button>
+    <button id="diary-fmt-bold-red" class="diary-fmt-btn" type="button" title="선택한 글자를 볼드+빨간색으로"><span style="font-weight:700;color:var(--red);">B</span></button>
+    <button id="diary-fmt-clear" class="diary-fmt-btn clear" type="button" title="선택한 영역의 강조 해제 (원래 스타일로 원복)">✕</button>
     <button id="diary-pull-btn" class="btn" type="button" title="GitHub 의 최신 다이어리 내용을 이 기기로 가져옵니다 (현재 내용 덮어씀)">🔄 가져오기</button>
     <button id="diary-backup-btn" class="btn" type="button">💾 백업</button>
   </div>
@@ -2143,6 +2147,39 @@ function applyBoldRedToggle() {
   try { updateTabCounts(); } catch(_) {}
 }
 
+// 선택 영역과 교차하는 모든 강조 span 을 unwrap — "원래 스타일로 원복"
+function clearBoldRedInRange() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount || sel.isCollapsed) return;
+  const range = sel.getRangeAt(0);
+  const anc = range.commonAncestorContainer;
+  const startEl = anc.nodeType === 1 ? anc : anc.parentElement;
+  const editable = startEl && startEl.closest('[contenteditable="true"]');
+  if (!editable) return;
+
+  // 강조 span 후보: 마커 또는 빨강+볼드 스타일. range 와 교차하는 것만.
+  const targets = [...editable.querySelectorAll('span')].filter(sp => {
+    const isMark  = sp.getAttribute('data-diary-br') === '1';
+    const isStyle = _looksLikeBoldRed(sp.getAttribute('style') || '');
+    if (!isMark && !isStyle) return false;
+    try { return range.intersectsNode(sp); } catch(_) { return false; }
+  });
+  if (!targets.length) return;
+
+  // unwrap
+  targets.forEach(sp => {
+    const parent = sp.parentNode;
+    while (sp.firstChild) parent.insertBefore(sp.firstChild, sp);
+    parent.removeChild(sp);
+  });
+
+  // selection 초기화 (정확히 복원 어려움)
+  try { sel.removeAllRanges(); } catch(_) {}
+
+  editable.dispatchEvent(new Event('input', { bubbles: true }));
+  try { updateTabCounts(); } catch(_) {}
+}
+
 /* ═══════════════════════════════════
    Diary
 ═══════════════════════════════════ */
@@ -2776,6 +2813,15 @@ function initDiary() {
     fmtBtn.addEventListener('mousedown', (e) => {
       e.preventDefault();
       applyBoldRedToggle();
+    });
+  }
+
+  // 강조 해제 — 선택 영역의 모든 강조 span unwrap
+  const clearBtn = document.getElementById('diary-fmt-clear');
+  if (clearBtn) {
+    clearBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      clearBoldRedInRange();
     });
   }
 
