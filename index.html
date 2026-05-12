@@ -463,16 +463,22 @@
     transition: opacity .15s, color .15s;
   }
   .dcard-del:hover { opacity: 1; color: var(--red); }
-  /* 일기·주간 textarea */
-  textarea.dcard-ta {
+  /* 일기·주간 textarea + contenteditable div 공용 */
+  textarea.dcard-ta,
+  .dcard-edit {
     display: block; width: 100%; box-sizing: border-box;
     padding: 16px 18px; background: transparent; border: none;
     color: var(--text); font: inherit; font-size: 15px; line-height: 1.6;
     resize: none; overflow: hidden; min-height: 60px;
     white-space: pre-wrap; word-break: break-word;
   }
-  textarea.dcard-ta:focus { outline: none; background: #fafbff; }
+  textarea.dcard-ta:focus,
+  .dcard-edit:focus { outline: none; background: #fafbff; }
   textarea.dcard-ta::placeholder { color: #aab2bd; }
+  .dcard-edit:empty::before {
+    content: attr(data-placeholder);
+    color: #aab2bd; pointer-events: none;
+  }
   /* 새 항목 버튼 */
   .diary-new-card-btn {
     width: 100%; padding: 15px; border: 2px dashed var(--border);
@@ -562,8 +568,9 @@
     opacity: 0.5; transition: opacity .15s, color .15s;
   }
   .trade-del-btn:hover { opacity: 1; color: var(--red); }
-  /* ── 매매일지 메모 ── */
-  textarea.memo-text {
+  /* ── 매매일지 메모 (textarea + contenteditable 공용) ── */
+  textarea.memo-text,
+  .memo-edit {
     flex: 1; color: var(--text);
     background: transparent; border: 1px solid transparent;
     padding: 6px 10px; border-radius: 6px;
@@ -573,11 +580,27 @@
     white-space: pre-wrap; word-break: break-all;
     box-sizing: border-box;
   }
-  textarea.memo-text:focus {
+  textarea.memo-text:focus,
+  .memo-edit:focus {
     outline: none; border-color: var(--accent); background: white;
     box-shadow: 0 0 0 2px var(--focus); color: var(--text);
   }
   textarea.memo-text::placeholder { color: #aab2bd; }
+  .memo-edit:empty::before {
+    content: attr(data-placeholder);
+    color: #aab2bd; pointer-events: none;
+  }
+
+  /* ── 다이어리 서식 버튼 ── */
+  .diary-fmt-btn {
+    flex: none; display:inline-flex; align-items:center; justify-content:center;
+    gap:4px; padding: 6px 12px; border: 1px solid var(--border);
+    border-radius: 8px; background: var(--panel); cursor: pointer;
+    font-size: 13.5px; font-weight: 700; color: var(--red);
+    transition: background .12s, border-color .12s;
+  }
+  .diary-fmt-btn:hover { background: #fde7e7; border-color: var(--red); }
+  .diary-fmt-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .trade-label { font-size: 14px; color: var(--text-dim); white-space: nowrap; }
   .trade-empty { padding: 40px 20px; text-align: center; color: var(--text-dim); font-size: 15px; }
   .ei-trade-badge {
@@ -768,6 +791,7 @@
     </div>
     <span class="spacer"></span>
     <input id="diary-search" class="diary-search-inp" type="search" placeholder="🔍 내용 검색..." autocomplete="off" />
+    <button id="diary-fmt-bold-red" class="diary-fmt-btn" type="button" title="선택한 글자를 볼드+빨간색으로 (다시 누르면 해제)"><span style="font-weight:700;color:var(--red);">B</span></button>
     <button id="diary-backup-btn" class="btn" type="button">💾 백업</button>
   </div>
   <div class="diary-feed-wrap">
@@ -1909,6 +1933,135 @@ refreshTabUpdateDots({ forceFresh: true });
 setInterval(() => refreshTabUpdateDots(), 10 * 60 * 1000);
 
 /* ═══════════════════════════════════
+   Diary — contenteditable 헬퍼
+═══════════════════════════════════ */
+
+// 허용 태그/속성만 남김. 외부 HTML 페이스트/저장 데이터의 XSS 방지.
+function sanitizeDiaryHTML(html) {
+  if (!html) return '';
+  const tmpl = document.createElement('template');
+  tmpl.innerHTML = String(html);
+  const ALLOW = new Set(['B','STRONG','I','EM','U','SPAN','BR','DIV','P','A']);
+  function walk(parent) {
+    [...parent.children].forEach(child => {
+      if (!ALLOW.has(child.tagName)) {
+        // 자식 먼저 정리 후 unwrap
+        walk(child);
+        while (child.firstChild) child.parentNode.insertBefore(child.firstChild, child);
+        child.remove();
+      } else {
+        [...child.attributes].forEach(attr => {
+          if (attr.name === 'style') {
+            const safe = [];
+            attr.value.split(';').forEach(rule => {
+              const idx = rule.indexOf(':');
+              if (idx < 0) return;
+              const k = rule.slice(0, idx).trim().toLowerCase();
+              const v = rule.slice(idx + 1).trim();
+              if (!k || !v) return;
+              if (k === 'color' && /^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|rgba?\([^)]+\))$/.test(v)) safe.push(`${k}:${v}`);
+              else if (k === 'font-weight' && /^(bold|normal|[1-9]00)$/i.test(v)) safe.push(`${k}:${v}`);
+              else if (k === 'text-decoration' && /^(underline|line-through|none)$/i.test(v)) safe.push(`${k}:${v}`);
+              else if (k === 'font-style' && /^(italic|normal)$/i.test(v)) safe.push(`${k}:${v}`);
+            });
+            if (safe.length) child.setAttribute('style', safe.join(';'));
+            else child.removeAttribute('style');
+          } else if (attr.name === 'href' && child.tagName === 'A') {
+            const v = attr.value.trim();
+            if (!/^(https?:|mailto:)/i.test(v)) child.removeAttribute('href');
+            else { child.setAttribute('target','_blank'); child.setAttribute('rel','noopener'); }
+          } else {
+            child.removeAttribute(attr.name);
+          }
+        });
+        walk(child);
+      }
+    });
+  }
+  walk(tmpl.content);
+  return tmpl.innerHTML;
+}
+
+// 기존 plain text 데이터(태그 없는) → 안전한 HTML로 정규화. HTML이면 sanitize만.
+function normalizeDiaryValue(stored) {
+  if (!stored) return '';
+  const s = String(stored);
+  if (!/<[a-zA-Z][^>]*>/.test(s)) {
+    // plain text — escape + 줄바꿈 변환
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\r?\n/g, '<br>');
+  }
+  return sanitizeDiaryHTML(s);
+}
+
+// contenteditable element 공통 설정 — paste 시 외부 HTML 차단, plain text로 변환
+function attachEditable(el) {
+  el.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    // 기본 execCommand insertText — 현재 selection 위치에 삽입
+    if (document.queryCommandSupported && document.queryCommandSupported('insertText')) {
+      document.execCommand('insertText', false, text);
+    } else {
+      // fallback
+      const sel = window.getSelection();
+      if (sel.rangeCount) {
+        sel.getRangeAt(0).deleteContents();
+        sel.getRangeAt(0).insertNode(document.createTextNode(text));
+        sel.collapseToEnd();
+      }
+    }
+  });
+}
+
+// 선택 영역 볼드+빨강 토글
+function applyBoldRedToggle() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount || sel.isCollapsed) return;
+  const range = sel.getRangeAt(0);
+  // contenteditable 안에 있어야 함
+  const anc = range.commonAncestorContainer;
+  const startEl = anc.nodeType === 1 ? anc : anc.parentElement;
+  const editable = startEl && startEl.closest('[contenteditable="true"]');
+  if (!editable) return;
+
+  // 선택 영역이 단일 br-span 안에 완전히 들어있으면 해제, 아니면 적용
+  function findEnclosingBR(n) {
+    while (n && n !== editable) {
+      if (n.nodeType === 1 && n.dataset && n.dataset.diaryBr === '1') return n;
+      n = n.parentNode;
+    }
+    return null;
+  }
+  const enclosingStart = findEnclosingBR(range.startContainer);
+  const enclosingEnd   = findEnclosingBR(range.endContainer);
+  if (enclosingStart && enclosingStart === enclosingEnd) {
+    // 해제 (unwrap)
+    const sp = enclosingStart;
+    const parent = sp.parentNode;
+    while (sp.firstChild) parent.insertBefore(sp.firstChild, sp);
+    parent.removeChild(sp);
+  } else {
+    // 적용 (extract → wrap)
+    const span = document.createElement('span');
+    span.dataset.diaryBr = '1';
+    span.style.cssText = 'font-weight:700;color:#e23a3a;';
+    try {
+      span.appendChild(range.extractContents());
+      range.insertNode(span);
+      sel.removeAllRanges();
+      const r2 = document.createRange();
+      r2.selectNodeContents(span);
+      sel.addRange(r2);
+    } catch (e) {
+      console.warn('[diary] bold/red apply failed', e);
+      return;
+    }
+  }
+  // 자동 저장 트리거
+  editable.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+/* ═══════════════════════════════════
    Diary
 ═══════════════════════════════════ */
 const DIARY_KEY = 'sv_diary_v1';
@@ -1973,11 +2126,15 @@ function updateTabCounts() {
     Object.keys(d.trades || {}).filter(k => (d.trades[k]||[]).length > 0).length;
 }
 
-/* ── 저장 (디바운스) ── */
+/* ── 저장 (디바운스) — value 는 HTML 일 수도 plain text 일 수도 있음 ── */
 function diarySave(key, section, value, badgeEl) {
   clearTimeout(diary.saveTimers[key]);
   diary.saveTimers[key] = setTimeout(() => {
-    if (value.trim()) diary.data[section][key] = value;
+    // 시각적 빈 콘텐츠( <br>·&nbsp;·공백만 )도 빈 것으로 간주
+    const probe = document.createElement('div');
+    probe.innerHTML = String(value || '');
+    const hasContent = (probe.innerText || '').replace(/ /g, ' ').trim().length > 0;
+    if (hasContent) diary.data[section][key] = value;
     else delete diary.data[section][key];
     saveDiaryData(diary.data);
     updateTabCounts();
@@ -2013,11 +2170,15 @@ function makeDailyCard(dateStr, today) {
   header.appendChild(delBtn);
   card.appendChild(header);
 
-  const ta = document.createElement('textarea'); ta.className = 'dcard-ta';
-  ta.placeholder = '오늘의 투자 생각을 기록하세요...';
-  ta.value = diary.data.daily[dateStr] || ''; ta.rows = 1;
-  requestAnimationFrame(() => taAutoResize(ta));
-  ta.addEventListener('input', () => { taAutoResize(ta); diarySave(dateStr, 'daily', ta.value, saveBadge); });
+  const ta = document.createElement('div');
+  ta.className = 'dcard-edit';
+  ta.contentEditable = 'true';
+  ta.setAttribute('data-placeholder', '오늘의 투자 생각을 기록하세요...');
+  ta.innerHTML = normalizeDiaryValue(diary.data.daily[dateStr] || '');
+  attachEditable(ta);
+  ta.addEventListener('input', () => {
+    diarySave(dateStr, 'daily', sanitizeDiaryHTML(ta.innerHTML), saveBadge);
+  });
   card.appendChild(ta);
   return card;
 }
@@ -2029,12 +2190,12 @@ function renderFeedDaily() {
 
   const newBtn = document.createElement('button'); newBtn.className = 'diary-new-card-btn'; newBtn.textContent = '+ 오늘 일기 작성';
   newBtn.addEventListener('click', () => {
-    const ex = feed.querySelector(`[data-key="${today}"] textarea`);
+    const ex = feed.querySelector(`[data-key="${today}"] .dcard-edit`);
     if (ex) { ex.focus(); return; }
     if (!diary.data.daily) diary.data.daily = {};
     if (diary.data.daily[today] === undefined) diary.data.daily[today] = '';
     renderFeedDaily();
-    setTimeout(() => { const ta = feed.querySelector(`[data-key="${today}"] textarea`); if (ta) ta.focus(); }, 50);
+    setTimeout(() => { const ta = feed.querySelector(`[data-key="${today}"] .dcard-edit`); if (ta) ta.focus(); }, 50);
   });
   feed.appendChild(newBtn);
 
@@ -2062,12 +2223,12 @@ function renderFeedWeekly() {
     const btn = document.createElement('button'); btn.className = 'diary-new-card-btn';
     btn.style.flex = '1'; btn.style.marginBottom = '16px'; btn.textContent = label;
     btn.addEventListener('click', () => {
-      const ex = feed.querySelector(`[data-key="${weekKey}"] textarea`);
+      const ex = feed.querySelector(`[data-key="${weekKey}"] .dcard-edit`);
       if (ex) { ex.focus(); return; }
       if (!diary.data.weekly) diary.data.weekly = {};
       if (diary.data.weekly[weekKey] === undefined) diary.data.weekly[weekKey] = '';
       renderFeedWeekly();
-      setTimeout(() => { const ta = feed.querySelector(`[data-key="${weekKey}"] textarea`); if (ta) ta.focus(); }, 50);
+      setTimeout(() => { const ta = feed.querySelector(`[data-key="${weekKey}"] .dcard-edit`); if (ta) ta.focus(); }, 50);
     });
     return btn;
   };
@@ -2102,11 +2263,15 @@ function renderFeedWeekly() {
     });
     header.appendChild(delBtn); card.appendChild(header);
 
-    const ta = document.createElement('textarea'); ta.className = 'dcard-ta';
-    ta.placeholder = '이번 주 투자 전략을 정리하세요...';
-    ta.value = diary.data.weekly[k] || ''; ta.rows = 1;
-    requestAnimationFrame(() => taAutoResize(ta));
-    ta.addEventListener('input', () => { taAutoResize(ta); diarySave(k, 'weekly', ta.value, saveBadge); });
+    const ta = document.createElement('div');
+    ta.className = 'dcard-edit';
+    ta.contentEditable = 'true';
+    ta.setAttribute('data-placeholder', '이번 주 투자 전략을 정리하세요...');
+    ta.innerHTML = normalizeDiaryValue(diary.data.weekly[k] || '');
+    attachEditable(ta);
+    ta.addEventListener('input', () => {
+      diarySave(k, 'weekly', sanitizeDiaryHTML(ta.innerHTML), saveBadge);
+    });
     card.appendChild(ta); feed.appendChild(card);
   });
 }
@@ -2235,11 +2400,20 @@ function renderTradeSection(dateStr, container) {
     calcTotal();
     row2.append(mkLabel('수량'), qtyInp, mkLabel('주  ×  가격'), priceInp, mkLabel('원'), totalEl);
 
-    const memoTA = document.createElement('textarea'); memoTA.className = 'memo-text'; memoTA.placeholder = '매매 사유 / 메모'; memoTA.rows = 1; memoTA.value = trade.memo||'';
-    const memoAutoResize = () => { memoTA.style.height='auto'; memoTA.style.height=memoTA.scrollHeight+'px'; };
-    requestAnimationFrame(memoAutoResize);
-    memoTA.addEventListener('input', () => { trade.memo=memoTA.value; saveDiaryData(diary.data); memoAutoResize(); });
-    memoTA.addEventListener('blur', () => { trade.memo=memoTA.value; saveDiaryData(diary.data); });
+    const memoTA = document.createElement('div');
+    memoTA.className = 'memo-edit';
+    memoTA.contentEditable = 'true';
+    memoTA.setAttribute('data-placeholder', '매매 사유 / 메모');
+    memoTA.innerHTML = normalizeDiaryValue(trade.memo || '');
+    attachEditable(memoTA);
+    memoTA.addEventListener('input', () => {
+      trade.memo = sanitizeDiaryHTML(memoTA.innerHTML);
+      saveDiaryData(diary.data);
+    });
+    memoTA.addEventListener('blur', () => {
+      trade.memo = sanitizeDiaryHTML(memoTA.innerHTML);
+      saveDiaryData(diary.data);
+    });
     row3.append(mkLabel('메모'), memoTA);
 
     card.append(row1, row2, row3); container.appendChild(card);
@@ -2362,8 +2536,12 @@ function initDiary() {
         card.classList.remove('search-hidden');
         return;
       }
-      // 검색 대상 텍스트 수집
+      // 검색 대상 텍스트 수집 (contenteditable 은 innerText, textarea 는 value)
       const sources = [];
+      card.querySelectorAll('.dcard-edit, .memo-edit').forEach(el => {
+        const t = el.innerText || '';
+        if (t.trim()) sources.push(t);
+      });
       card.querySelectorAll('textarea').forEach(ta => { if (ta.value) sources.push(ta.value); });
       card.querySelectorAll('input').forEach(inp => { if (inp.type !== 'hidden' && inp.value) sources.push(inp.value); });
       card.querySelectorAll('select').forEach(sel => { if (sel.value) sources.push(sel.value); });
@@ -2403,6 +2581,16 @@ function initDiary() {
       if (sq) setTimeout(() => applyDiarySearch(sq), 50);
     });
   });
+
+  // 볼드+빨강 토글 — 현재 선택 영역에 적용
+  const fmtBtn = document.getElementById('diary-fmt-bold-red');
+  if (fmtBtn) {
+    // mousedown 으로 처리 — click 직전에 contenteditable 의 selection 이 날아가는 걸 방지
+    fmtBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      applyBoldRedToggle();
+    });
+  }
 
   document.getElementById('diary-backup-btn').addEventListener('click', () => {
     const out = JSON.stringify({ _backup_date: new Date().toISOString().slice(0,19).replace('T',' '), _note: 'sv_diary_v1', data: diary.data }, null, 2);
