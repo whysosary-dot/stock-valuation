@@ -2621,7 +2621,7 @@ document.getElementById('gh-commit-btn').addEventListener('click', ghCommitAll);
 
   async function fetchNew() {
     const offset = parseInt(localStorage.getItem(OFFSET_KEY) || '0');
-    const params = { limit: 100, allowed_updates: 'channel_post' };
+    const params = { limit: 100, timeout: 0, allowed_updates: 'channel_post' };
     if (offset > 0) params.offset = offset + 1;
     const res = await tgApi('getUpdates', params);
     if (!res.ok) return [];
