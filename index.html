@@ -1797,13 +1797,26 @@ window.addEventListener('popstate', (e) => {
 });
 
 // 초기 로드: URL에 해시가 있으면 그 탭 활성화 + 초기 상태에 valuation을 기록
+//
+// ⚠️ activatePage()는 이 스크립트 아래쪽에서 const(diary)/window.tgActivate
+//    로 정의되는 식별자를 내부에서 참조한다. 같은 <script> 태그 안에서
+//    위쪽 IIFE가 그것들을 호출하면 TDZ/ReferenceError로 스크립트 전체가
+//    중단되어 initDiary 같은 후속 초기화가 통째로 사라진다.
+//    그래서 history.replaceState 만 동기로 처리하고, activatePage 호출은
+//    queueMicrotask 로 현재 스크립트 본문 실행 이후로 미룬다.
 (function initFromHash() {
   history.replaceState({ page: 'valuation' }, '', location.pathname + location.search + location.hash);
   const initial = (location.hash || '').replace(/^#/, '');
-  if (initial && document.querySelector(`.page-tab-btn[data-page="${initial}"]`)) {
-    activatePage(initial, { skipHistory: true });
-    history.replaceState({ page: initial }, '', '#' + initial);
-  }
+  if (!initial) return;
+  if (!document.querySelector(`.page-tab-btn[data-page="${initial}"]`)) return;
+  queueMicrotask(() => {
+    try {
+      activatePage(initial, { skipHistory: true });
+      history.replaceState({ page: initial }, '', '#' + initial);
+    } catch (e) {
+      console.error('[initFromHash] activatePage failed:', e);
+    }
+  });
 })();
 
 /* ═══════════════════════════════════
