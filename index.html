@@ -1764,8 +1764,8 @@ function activatePage(page, opts = {}) {
   document.querySelectorAll('.page-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
   markTabVisited(page);
-  if (page === 'diary') renderAllDiaryFeeds();
-  if (page === 'telegram') tgActivate();
+  if (page === 'diary' && typeof renderAllDiaryFeeds === 'function') renderAllDiaryFeeds();
+  if (page === 'telegram' && typeof tgActivate === 'function') tgActivate();
   const src = IFRAME_TAB_SRC[page];
   if (src) {
     const fr = document.getElementById(`${page}-frame`);
@@ -2675,6 +2675,16 @@ document.getElementById('gh-commit-btn').addEventListener('click', ghCommitAll);
   window.tgActivate = function() {
     renderMessages(loadLocal());
   };
+
+  // 초기 로드 시 #telegram 해시로 들어와서 tgActivate 정의 전에 activatePage가
+  // 스킵된 경우 — 현재 활성 탭이 telegram이면 여기서 다시 렌더한다.
+  // (초기 HTML의 "불러오는 중…" 플레이스홀더 제거용)
+  try {
+    const tgPage = document.getElementById('page-telegram');
+    if (tgPage && tgPage.classList.contains('active')) {
+      window.tgActivate();
+    }
+  } catch(_) {}
 
   // ↻ 버튼: Promise.race로 타임아웃 보장, 완료 후 localStorage 저장 + 렌더
   let _fetching = false;
