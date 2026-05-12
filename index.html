@@ -2714,9 +2714,19 @@ document.getElementById('gh-commit-btn').addEventListener('click', ghCommitAll);
       new Promise(resolve => setTimeout(() => resolve(null), 10000))
     ])
     .then(data => {
-      if (Array.isArray(data)) {
+      if (Array.isArray(data) && data.length > 0) {
+        // 데이터 있을 때만 캐시 덮어쓰기
         localStorage.setItem(LS_KEY, JSON.stringify(data));
         renderMessages(data);
+      } else if (Array.isArray(data)) {
+        // 서버 응답이 빈 배열 — 캐시 보존, 기존 메시지 그대로 표시
+        // (telegram_update.py 가 폴링한 시점에 새 메시지가 없으면 빈 배열을 받는다.
+        //  이걸 그대로 캐시에 덮어쓰면 사용자 화면의 모든 메시지가 한 번에 사라진다.)
+        const cached = loadLocal();
+        renderMessages(cached);
+        if (status) status.textContent = cached.length
+          ? `${cached.length}개 (서버 비어있음 · 캐시)`
+          : '서버에 메시지 없음';
       } else {
         renderMessages(loadLocal());
         if (status) status.textContent = '불러오기 실패 (캐시 표시)';
