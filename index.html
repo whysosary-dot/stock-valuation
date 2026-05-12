@@ -2457,10 +2457,12 @@ function initDiary() {
     });
   });
 
+  const _diaryAbort = new AbortController();
+  window.addEventListener('pagehide', () => _diaryAbort.abort(), { once: true });
   (async () => {
     try {
       const url = `https://raw.githubusercontent.com/${GH.OWNER}/${GH.REPO}/${GH.BRANCH}/diary.json?t=${Date.now()}`;
-      const r = await fetch(url);
+      const r = await fetch(url, { signal: _diaryAbort.signal });
       if (!r.ok) return;
       const ghDiary = await r.json();
       if (!ghDiary || typeof ghDiary !== 'object') return;
@@ -2470,10 +2472,11 @@ function initDiary() {
                       + Object.keys(ghDiary.trades||{}).length;
       if (!ghHasData) return;
       // localStorage(최신)와 GitHub(커밋된) 병합 — 같은 날짜는 localStorage 우선
+      const snapshot = loadDiary(); // abort 직전까지의 최신 localStorage 값
       diary.data = {
-        daily:  { ...(ghDiary.daily  || {}), ...(diary.data.daily  || {}) },
-        weekly: { ...(ghDiary.weekly || {}), ...(diary.data.weekly || {}) },
-        trades: { ...(ghDiary.trades || {}), ...(diary.data.trades || {}) },
+        daily:  { ...(ghDiary.daily  || {}), ...(snapshot.daily  || {}) },
+        weekly: { ...(ghDiary.weekly || {}), ...(snapshot.weekly || {}) },
+        trades: { ...(ghDiary.trades || {}), ...(snapshot.trades || {}) },
       };
       saveDiaryData(diary.data);
       renderAllDiaryFeeds();
@@ -2481,7 +2484,7 @@ function initDiary() {
         const sq = document.getElementById('diary-search').value;
         if (sq) applyDiarySearch(sq);
       });
-    } catch (_) {}
+    } catch (_) {} // AbortError 포함 무시
   })();
 }
 
@@ -2706,6 +2709,33 @@ document.getElementById('gh-commit-btn').addEventListener('click', ghCommitAll);
     });
   });
 })();
+
+/* ═══════════════════════════════════
+   bfcache / 새로고침 안전장치
+   - pagehide: 페이지 freeze 직전에 pending saveTimers를 즉시 flush
+   - pageshow(persisted): bfcache에서 복원될 때 diary + telegram 재초기화
+═══════════════════════════════════ */
+window.addEventListener('pagehide', () => {
+  // 500ms 디바운스 타이머가 남아있으면 즉시 저장하고 취소
+  Object.entries(diary.saveTimers).forEach(([k, tid]) => {
+    clearTimeout(tid);
+  });
+  diary.saveTimers = {};
+  // 최신 diary.data를 즉시 localStorage에 플러시 (debounce 대기 중이었을 경우 대비)
+  try { saveDiaryData(diary.data); } catch(_) {}
+});
+
+window.addEventListener('pageshow', (e) => {
+  if (!e.persisted) return;
+  // bfcache에서 복원됨 — localStorage에서 최신 상태 재로드 후 렌더
+  diary.data = loadDiary();
+  renderAllDiaryFeeds();
+  // 현재 활성 탭이 telegram이면 재렌더
+  if (typeof tgActivate === 'function') {
+    const tgPage = document.getElementById('page-telegram');
+    if (tgPage && tgPage.style.display !== 'none') tgActivate();
+  }
+});
 </script>
 </body>
 </html>
