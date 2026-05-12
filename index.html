@@ -621,6 +621,29 @@
     input.cell-num { font-size: 15px; padding: 6px 7px; }
     span.sector-tag { font-size: 12px; padding: 3px 9px; }
   }
+
+/* ── Telegram Feed ── */
+.tg-wrap { display:flex; flex-direction:column; height:calc(100vh - 48px); background:var(--bg); }
+.tg-header { display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid var(--border); background:var(--panel); flex-shrink:0; }
+.tg-title { font-size:15px; font-weight:600; color:var(--text); }
+.tg-header-actions { display:flex; align-items:center; gap:10px; }
+.tg-status { font-size:12px; color:var(--text-2); }
+.tg-refresh-btn { background:none; border:1px solid var(--border); border-radius:6px; padding:4px 10px; cursor:pointer; font-size:16px; color:var(--text-2); line-height:1; }
+.tg-refresh-btn:hover { color:var(--text); background:var(--panel-2); }
+.tg-open-btn { font-size:12px; color:#2AABEE; text-decoration:none; padding:4px 10px; border:1px solid #2AABEE; border-radius:6px; }
+.tg-open-btn:hover { background:#2AABEE22; }
+.tg-feed { flex:1; overflow-y:auto; padding:16px 20px; display:flex; flex-direction:column; gap:12px; }
+.tg-loading { text-align:center; color:var(--text-2); padding:40px; font-size:14px; }
+.tg-empty { text-align:center; color:var(--text-2); padding:40px; font-size:14px; }
+.tg-msg { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px 16px; max-width:720px; width:100%; }
+.tg-msg-date { font-size:11px; color:var(--text-2); margin-bottom:6px; }
+.tg-msg-text { font-size:14px; color:var(--text); line-height:1.6; white-space:pre-wrap; word-break:break-word; }
+.tg-msg-photo { width:100%; max-width:480px; border-radius:8px; margin-top:10px; display:block; cursor:pointer; }
+.tg-msg-photo:hover { opacity:0.9; }
+.tg-msg-caption { font-size:14px; color:var(--text); line-height:1.6; white-space:pre-wrap; margin-top:8px; }
+.tg-msg-doc { display:inline-flex; align-items:center; gap:8px; margin-top:8px; padding:8px 12px; background:var(--panel-2); border-radius:8px; font-size:13px; color:var(--accent); text-decoration:none; }
+.tg-lightbox { position:fixed; inset:0; background:#000c; z-index:9999; display:flex; align-items:center; justify-content:center; cursor:zoom-out; }
+.tg-lightbox img { max-width:90vw; max-height:90vh; border-radius:8px; box-shadow:0 8px 40px #0008; }
 </style>
 </head>
 <body>
@@ -757,15 +780,21 @@
 </div><!-- /page-awake -->
 
 <div id="page-telegram" class="page">
-  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100vh - 48px);gap:20px;background:var(--bg);">
-    <div style="font-size:48px;">✈️</div>
-    <div style="font-size:18px;font-weight:600;color:var(--text);">Telegram 채널</div>
-    <div style="font-size:13px;color:var(--text-2);">Telegram Web은 외부 임베딩이 차단됩니다.</div>
-    <a href="https://web.telegram.org/k/#-3980062440" target="_blank" rel="noopener"
-       style="margin-top:8px;padding:12px 28px;background:#2AABEE;color:#fff;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:8px;">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248-1.97 9.288c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.933z"/></svg>
-      Telegram에서 열기
-    </a>
+  <div class="tg-wrap">
+    <div class="tg-header">
+      <span class="tg-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#2AABEE" style="vertical-align:-3px;margin-right:6px"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248-1.97 9.288c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.933z"/></svg>
+        리송 자료 저장소
+      </span>
+      <div class="tg-header-actions">
+        <span id="tg-status" class="tg-status"></span>
+        <button class="tg-refresh-btn" id="tg-refresh-btn" title="새로고침">↻</button>
+        <a href="https://web.telegram.org/k/#-3980062440" target="_blank" rel="noopener" class="tg-open-btn">열기 ↗</a>
+      </div>
+    </div>
+    <div class="tg-feed" id="tg-feed">
+      <div class="tg-loading" id="tg-loading">불러오는 중…</div>
+    </div>
   </div>
 </div><!-- /page-telegram -->
 
@@ -1733,7 +1762,7 @@ function activatePage(page, opts = {}) {
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
   markTabVisited(page);
   if (page === 'diary') renderAllDiaryFeeds();
-  if (page === 'telegram') window.open('https://web.telegram.org/k/#-3980062440', '_blank', 'noopener');
+  if (page === 'telegram') tgActivate();
   const src = IFRAME_TAB_SRC[page];
   if (src) {
     const fr = document.getElementById(`${page}-frame`);
@@ -2567,6 +2596,158 @@ async function ghCommitAll() {
 }
 
 document.getElementById('gh-commit-btn').addEventListener('click', ghCommitAll);
+
+/* ═══════════════════════════════════
+   Telegram Feed
+═══════════════════════════════════ */
+(function() {
+  const TG_TOKEN   = '8574870425:AAEXmdC3SnzuQb6VPOl8LOUGpJjpqlhrvf8';
+  const TG_CHAT    = '-1003980062440';
+  const MSG_KEY    = 'tg_msgs_v1';
+  const OFFSET_KEY = 'tg_offset_v1';
+
+  function tgApi(method, params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return fetch(`https://api.telegram.org/bot${TG_TOKEN}/${method}?${qs}`)
+      .then(r => r.json());
+  }
+
+  function loadMsgs() {
+    try { return JSON.parse(localStorage.getItem(MSG_KEY) || '[]'); } catch { return []; }
+  }
+  function saveMsgs(msgs) {
+    localStorage.setItem(MSG_KEY, JSON.stringify(msgs.slice(-500)));
+  }
+
+  async function fetchNew() {
+    const offset = parseInt(localStorage.getItem(OFFSET_KEY) || '0');
+    const params = { limit: 100, allowed_updates: 'channel_post' };
+    if (offset > 0) params.offset = offset + 1;
+    const res = await tgApi('getUpdates', params);
+    if (!res.ok) return [];
+
+    const updates = res.result || [];
+    if (updates.length > 0) {
+      localStorage.setItem(OFFSET_KEY, updates[updates.length - 1].update_id);
+    }
+    return updates.map(u => u.channel_post).filter(Boolean);
+  }
+
+  async function resolvePhotoUrl(file_id) {
+    const res = await tgApi('getFile', { file_id });
+    if (!res.ok) return null;
+    return `https://api.telegram.org/file/bot${TG_TOKEN}/${res.result.file_path}`;
+  }
+
+  function fmtDate(ts) {
+    const d = new Date(ts * 1000);
+    return d.toLocaleDateString('ko-KR', { month:'short', day:'numeric' })
+      + ' ' + d.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' });
+  }
+
+  function escHtml(s) {
+    return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  async function renderFeed() {
+    const feed = document.getElementById('tg-feed');
+    const loading = document.getElementById('tg-loading');
+    const status = document.getElementById('tg-status');
+    if (!feed) return;
+
+    if (loading) loading.textContent = '새 메시지 확인 중…';
+
+    // 새 메시지 가져오기
+    let newPosts = [];
+    try {
+      newPosts = await fetchNew();
+    } catch(e) {
+      if (loading) loading.textContent = '네트워크 오류';
+      return;
+    }
+
+    // 사진 URL 미리 resolve
+    for (const post of newPosts) {
+      if (post.photo) {
+        const best = post.photo.reduce((a, b) => (b.file_size > (a.file_size||0) ? b : a));
+        post._photo_url = await resolvePhotoUrl(best.file_id).catch(() => null);
+      }
+    }
+
+    // 저장된 메시지에 병합 (중복 제거)
+    const saved = loadMsgs();
+    const byId = {};
+    [...saved, ...newPosts].forEach(m => { if (m && m.message_id) byId[m.message_id] = m; });
+    const all = Object.values(byId).sort((a, b) => b.date - a.date);  // 최신순
+    saveMsgs(all);
+
+    // 렌더
+    feed.innerHTML = '';
+    if (all.length === 0) {
+      feed.innerHTML = '<div class="tg-empty">메시지가 없습니다.<br>채널에 새 메시지를 올리면 여기에 표시됩니다.</div>';
+      if (status) status.textContent = '';
+      return;
+    }
+
+    if (status) status.textContent = `${all.length}개 · ${fmtDate(Date.now()/1000)} 기준`;
+
+    all.forEach(post => {
+      const div = document.createElement('div');
+      div.className = 'tg-msg';
+      let html = `<div class="tg-msg-date">${fmtDate(post.date)}</div>`;
+
+      if (post._photo_url) {
+        html += `<img class="tg-msg-photo" src="${post._photo_url}" loading="lazy" alt="사진">`;
+        if (post.caption) html += `<div class="tg-msg-caption">${escHtml(post.caption)}</div>`;
+      } else if (post.text) {
+        html += `<div class="tg-msg-text">${escHtml(post.text)}</div>`;
+      } else if (post.document) {
+        const name = post.document.file_name || '파일';
+        html += `<a class="tg-msg-doc" href="#" data-fileid="${post.document.file_id}">📎 ${escHtml(name)}</a>`;
+        if (post.caption) html += `<div class="tg-msg-caption">${escHtml(post.caption)}</div>`;
+      } else if (post.caption) {
+        html += `<div class="tg-msg-caption">${escHtml(post.caption)}</div>`;
+      }
+
+      div.innerHTML = html;
+
+      // 사진 클릭 → 라이트박스
+      const img = div.querySelector('.tg-msg-photo');
+      if (img) {
+        img.addEventListener('click', () => {
+          const lb = document.createElement('div');
+          lb.className = 'tg-lightbox';
+          lb.innerHTML = `<img src="${post._photo_url}">`;
+          lb.addEventListener('click', () => lb.remove());
+          document.body.appendChild(lb);
+        });
+      }
+
+      // 문서 다운로드
+      const docLink = div.querySelector('[data-fileid]');
+      if (docLink) {
+        docLink.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const url = await resolvePhotoUrl(docLink.dataset.fileid);
+          if (url) window.open(url, '_blank');
+        });
+      }
+
+      feed.appendChild(div);
+    });
+  }
+
+  let tgActivated = false;
+  window.tgActivate = function() {
+    renderFeed();
+  };
+
+  document.getElementById('tg-refresh-btn')?.addEventListener('click', () => {
+    const feed = document.getElementById('tg-feed');
+    if (feed) feed.innerHTML = '<div class="tg-loading">새로고침 중…</div>';
+    renderFeed();
+  });
+})();
 </script>
 </body>
 </html>
