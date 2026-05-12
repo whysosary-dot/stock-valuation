@@ -625,28 +625,6 @@
     span.sector-tag { font-size: 12px; padding: 3px 9px; }
   }
 
-/* ── Telegram Feed ── */
-.tg-wrap { display:flex; flex-direction:column; height:calc(100vh - 48px); background:var(--bg); }
-.tg-header { display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid var(--border); background:var(--panel); flex-shrink:0; }
-.tg-title { font-size:15px; font-weight:600; color:var(--text); }
-.tg-header-actions { display:flex; align-items:center; gap:10px; }
-.tg-status { font-size:12px; color:var(--text-2); }
-.tg-refresh-btn { background:none; border:1px solid var(--border); border-radius:6px; padding:4px 10px; cursor:pointer; font-size:16px; color:var(--text-2); line-height:1; }
-.tg-refresh-btn:hover { color:var(--text); background:var(--panel-2); }
-.tg-open-btn { font-size:12px; color:#2AABEE; text-decoration:none; padding:4px 10px; border:1px solid #2AABEE; border-radius:6px; }
-.tg-open-btn:hover { background:#2AABEE22; }
-.tg-feed { flex:1; overflow-y:auto; padding:16px 20px; display:flex; flex-direction:column; gap:12px; }
-.tg-loading { text-align:center; color:var(--text-2); padding:40px; font-size:14px; }
-.tg-empty { text-align:center; color:var(--text-2); padding:40px; font-size:14px; }
-.tg-msg { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px 16px; max-width:720px; width:100%; }
-.tg-msg-date { font-size:11px; color:var(--text-2); margin-bottom:6px; }
-.tg-msg-text { font-size:14px; color:var(--text); line-height:1.6; white-space:pre-wrap; word-break:break-word; }
-.tg-msg-photo { width:100%; max-width:480px; border-radius:8px; margin-top:10px; display:block; cursor:pointer; }
-.tg-msg-photo:hover { opacity:0.9; }
-.tg-msg-caption { font-size:14px; color:var(--text); line-height:1.6; white-space:pre-wrap; margin-top:8px; }
-.tg-msg-doc { display:inline-flex; align-items:center; gap:8px; margin-top:8px; padding:8px 12px; background:var(--panel-2); border-radius:8px; font-size:13px; color:var(--accent); text-decoration:none; }
-.tg-lightbox { position:fixed; inset:0; background:#000c; z-index:9999; display:flex; align-items:center; justify-content:center; cursor:zoom-out; }
-.tg-lightbox img { max-width:90vw; max-height:90vh; border-radius:8px; box-shadow:0 8px 40px #0008; }
 </style>
 </head>
 <body>
@@ -662,7 +640,6 @@
   <button class="page-tab-btn" data-page="usmarket">🇺🇸 US Market</button>
   <button class="page-tab-btn" data-page="krmarket">🇰🇷 KR Market</button>
   <button class="page-tab-btn" data-page="awake">🔔 Awake</button>
-  <button class="page-tab-btn" data-page="telegram">✈️ Telegram</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
   <div class="tabs-spacer"></div>
   <button id="gh-settings-btn" class="gh-settings-btn" title="GitHub 토큰 설정">⚙️</button>
@@ -781,25 +758,6 @@
     title="Awake Disclosure"
   ></iframe>
 </div><!-- /page-awake -->
-
-<div id="page-telegram" class="page">
-  <div class="tg-wrap">
-    <div class="tg-header">
-      <span class="tg-title">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="#2AABEE" style="vertical-align:-3px;margin-right:6px"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248-1.97 9.288c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.933z"/></svg>
-        리송 자료 저장소
-      </span>
-      <div class="tg-header-actions">
-        <span id="tg-status" class="tg-status"></span>
-        <button class="tg-refresh-btn" id="tg-refresh-btn" title="새로고침">↻</button>
-        <a href="https://web.telegram.org/k/#-3980062440" target="_blank" rel="noopener" class="tg-open-btn">열기 ↗</a>
-      </div>
-    </div>
-    <div class="tg-feed" id="tg-feed">
-      <div class="tg-loading" id="tg-loading">불러오는 중…</div>
-    </div>
-  </div>
-</div><!-- /page-telegram -->
 
 <div id="page-diary" class="page">
   <div class="diary-topbar">
@@ -1765,7 +1723,6 @@ function activatePage(page, opts = {}) {
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
   markTabVisited(page);
   if (page === 'diary' && typeof renderAllDiaryFeeds === 'function') renderAllDiaryFeeds();
-  if (page === 'telegram' && typeof tgActivate === 'function') tgActivate();
   const src = IFRAME_TAB_SRC[page];
   if (src) {
     const fr = document.getElementById(`${page}-frame`);
@@ -1798,12 +1755,11 @@ window.addEventListener('popstate', (e) => {
 
 // 초기 로드: URL에 해시가 있으면 그 탭 활성화 + 초기 상태에 valuation을 기록
 //
-// ⚠️ activatePage()는 이 스크립트 아래쪽에서 const(diary)/window.tgActivate
-//    로 정의되는 식별자를 내부에서 참조한다. 같은 <script> 태그 안에서
-//    위쪽 IIFE가 그것들을 호출하면 TDZ/ReferenceError로 스크립트 전체가
-//    중단되어 initDiary 같은 후속 초기화가 통째로 사라진다.
-//    그래서 history.replaceState 만 동기로 처리하고, activatePage 호출은
-//    queueMicrotask 로 현재 스크립트 본문 실행 이후로 미룬다.
+// ⚠️ activatePage()는 이 스크립트 아래쪽에서 const(diary) 로 정의되는 식별자를
+//    내부에서 참조한다. 같은 <script> 태그 안에서 위쪽 IIFE가 그것을 호출하면
+//    TDZ/ReferenceError로 스크립트 전체가 중단되어 initDiary 같은 후속 초기화가
+//    통째로 사라진다. 그래서 history.replaceState 만 동기로 처리하고,
+//    activatePage 호출은 queueMicrotask 로 현재 스크립트 본문 실행 이후로 미룬다.
 (function initFromHash() {
   history.replaceState({ page: 'valuation' }, '', location.pathname + location.search + location.hash);
   const initial = (location.hash || '').replace(/^#/, '');
@@ -2626,137 +2582,9 @@ async function ghCommitAll() {
 document.getElementById('gh-commit-btn').addEventListener('click', ghCommitAll);
 
 /* ═══════════════════════════════════
-   Telegram Feed  — 완전 동기/localStorage 기반. 페이지 로드 시 fetch 없음
-═══════════════════════════════════ */
-(function() {
-  const LS_KEY = 'tg_msgs_v1';
-  const RAW_URL = 'https://raw.githubusercontent.com/whysosary-dot/stock-valuation/main/telegram.json';
-
-  function loadLocal() {
-    try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; }
-  }
-
-  function fmtDate(ts) {
-    const d = new Date(ts * 1000);
-    return d.toLocaleDateString('ko-KR', { month:'short', day:'numeric' })
-      + ' ' + d.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' });
-  }
-
-  function escHtml(s) {
-    return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-
-  function renderMessages(all) {
-    const feed = document.getElementById('tg-feed');
-    const status = document.getElementById('tg-status');
-    if (!feed) return;
-    feed.innerHTML = '';
-    if (!all || all.length === 0) {
-      feed.innerHTML = '<div class="tg-empty">메시지가 없습니다.<br>↻ 버튼을 눌러 불러오세요.</div>';
-      if (status) status.textContent = '';
-      return;
-    }
-    if (status) status.textContent = `${all.length}개`;
-    all.forEach(post => {
-      const div = document.createElement('div');
-      div.className = 'tg-msg';
-      let html = `<div class="tg-msg-date">${fmtDate(post.date)}</div>`;
-      if (post._photo_url) {
-        html += `<img class="tg-msg-photo" src="${escHtml(post._photo_url)}" loading="lazy" alt="사진">`;
-        if (post.caption) html += `<div class="tg-msg-caption">${escHtml(post.caption)}</div>`;
-      } else if (post.text) {
-        html += `<div class="tg-msg-text">${escHtml(post.text)}</div>`;
-      } else if (post.caption) {
-        html += `<div class="tg-msg-caption">${escHtml(post.caption)}</div>`;
-      }
-      div.innerHTML = html;
-      const img = div.querySelector('.tg-msg-photo');
-      if (img) {
-        img.addEventListener('click', () => {
-          const lb = document.createElement('div');
-          lb.className = 'tg-lightbox';
-          lb.innerHTML = `<img src="${escHtml(post._photo_url)}">`;
-          lb.addEventListener('click', () => lb.remove());
-          document.body.appendChild(lb);
-        });
-      }
-      feed.appendChild(div);
-    });
-  }
-
-  // 탭 전환: localStorage에서 동기적으로 즉시 렌더 (fetch 없음)
-  window.tgActivate = function() {
-    renderMessages(loadLocal());
-  };
-
-  // 초기 로드 시 #telegram 해시로 들어와서 tgActivate 정의 전에 activatePage가
-  // 스킵된 경우 — 현재 활성 탭이 telegram이면 여기서 다시 렌더한다.
-  // (초기 HTML의 "불러오는 중…" 플레이스홀더 제거용)
-  try {
-    const tgPage = document.getElementById('page-telegram');
-    if (tgPage && tgPage.classList.contains('active')) {
-      window.tgActivate();
-    }
-  } catch(_) {}
-
-  // ↻ 버튼: Promise.race로 타임아웃 보장, 완료 후 localStorage 저장 + 렌더
-  let _fetching = false;
-  document.getElementById('tg-refresh-btn')?.addEventListener('click', function() {
-    if (_fetching) return;
-    _fetching = true;
-    const btn = this;
-    const status = document.getElementById('tg-status');
-    btn.disabled = true;
-    if (status) status.textContent = '가져오는 중…';
-
-    // raw.githubusercontent.com 은 max-age=300 (5분) 으로 응답해서 Safari 디스크
-     // 캐시가 끈질기게 옛 응답을 잡고 있을 수 있다. cache:'no-store' 로 명시적 우회.
-    Promise.race([
-      fetch(RAW_URL + '?t=' + Date.now(), { cache: 'no-store' })
-        .then(r => r.ok ? r.json().then(j => ({ ok:true, data:j })) : { ok:false, status:r.status })
-        .catch(e => ({ ok:false, err: String(e) })),
-      new Promise(resolve => setTimeout(() => resolve({ ok:false, err:'timeout' }), 10000))
-    ])
-    .then(res => {
-      const data = res.ok ? res.data : null;
-      if (Array.isArray(data) && data.length > 0) {
-        // 데이터 있을 때만 캐시 덮어쓰기
-        localStorage.setItem(LS_KEY, JSON.stringify(data));
-        renderMessages(data);
-      } else if (Array.isArray(data)) {
-        // 서버 응답이 빈 배열 — 캐시 보존, 기존 메시지 그대로 표시
-        // (telegram_update.py 가 폴링한 시점에 새 메시지가 없으면 빈 배열을 받는다.
-        //  이걸 그대로 캐시에 덮어쓰면 사용자 화면의 모든 메시지가 한 번에 사라진다.)
-        const cached = loadLocal();
-        renderMessages(cached);
-        if (status) status.textContent = cached.length
-          ? `${cached.length}개 (서버 비어있음 · 캐시)`
-          : '서버에 메시지 없음';
-      } else {
-        // 실패 사유를 status 에 그대로 노출 — 디버그용
-        renderMessages(loadLocal());
-        const tag = res.ok === false
-          ? (res.err ? `오류:${res.err}` : `HTTP ${res.status||'?'}`)
-          : '응답 비배열';
-        if (status) status.textContent = `불러오기 실패 (${tag}) · 캐시 표시`;
-        console.warn('[telegram] fetch fail', res);
-      }
-    })
-    .catch(() => {
-      renderMessages(loadLocal());
-      if (status) status.textContent = '오류 (캐시 표시)';
-    })
-    .finally(() => {
-      _fetching = false;
-      btn.disabled = false;
-    });
-  });
-})();
-
-/* ═══════════════════════════════════
    bfcache / 새로고침 안전장치
    - pagehide: 페이지 freeze 직전에 pending saveTimers를 즉시 flush
-   - pageshow(persisted): bfcache에서 복원될 때 diary + telegram 재초기화
+   - pageshow(persisted): bfcache에서 복원될 때 diary 재초기화
 ═══════════════════════════════════ */
 window.addEventListener('pagehide', () => {
   // 500ms 디바운스 타이머가 남아있으면 즉시 저장하고 취소
@@ -2773,12 +2601,10 @@ window.addEventListener('pageshow', (e) => {
   // bfcache에서 복원됨 — localStorage에서 최신 상태 재로드 후 렌더
   diary.data = loadDiary();
   renderAllDiaryFeeds();
-  // 현재 활성 탭이 telegram이면 재렌더
-  if (typeof tgActivate === 'function') {
-    const tgPage = document.getElementById('page-telegram');
-    if (tgPage && tgPage.style.display !== 'none') tgActivate();
-  }
 });
+
+// 텔레그램 잔재 localStorage 한 번 정리 (탭 제거 후 1회 cleanup)
+try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
 </script>
 </body>
 </html>
