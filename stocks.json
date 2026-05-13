@@ -3214,7 +3214,7 @@
         10880,
         14820
       ],
-      "target_cap_oku": 10000,
+      "target_cap_oku": 20000,
       "safety_cap_oku": 3000,
       "q1_op": 140,
       "q2_op": null,
