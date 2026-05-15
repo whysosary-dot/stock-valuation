@@ -2098,106 +2098,37 @@ function applyBoldRedToggle() {
 // 3) span 이 비게 되면 제거
 function clearBoldRedInRange() {
   const sel = window.getSelection();
-  if (!sel || !sel.rangeCount || sel.isCollapsed) {
-    console.warn('[diary] clear: no active selection');
-    return;
-  }
+  if (!sel || !sel.rangeCount || sel.isCollapsed) return;
   const range = sel.getRangeAt(0);
   const anc = range.commonAncestorContainer;
   const startEl = anc.nodeType === 1 ? anc : anc.parentElement;
   const editable = startEl && startEl.closest('[contenteditable="true"]');
-  if (!editable) {
-    console.warn('[diary] clear: selection not in editable');
-    return;
-  }
+  if (!editable) return;
 
-  // 강조 span 후보 (마커 또는 빨강+볼드 스타일) — 선택과 교차
-  const spans = [...editable.querySelectorAll('span')].filter(sp => {
-    const isMark  = sp.getAttribute('data-diary-br') === '1';
-    const isStyle = _looksLikeBoldRed(sp.getAttribute('style') || '');
-    if (!isMark && !isStyle) return false;
-    try { return range.intersectsNode(sp); } catch(_) { return false; }
-  });
-  if (!spans.length) {
-    console.warn('[diary] clear: no highlight span intersects selection');
-    return;
-  }
+  const isBoldRed = sp => sp.tagName === 'SPAN' &&
+    (sp.getAttribute('data-diary-br') === '1' || _looksLikeBoldRed(sp.getAttribute('style') || ''));
 
-  // 각 span 별로 정밀 처리
-  spans.forEach(span => {
-    // span 전체가 선택 안에 완전히 포함되나? → 그냥 unwrap
-    const spanFullyIn =
-      range.isPointInRange(span, 0) &&
-      range.isPointInRange(span, span.childNodes.length);
-    // (isPointInRange 가 일부 환경에서 throw 가능 — try)
-    let fullIn = false;
-    try {
-      fullIn = range.isPointInRange(span, 0) && range.isPointInRange(span, span.childNodes.length);
-    } catch(_) { fullIn = false; }
-
-    if (fullIn) {
-      const parent = span.parentNode;
-      while (span.firstChild) parent.insertBefore(span.firstChild, span);
-      parent.removeChild(span);
-      return;
-    }
-
-    // 부분 선택 — span 안의 모든 텍스트를 모아서 3등분 (강조 span 안엔 텍스트만 있다고 가정)
-    const fullText = span.textContent || '';
-    // span 시작점이 range 안에 있나 / 끝점이 range 안에 있나
-    let startInRange = false, endInRange = false;
-    try { startInRange = range.isPointInRange(span, 0); } catch(_) {}
-    try { endInRange   = range.isPointInRange(span, span.childNodes.length); } catch(_) {}
-
-    // 잘라낼 텍스트 위치 결정 — selection 의 startContainer/endContainer 가 이 span 내부일 때
-    let cutStart = 0, cutEnd = fullText.length;
-    if (span.contains(range.startContainer)) {
-      // span 안에서 시작 → offset 계산: textContent 누적 길이 + startOffset
-      cutStart = _offsetWithin(span, range.startContainer, range.startOffset);
-    } else if (startInRange) {
-      cutStart = 0;
-    } else {
-      cutStart = 0; // 보수적 default
-    }
-    if (span.contains(range.endContainer)) {
-      cutEnd = _offsetWithin(span, range.endContainer, range.endOffset);
-    } else if (endInRange) {
-      cutEnd = fullText.length;
-    } else {
-      cutEnd = fullText.length;
-    }
-    if (cutStart < 0) cutStart = 0;
-    if (cutEnd > fullText.length) cutEnd = fullText.length;
-    if (cutEnd <= cutStart) return; // 선택과 안 겹침
-
-    const before = fullText.slice(0, cutStart);
-    const middle = fullText.slice(cutStart, cutEnd);
-    const after  = fullText.slice(cutEnd);
-
-    // before 는 원래 span 에 남기고, middle 은 텍스트노드, after 는 새 span
-    span.textContent = before;
-    const midNode = document.createTextNode(middle);
-    let afterSpan = null;
-    if (after) {
-      afterSpan = span.cloneNode(false);  // 같은 속성/스타일 복제, 자식 없음
-      afterSpan.textContent = after;
-    }
-    // before 가 비었으면 원래 span 제거
-    if (!before) {
-      const parent = span.parentNode;
-      parent.insertBefore(midNode, span);
-      if (afterSpan) parent.insertBefore(afterSpan, span);
-      parent.removeChild(span);
-    } else {
-      span.parentNode.insertBefore(midNode, span.nextSibling);
-      if (afterSpan) span.parentNode.insertBefore(afterSpan, midNode.nextSibling);
-    }
-  });
-
-  // 정리: 비어있는 강조 span 제거
+  // 대상 span 수집: ① range와 교차하는 것 ② startContainer 조상 중 bold-red span
+  const candidates = new Set();
   editable.querySelectorAll('span').forEach(sp => {
-    const isBR = sp.getAttribute('data-diary-br') === '1' || _looksLikeBoldRed(sp.getAttribute('style') || '');
-    if (isBR && !sp.textContent) sp.remove();
+    if (!isBoldRed(sp)) return;
+    try { if (range.intersectsNode(sp)) candidates.add(sp); } catch(_) {}
+  });
+  // range가 span 내부에 완전히 들어있는 경우(intersectsNode로도 잡히지만) 조상 체인도 확인
+  let cur = anc.nodeType === 3 ? anc.parentElement : anc;
+  while (cur && cur !== editable) {
+    if (isBoldRed(cur)) candidates.add(cur);
+    cur = cur.parentElement;
+  }
+
+  if (!candidates.size) return;
+
+  // 각 span unwrap — 자식 노드는 그대로 유지, span 껍데기만 제거
+  candidates.forEach(span => {
+    if (!span.parentNode) return;
+    const parent = span.parentNode;
+    while (span.firstChild) parent.insertBefore(span.firstChild, span);
+    parent.removeChild(span);
   });
 
   try { sel.removeAllRanges(); } catch(_) {}
