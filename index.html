@@ -2108,27 +2108,70 @@ function clearBoldRedInRange() {
   const isBoldRed = sp => sp.tagName === 'SPAN' &&
     (sp.getAttribute('data-diary-br') === '1' || _looksLikeBoldRed(sp.getAttribute('style') || ''));
 
-  // 대상 span 수집: ① range와 교차하는 것 ② startContainer 조상 중 bold-red span
+  // 대상 span 수집: ① editable 내 교차 span ② startContainer 조상 체인 (span이 range를 감싸는 경우)
   const candidates = new Set();
   editable.querySelectorAll('span').forEach(sp => {
     if (!isBoldRed(sp)) return;
     try { if (range.intersectsNode(sp)) candidates.add(sp); } catch(_) {}
   });
-  // range가 span 내부에 완전히 들어있는 경우(intersectsNode로도 잡히지만) 조상 체인도 확인
   let cur = anc.nodeType === 3 ? anc.parentElement : anc;
   while (cur && cur !== editable) {
     if (isBoldRed(cur)) candidates.add(cur);
     cur = cur.parentElement;
   }
-
   if (!candidates.size) return;
 
-  // 각 span unwrap — 자식 노드는 그대로 유지, span 껍데기만 제거
   candidates.forEach(span => {
     if (!span.parentNode) return;
     const parent = span.parentNode;
-    while (span.firstChild) parent.insertBefore(span.firstChild, span);
-    parent.removeChild(span);
+
+    // 선택이 span 전체를 포함하는지 판단
+    let fullySelected = false;
+    try {
+      const sr = document.createRange();
+      sr.selectNodeContents(span);
+      fullySelected = range.compareBoundaryPoints(Range.START_TO_START, sr) <= 0 &&
+                      range.compareBoundaryPoints(Range.END_TO_END, sr) >= 0;
+    } catch(_) {}
+
+    if (fullySelected) {
+      // 전체 unwrap
+      while (span.firstChild) parent.insertBefore(span.firstChild, span);
+      parent.removeChild(span);
+      return;
+    }
+
+    // 부분 선택: before(유지) | middle(평문) | after(유지) 로 분리
+    const fullText = span.textContent || '';
+    let cutStart = span.contains(range.startContainer)
+      ? _offsetWithin(span, range.startContainer, range.startOffset) : 0;
+    let cutEnd = span.contains(range.endContainer)
+      ? _offsetWithin(span, range.endContainer, range.endOffset) : fullText.length;
+    cutStart = Math.max(0, cutStart);
+    cutEnd   = Math.min(fullText.length, cutEnd);
+    if (cutEnd <= cutStart) return;
+
+    const before = fullText.slice(0, cutStart);
+    const middle = fullText.slice(cutStart, cutEnd);
+    const after  = fullText.slice(cutEnd);
+
+    const midNode = document.createTextNode(middle);
+    const afterSpan = after ? Object.assign(span.cloneNode(false), { textContent: after }) : null;
+
+    if (before) {
+      span.textContent = before;
+      parent.insertBefore(midNode, span.nextSibling);
+      if (afterSpan) parent.insertBefore(afterSpan, midNode.nextSibling);
+    } else {
+      parent.insertBefore(midNode, span);
+      if (afterSpan) parent.insertBefore(afterSpan, midNode.nextSibling);
+      parent.removeChild(span);
+    }
+  });
+
+  // 빈 bold-red span 정리
+  editable.querySelectorAll('span').forEach(sp => {
+    if (isBoldRed(sp) && !sp.textContent) sp.remove();
   });
 
   try { sel.removeAllRanges(); } catch(_) {}
