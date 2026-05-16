@@ -9531,7 +9531,9 @@
       "favorite": true,
       "target_cap_oku": 50000,
       "safety_cap_oku": 25000,
-      "naver_code": "080220.KQ"
+      "naver_code": "080220.KQ",
+      "q1_op": 671,
+      "q3_op": 2200
     },
     {
       "name": "하나마이크론",
