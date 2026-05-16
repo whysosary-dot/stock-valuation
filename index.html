@@ -721,6 +721,7 @@
   <button class="page-tab-btn" data-page="usmarket">🇺🇸 US Market</button>
   <button class="page-tab-btn" data-page="krmarket">🇰🇷 KR Market</button>
   <button class="page-tab-btn" data-page="awake">🔔 Awake</button>
+  <button class="page-tab-btn" data-page="research">🔬 Research</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
   <div class="tabs-spacer"></div>
   <button id="gh-settings-btn" class="gh-settings-btn" title="GitHub 토큰 설정">⚙️</button>
@@ -838,6 +839,16 @@
     title="Awake Disclosure"
   ></iframe>
 </div><!-- /page-awake -->
+
+<div id="page-research" class="page">
+  <iframe
+    id="research-frame"
+    src="https://whysosary-dot.github.io/investment-notes/"
+    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
+    loading="lazy"
+    title="Research Notes"
+  ></iframe>
+</div><!-- /page-research -->
 
 <div id="page-diary" class="page">
   <div class="diary-topbar">
@@ -1746,6 +1757,7 @@ const IFRAME_TAB_SRC = {
   usmarket:  'https://whysosary-dot.github.io/us-market-briefing/',
   krmarket:  'https://whysosary-dot.github.io/kr-market-briefing/',
   awake:     'https://whysosary-dot.github.io/awake-disclosure/',
+  research:  'https://whysosary-dot.github.io/investment-notes/',
 };
 
 function activatePage(page, opts = {}) {
@@ -1823,6 +1835,7 @@ const TAB_REPOS = {
   usmarket:  { repo: 'whysosary-dot/us-market-briefing' },
   krmarket:  { repo: 'whysosary-dot/kr-market-briefing' },
   awake:     { repo: 'whysosary-dot/awake-disclosure' },
+  research:  { repo: 'whysosary-dot/investment-notes' },
   diary:     { repo: 'whysosary-dot/stock-valuation', path: 'diary.json' },
 };
 const TAB_VISIT_KEY    = 'sv_tab_lastvisit_v1';
