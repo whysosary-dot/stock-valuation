@@ -9496,11 +9496,11 @@
         94800
       ],
       "favorite": true,
-      "target_cap_oku": 50000,
+      "target_cap_oku": 60000,
       "safety_cap_oku": 25000,
       "naver_code": "080220.KQ",
       "q1_op": 671,
-      "q3_op": 2200,
+      "q3_op": 800,
       "q2_op": 700,
       "q4_op": 900
     },
