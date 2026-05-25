@@ -943,6 +943,7 @@ const COLS = [
   { key: '_downside',       label: '하방 %',        type: 'calc',    sortable: true },
   { key: '_chart3y',        label: '3년 차트',       type: 'chart3y', sortable: false, align: 'center' },
   { key: '_chart',          label: '1년 차트',       type: 'chart',   sortable: false, align: 'center' },
+  { key: '_chart3m',        label: '3개월 차트',     type: 'chart3m', sortable: false, align: 'center' },
   { key: 'price_native',    label: '현재주가',      type: 'current-price', sortable: true },
   { key: 'market_cap_oku',  label: '현재시총 (억)',  type: 'current', sortable: true, capCol: true },
   { key: 'target_cap_oku',  label: '목표시총 (억)',  type: 'num',     sortable: true, capCol: true },
@@ -1243,6 +1244,9 @@ function renderRow(s) {
     } else if (c.type === 'chart3y') {
       td.classList.add('chart-cell');
       td.innerHTML = renderSparkline(s.price_history_3y);
+    } else if (c.type === 'chart3m') {
+      td.classList.add('chart-cell');
+      td.innerHTML = renderSparkline(s.price_history_3m);
     } else if (c.type === 'chart') {
       td.classList.add('chart-cell');
       td.innerHTML = renderSparkline(s.price_history);
