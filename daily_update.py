@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Daily auto-update:
+Daily auto-update (fast parallel version):
   1) GitHub에서 stocks.json 최신 불러오기 (유저가 웹에서 편집한 내용 포함)
-  2) yfinance로 모든 종목 시총/통화 갱신 (시총 관련 필드만 덮어씀)
+  2) yfinance fast_info로 모든 종목 시총/통화 갱신 (병렬, ~23s)
      - 유저 입력 필드(target/safety/q1~q4 매출·영업이익)는 절대 건드리지 않음
-  3) GitHub Contents API로 커밋 & 푸시
+  3) yfinance history(1wk)로 주봉 차트 데이터 갱신 (병렬, ~20s, 숫자배열 형식)
+  4) Git Data API로 커밋 (1MB 초과 파일 대응)
 
-매일 오전 6시에 스케줄러가 실행합니다.
 수동 실행: python3 daily_update.py
 """
 
@@ -17,22 +17,37 @@ import base64
 import datetime
 import urllib.request
 import urllib.error
+import warnings
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+warnings.filterwarnings('ignore')
 
 BASE_DIR = Path(__file__).parent.resolve()
-sys.path.insert(0, str(BASE_DIR))
 
-from server import _get_usdkrw, _fetch_marketcap_krw, _fetch_price_history  # noqa: E402
+# yfinance는 로컬 pylib 또는 시스템 패키지 사용
+for _p in [BASE_DIR / "pylib", BASE_DIR / "pylibs", Path("/tmp/pypackages")]:
+    if _p.exists():
+        sys.path.insert(0, str(_p))
+
+try:
+    import yfinance as yf
+except ImportError:
+    print("[ERROR] yfinance 없음. pip install yfinance 실행 후 재시도.")
+    sys.exit(1)
 
 REPO = "whysosary-dot/stock-valuation"
-FILE_PATH = "stocks.json"
 BRANCH = "main"
 TOKEN_FILE = BASE_DIR / ".github_token"
 
-# 시총 업데이트가 덮어써도 되는 필드 (나머지는 유저 입력으로 간주하고 절대 건드리지 않음)
-# shares_adjustment: 유증 등 yfinance 미반영 발행주식수 보정치 — 유저 입력으로 보존
-SERVER_WRITE_FIELDS = {"market_cap_oku", "currency", "price_native", "price_change_pct", "naver_code", "price_history", "price_history_3y"}
+# 서버가 덮어쓰는 필드 (유저 입력은 보존)
+SERVER_WRITE_FIELDS = {
+    "market_cap_oku", "currency", "price_native", "price_change_pct",
+    "naver_code", "price_history", "price_history_3y", "price_history_3m"
+}
 
+
+# ── GitHub helpers ──────────────────────────────────────────
 
 def get_token() -> str:
     tok = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
@@ -40,135 +55,241 @@ def get_token() -> str:
         return tok.strip()
     if TOKEN_FILE.exists():
         return TOKEN_FILE.read_text().strip()
-    raise SystemExit(
-        f"GitHub 토큰 없음: 환경변수 GITHUB_TOKEN 또는 {TOKEN_FILE} 에 PAT를 넣어주세요."
-    )
+    raise SystemExit(f"GitHub 토큰 없음: {TOKEN_FILE}")
 
 
-def gh_get_file(token: str):
-    api = f"https://api.github.com/repos/{REPO}/contents/{FILE_PATH}?ref={BRANCH}"
-    req = urllib.request.Request(
-        api,
-        headers={
-            "Authorization": f"token {token}",
-            "Accept": "application/vnd.github+json",
-            "User-Agent": "stock-valuation-daily",
-        },
-    )
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        meta = json.loads(resp.read().decode("utf-8"))
-    content = base64.b64decode(meta["content"]).decode("utf-8")
-    return json.loads(content), meta["sha"]
-
-
-def gh_put_file(token: str, content_bytes: bytes, sha: str, message: str):
-    api = f"https://api.github.com/repos/{REPO}/contents/{FILE_PATH}"
-    body = {
-        "message": message,
-        "content": base64.b64encode(content_bytes).decode("ascii"),
-        "branch": BRANCH,
-        "sha": sha,
-    }
-    put = urllib.request.Request(
-        api, method="PUT",
-        data=json.dumps(body).encode("utf-8"),
+def _gh_req(token, method, path, body=None, timeout=30):
+    url = f"https://api.github.com/repos/{REPO}/{path}"
+    data = json.dumps(body).encode() if body else None
+    req = urllib.request.Request(url, method=method, data=data,
         headers={
             "Authorization": f"token {token}",
             "Accept": "application/vnd.github+json",
             "User-Agent": "stock-valuation-daily",
             "Content-Type": "application/json",
-        },
-    )
-    with urllib.request.urlopen(put, timeout=30) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+        })
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode())
 
+
+def gh_get_file(token: str):
+    """GitHub에서 stocks.json 로드 (Contents API, ≤1MB 용)"""
+    meta = _gh_req(token, "GET", f"contents/stocks.json?ref={BRANCH}", timeout=20)
+    content = base64.b64decode(meta["content"]).decode("utf-8")
+    return json.loads(content), meta["sha"]
+
+
+def gh_commit_data_api(token: str, content_str: str, message: str) -> dict:
+    """Git Data API로 커밋 — 파일 크기 무제한"""
+    ref = _gh_req(token, "GET", f"git/ref/heads/{BRANCH}")
+    commit_sha = ref["object"]["sha"]
+    commit_obj = _gh_req(token, "GET", f"git/commits/{commit_sha}")
+    tree_sha = commit_obj["tree"]["sha"]
+
+    blob = _gh_req(token, "POST", "git/blobs", {
+        "content": base64.b64encode(content_str.encode()).decode(),
+        "encoding": "base64",
+    })
+    new_tree = _gh_req(token, "POST", "git/trees", {
+        "base_tree": tree_sha,
+        "tree": [{"path": "stocks.json", "mode": "100644", "type": "blob", "sha": blob["sha"]}],
+    })
+    new_commit = _gh_req(token, "POST", "git/commits", {
+        "message": message,
+        "tree": new_tree["sha"],
+        "parents": [commit_sha],
+    })
+    _gh_req(token, "PATCH", f"git/refs/heads/{BRANCH}", {"sha": new_commit["sha"]})
+    return new_commit
+
+
+# ── Data fetchers ────────────────────────────────────────────
+
+def _fetch_fx(sym: str, default: float) -> float:
+    try:
+        fi = yf.Ticker(sym).fast_info
+        v = fi.get("lastPrice") or fi.get("last_price")
+        if v and float(v) > 0:
+            return float(v)
+    except Exception:
+        pass
+    return default
+
+
+def _fetch_marketcap(s: dict, fx: dict) -> tuple:
+    """fast_info 기반 시총 조회 (병렬용). (stock_dict, ok, msg) 반환"""
+    ticker = (s.get("ticker") or "").strip()
+    if not ticker:
+        return s, False, "ticker 없음"
+    s = s.copy()
+    try:
+        fi = yf.Ticker(ticker).fast_info
+        price = fi.get("lastPrice") or fi.get("last_price")
+        cur = (fi.get("currency") or "").upper() or "USD"
+
+        # 시총: fast_info.marketCap 우선, 없으면 price×shares
+        mc = fi.get("marketCap") or fi.get("market_cap")
+        if not mc:
+            ov = float(s.get("shares_override") or 0)
+            sh = ov or fi.get("shares") or fi.get("shares_outstanding")
+            if sh and price:
+                mc = float(price) * float(sh)
+        if not mc:
+            return s, False, "marketCap not found"
+
+        # 원화 환산
+        if cur == "KRW" or ticker.endswith(".KS") or ticker.endswith(".KQ"):
+            mc_krw = float(mc)
+        else:
+            mc_krw = float(mc) * fx.get(cur, fx.get("USD", 1400.0))
+
+        # 등락률
+        pcp = None
+        try:
+            v = fi.get("regularMarketChangePercent") or fi.get("regular_market_change_percent")
+            if v:
+                pcp = round(float(v), 4)
+        except Exception:
+            pass
+
+        s["market_cap_oku"] = round(mc_krw / 1e8, 2)
+        s["currency"] = cur
+        s["price_native"] = round(float(price), 4) if price else None
+        s["price_change_pct"] = pcp
+        return s, True, f"{mc_krw / 1e8:,.0f}억"
+    except Exception as e:
+        return s, False, str(e)
+
+
+def _fetch_history(ticker: str) -> tuple:
+    """주봉 종가 숫자배열 반환 (renderSparkline 호환). (ticker, h1y, h3y, h3m) 반환"""
+    try:
+        t = yf.Ticker(ticker)
+        h1 = t.history(period="1y", interval="1wk")
+        h3 = t.history(period="3y", interval="1wk")
+        h3m = t.history(period="3mo", interval="1d")
+        r1 = [round(float(x), 4) for x in h1["Close"].dropna().tolist()] if not h1.empty else []
+        r3 = [round(float(x), 4) for x in h3["Close"].dropna().tolist()] if not h3.empty else []
+        r3m = [round(float(x), 4) for x in h3m["Close"].dropna().tolist()] if not h3m.empty else []
+        return ticker, r1, r3, r3m
+    except Exception:
+        return ticker, [], [], []
+
+
+# ── Main ─────────────────────────────────────────────────────
 
 def main():
-    started = datetime.datetime.now()
-    print(f"[{started:%Y-%m-%d %H:%M:%S}] 일일 시총 업데이트 시작")
+    t_start = datetime.datetime.now()
+    print(f"[{t_start:%Y-%m-%d %H:%M:%S}] 일일 업데이트 시작")
 
     token = get_token()
 
-    # 1) GitHub에서 최신 불러오기 (유저 웹 편집 반영)
-    data, sha = gh_get_file(token)
-    stocks = data.get("stocks", [])
-    if not stocks:
-        print("  종목이 없습니다. 종료.")
-        return 0
-    print(f"  ↓ GitHub에서 {len(stocks)}개 종목 로드 (sha={sha[:7]})")
+    # GitHub + FX 병렬 로드
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        f_gh  = ex.submit(gh_get_file, token)
+        f_usd = ex.submit(_fetch_fx, "KRW=X",    1400.0)
+        f_jpy = ex.submit(_fetch_fx, "JPYKRW=X",    9.0)
+        f_hkd = ex.submit(_fetch_fx, "HKDKRW=X",  180.0)
+        f_cny = ex.submit(_fetch_fx, "CNYKRW=X",  195.0)
+        data, sha = f_gh.result()
+        fx = {
+            "KRW": 1.0,
+            "USD": f_usd.result(),
+            "JPY": f_jpy.result(),
+            "HKD": f_hkd.result(),
+            "CNY": f_cny.result(),
+        }
+        fx["RMB"] = fx["CNY"]
 
-    usdkrw = _get_usdkrw()
-    data["usdkrw"] = round(usdkrw, 2)
-    print(f"  USDKRW: {usdkrw:.2f}")
+    stocks = data.get("stocks", [])
+    usdkrw = fx["USD"]
+    print(f"  ↓ GitHub {len(stocks)}개 (sha={sha[:7]}) | USD={usdkrw:.0f} JPY={fx['JPY']:.1f}")
+
+    tickers_valid = [(s.get("ticker") or "").strip() for s in stocks]
+
+    # 시총 + 가격이력 동시 병렬 실행 (workers=40)
+    print(f"  ▶ 시총+이력 병렬 조회 ({len(stocks)}개, workers=40)…")
+    mcap_results: dict = {}
+    hist_results: dict = {}
+
+    with ThreadPoolExecutor(max_workers=40) as ex:
+        # 시총
+        mcap_futs = {ex.submit(_fetch_marketcap, s.copy(), fx): i for i, s in enumerate(stocks)}
+        # 가격이력
+        hist_futs = {ex.submit(_fetch_history, t): t for t in tickers_valid if t}
+
+        for fut in as_completed(list(mcap_futs) + list(hist_futs)):
+            if fut in mcap_futs:
+                i = mcap_futs[fut]
+                try:
+                    mcap_results[i] = fut.result()
+                except Exception as e:
+                    mcap_results[i] = (stocks[i].copy(), False, str(e))
+            else:
+                t = hist_futs[fut]
+                try:
+                    tk, h1, h3, h3m = fut.result()
+                    hist_results[tk] = (h1, h3, h3m)
+                except Exception:
+                    hist_results[t] = ([], [], [])
 
     ok_count = 0
     fail = []
-    for s in stocks:
-        ticker = (s.get("ticker") or "").strip()
-        if not ticker:
-            fail.append(s.get("name", "?"))
-            continue
-        adj = s.get("shares_adjustment") or 0
-        override = s.get("shares_override") or 0
-        r = _fetch_marketcap_krw(ticker, usdkrw, shares_adjustment=adj, shares_override=override)
-        if r["ok"]:
-            # ★ 시총 관련 필드만 덮어씀. target/safety/q1~q4 등 유저 입력은 유지
-            s["market_cap_oku"] = r["market_cap_oku"]
-            s["currency"] = r["currency"]
-            s["price_native"] = r.get("price_native")
-            s["price_change_pct"] = r.get("price_change_pct")
-            new_nc = r.get("naver_code")
-            # suffix 있는 코드만 저장 (suffix 없는 폴백으로 기존 값 덮어쓰기 방지)
-            if new_nc and ('.' in new_nc or not s.get("naver_code")):
-                s["naver_code"] = new_nc
-            s["price_history"] = _fetch_price_history(ticker, '1y')
-            s["price_history_3y"] = _fetch_price_history(ticker, '3y')
+    for i, s in enumerate(stocks):
+        # 시총 업데이트
+        if i in mcap_results:
+            s_up, ok, msg = mcap_results[i]
+        else:
+            s_up, ok, msg = s.copy(), False, "no result"
+
+        # 가격이력 주입 (숫자배열, 주봉)
+        ticker = (s_up.get("ticker") or "").strip()
+        if ticker and ticker in hist_results:
+            h1, h3, h3m = hist_results[ticker]
+            s_up["price_history"] = h1
+            s_up["price_history_3y"] = h3
+            s_up["price_history_3m"] = h3m
+
+        stocks[i] = s_up
+        name = s_up.get("name", "?")
+        h1c = len(s_up.get("price_history") or [])
+        h3c = len(s_up.get("price_history_3y") or [])
+        h3mc = len(s_up.get("price_history_3m") or [])
+        if ok:
             ok_count += 1
-            print(f"  ✓ {s.get('name','?'):10s} {ticker:12s} {r['market_cap_oku']:>14,.0f} 억원")
+            print(f"  ✓ {name:10s} {ticker:12s} {msg}  (1y:{h1c}pt 3y:{h3c}pt)")
         else:
-            fail.append(f"{s.get('name','?')}({ticker}): {r.get('error')}")
-            print(f"  ✗ {s.get('name','?'):10s} {ticker:12s} — {r.get('error')}")
+            fail.append(f"{name}({ticker}): {msg}")
+            print(f"  ✗ {name:10s} {ticker:12s} — {msg}")
 
+    data["stocks"] = stocks
+    data["usdkrw"] = round(usdkrw, 2)
     data["updated_at"] = datetime.datetime.now().isoformat(timespec="seconds")
-    print(f"\n  성공 {ok_count} / 실패 {len(fail)}")
+    e1 = (datetime.datetime.now() - t_start).total_seconds()
+    print(f"\n  성공 {ok_count} / 실패 {len(fail)} | {e1:.1f}s")
+    if fail:
+        print("  실패 목록:", "; ".join(fail))
 
-    # 2) 로컬 백업도 업데이트 (선택적, 서버 모드 병행용)
+    # 로컬 백업
+    content_str = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     try:
-        local = BASE_DIR / "stocks.json"
-        local.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        (BASE_DIR / "stocks.json").write_text(content_str, encoding="utf-8")
     except Exception as e:
-        print(f"  (로컬 백업 실패 — 무시: {e})")
+        print(f"  (로컬 백업 실패: {e})")
 
-    # 3) GitHub에 PUT
-    content = (json.dumps(data, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
-    msg = f"📊 일일 시총 업데이트: {datetime.date.today().isoformat()}"
+    # GitHub 커밋 (Git Data API — 파일 크기 무관)
+    msg_commit = f"📊 일일 시총+이력 업데이트: {datetime.date.today().isoformat()}"
     try:
-        result = gh_put_file(token, content, sha, msg)
-    except urllib.error.HTTPError as e:
-        # 409/422 = sha 충돌 (유저가 방금 저장) → 재시도
-        if e.code in (409, 422):
-            print("  ⟳ 충돌 감지 — 재로드 후 재시도")
-            data2, sha2 = gh_get_file(token)
-            # 유저 편집 필드는 새 버전을 우선, 서버 필드(market_cap 등)는 우리가 방금 받은 값으로
-            by_ticker = { (s.get("ticker") or ""): s for s in data2.get("stocks", []) }
-            for s in stocks:
-                latest = by_ticker.get(s.get("ticker") or "")
-                if latest:
-                    for k, v in latest.items():
-                        if k not in SERVER_WRITE_FIELDS:
-                            s[k] = v
-            data2["stocks"] = stocks
-            data2["usdkrw"] = data["usdkrw"]
-            data2["updated_at"] = data["updated_at"]
-            content = (json.dumps(data2, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
-            result = gh_put_file(token, content, sha2, msg + " (retry)")
-        else:
-            raise
+        commit = gh_commit_data_api(token, content_str, msg_commit)
+    except Exception as e:
+        print(f"  [ERROR] 커밋 실패: {e}")
+        return 1
 
-    commit = result.get("commit", {})
-    print(f"  ✓ GitHub 커밋: {commit.get('sha','?')[:7]}")
-    if commit.get("html_url"):
-        print(f"    {commit['html_url']}")
+    sha_short = commit.get("sha", "?")[:7]
+    total = (datetime.datetime.now() - t_start).total_seconds()
+    print(f"  ✓ GitHub 커밋: {sha_short} | 총 {total:.1f}초")
+    url = f"https://github.com/{REPO}/commit/{commit.get('sha', '')}"
+    print(f"    {url}")
     return 0
 
 
