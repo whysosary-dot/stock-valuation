@@ -9994,6 +9994,28 @@
       ],
       "naver_code": "000990.KS",
       "favorite": true
+    },
+    {
+      "name": "닌텐도",
+      "ticker": "7974.T",
+      "market_cap_oku": 0,
+      "currency": "JPY",
+      "price_native": 0,
+      "sector": "게임",
+      "price_change_pct": null,
+      "price_history": [],
+      "price_history_3y": []
+    },
+    {
+      "name": "캡콤",
+      "ticker": "9697.T",
+      "market_cap_oku": 0,
+      "currency": "JPY",
+      "price_native": 0,
+      "sector": "게임",
+      "price_change_pct": null,
+      "price_history": [],
+      "price_history_3y": []
     }
   ]
 }
