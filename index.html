@@ -330,7 +330,29 @@
     flex-wrap: wrap;
     background: var(--panel); border-bottom: 1px solid var(--border);
     padding: 0 8px; gap: 0;
+    transition: padding .2s;
   }
+  .page-tabs.collapsed {
+    flex-wrap: nowrap;
+    padding: 0 8px;
+  }
+  .page-tabs.collapsed .page-tab-btn:not(.active) { display: none; }
+  .page-tabs.collapsed .page-tab-btn.active {
+    pointer-events: none;
+    opacity: .75;
+    font-size: 13px;
+  }
+  .tabs-collapse-btn {
+    flex-shrink: 0;
+    background: none; border: none; cursor: pointer;
+    font-size: 13px; color: var(--text-dim);
+    padding: 6px 8px; border-radius: 5px;
+    line-height: 1; transition: color .15s, background .15s;
+    display: flex; align-items: center; gap: 3px;
+    white-space: nowrap;
+    margin-right: 2px;
+  }
+  .tabs-collapse-btn:hover { color: var(--accent); background: var(--accent-soft); }
   .page-tabs .tabs-spacer { flex: 1; min-width: 8px; }
   .gh-commit-btn {
     display: flex; align-items: center; gap: 6px;
@@ -710,7 +732,8 @@
 </head>
 <body>
 
-<nav class="page-tabs">
+<nav class="page-tabs" id="page-tabs-nav">
+  <button id="tabs-collapse-btn" class="tabs-collapse-btn" title="탭 접기/펼치기">▲ 접기</button>
   <button class="page-tab-btn active" data-page="valuation">📊 Stock Valuation</button>
   <button class="page-tab-btn" data-page="calendar">📅 Calendar</button>
   <button class="page-tab-btn" data-page="index">📈 Index</button>
@@ -1801,6 +1824,28 @@ function activatePage(page, opts = {}) {
 document.querySelectorAll('.page-tab-btn').forEach(btn => {
   btn.addEventListener('click', () => activatePage(btn.dataset.page));
 });
+
+// 탭 접기/펼치기
+(function initTabsCollapse() {
+  const nav = document.getElementById('page-tabs-nav');
+  const btn = document.getElementById('tabs-collapse-btn');
+  if (!nav || !btn) return;
+  const LS_KEY = 'tabs-collapsed';
+  const setCollapsed = (collapsed) => {
+    nav.classList.toggle('collapsed', collapsed);
+    btn.textContent = collapsed ? '▼ 펼치기' : '▲ 접기';
+    btn.title = collapsed ? '탭 펼치기' : '탭 접기';
+    try { localStorage.setItem(LS_KEY, collapsed ? '1' : '0'); } catch(e) {}
+  };
+  // 저장된 상태 복원
+  try {
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved === '1') setCollapsed(true);
+  } catch(e) {}
+  btn.addEventListener('click', () => {
+    setCollapsed(!nav.classList.contains('collapsed'));
+  });
+})();
 
 // 브라우저 뒤로/앞으로
 window.addEventListener('popstate', (e) => {
