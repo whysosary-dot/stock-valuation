@@ -14130,6 +14130,28 @@
       ],
       "favorite": false,
       "naver_code": "2344.TW"
+    },
+    {
+      "name": "나무라조선소",
+      "ticker": "7014.T",
+      "market_cap_oku": 0,
+      "currency": "JPY",
+      "price_native": 0,
+      "sector": "조선",
+      "price_change_pct": 0,
+      "favorite": false,
+      "naver_code": "7014.T"
+    },
+    {
+      "name": "미쓰이E&S",
+      "ticker": "7003.T",
+      "market_cap_oku": 0,
+      "currency": "JPY",
+      "price_native": 0,
+      "sector": "조선",
+      "price_change_pct": 0,
+      "favorite": false,
+      "naver_code": "7003.T"
     }
   ]
 }
