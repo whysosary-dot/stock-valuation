@@ -15709,6 +15709,22 @@
         60000.0
       ],
       "naver_code": "439260.KS"
+    },
+    {
+      "name": "SK하이닉스 DRC",
+      "ticker": "HY9H.F",
+      "sector": "반도체",
+      "currency": "EUR",
+      "favorite": false,
+      "naver_code": "HY9H.F"
+    },
+    {
+      "name": "삼성전자 DRC",
+      "ticker": "SSUN.F",
+      "sector": "반도체",
+      "currency": "EUR",
+      "favorite": false,
+      "naver_code": "SSUN.F"
     }
   ]
 }
