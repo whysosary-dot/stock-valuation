@@ -1550,7 +1550,11 @@ function render() {
     entries.sort((a, b) => {
       if (a.sector === SECTOR_UNCATEGORIZED) return 1;
       if (b.sector === SECTOR_UNCATEGORIZED) return -1;
-      return b.total - a.total;
+      const aKo = /[가-힣]/.test(a.sector[0]);
+      const bKo = /[가-힣]/.test(b.sector[0]);
+      if (aKo && !bKo) return -1;
+      if (!aKo && bKo) return 1;
+      return a.sector.localeCompare(b.sector, 'ko');
     });
     entries.forEach(({ sector, items, total }) => {
       // 그룹 내부도 현재 sortKey가 있으면 정렬, 없으면 시총 큰 순
