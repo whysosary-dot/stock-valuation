@@ -1603,10 +1603,14 @@ function updateSectorFilterOptions() {
     const k = normSector(s.sector);
     counts.set(k, (counts.get(k) || 0) + 1);
   }
-  // 정렬: 사전 정의 SECTORS 순서 → 그 외 → 미분류 마지막
-  const known = SECTORS.filter(name => counts.has(name));
-  const extra = [...counts.keys()].filter(k => !SECTORS.includes(k) && k !== SECTOR_UNCATEGORIZED).sort((a,b)=>a.localeCompare(b,'ko'));
-  const order = [...known, ...extra];
+  // 정렬: 한글 ㄱㄴㄷ → 영문 abc → 미분류 마지막
+  const order = [...counts.keys()].filter(k => k !== SECTOR_UNCATEGORIZED).sort((a, b) => {
+    const aKo = /[가-힣]/.test(a[0]);
+    const bKo = /[가-힣]/.test(b[0]);
+    if (aKo && !bKo) return -1;
+    if (!aKo && bKo) return 1;
+    return a.localeCompare(b, 'ko');
+  });
   if (counts.has(SECTOR_UNCATEGORIZED)) order.push(SECTOR_UNCATEGORIZED);
 
   const prev = state.sectorFilter;
