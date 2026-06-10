@@ -16296,6 +16296,24 @@
         2755.0,
         2715.0
       ]
+    },
+    {
+      "name": "롯데관광개발",
+      "ticker": "032350.KS",
+      "currency": "KRW",
+      "sector": "카지노"
+    },
+    {
+      "name": "GKL",
+      "ticker": "114090.KS",
+      "currency": "KRW",
+      "sector": "카지노"
+    },
+    {
+      "name": "파라다이스",
+      "ticker": "034230.KS",
+      "currency": "KRW",
+      "sector": "카지노"
     }
   ]
 }
