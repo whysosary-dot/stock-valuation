@@ -17161,6 +17161,17 @@
         14760.0,
         15000.0
       ]
+    },
+    {
+      "name": "ESMT",
+      "ticker": "3145.TW",
+      "market_cap_oku": 0,
+      "currency": "TWD",
+      "price_native": 0,
+      "sector": "반도체",
+      "price_change_pct": 0,
+      "favorite": false,
+      "naver_code": "3145.TW"
     }
   ]
 }
