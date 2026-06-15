@@ -714,6 +714,81 @@
   /* 즐겨찾기 필터 버튼 활성 색 */
   .btn.fav-on { background: #fff8e1; border-color: #d4a017; color: #7a5400; }
 
+  /* ── 인사이트 패널 ── */
+  #insight-panel {
+    position: fixed; top: 0; right: -420px; width: 400px; height: 100vh;
+    background: var(--panel); border-left: 1px solid var(--border);
+    box-shadow: -4px 0 24px rgba(15,23,42,0.10);
+    z-index: 250; display: flex; flex-direction: column;
+    transition: right 0.28s cubic-bezier(0.4,0,0.2,1);
+    overflow: hidden;
+  }
+  #insight-panel.open { right: 0; }
+  .insight-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px 18px; border-bottom: 1px solid var(--border);
+    background: var(--panel); flex-shrink: 0;
+  }
+  .insight-header h2 { margin: 0; font-size: 15px; font-weight: 700; flex: 1; }
+  .insight-header .insight-date { font-size: 12px; color: var(--text-dim); }
+  .insight-close {
+    background: none; border: none; cursor: pointer;
+    font-size: 18px; color: var(--text-dim); padding: 2px 4px;
+    line-height: 1; border-radius: 4px;
+  }
+  .insight-close:hover { background: var(--panel-2); color: var(--text); }
+  .insight-body {
+    flex: 1; overflow-y: auto; padding: 14px 18px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .insight-section { display: flex; flex-direction: column; gap: 6px; }
+  .insight-section-title {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+    color: var(--text-dim); text-transform: uppercase; padding-bottom: 2px;
+    border-bottom: 1px solid var(--border);
+  }
+  .insight-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 0; font-size: 13.5px; gap: 8px;
+  }
+  .insight-row .i-name { color: var(--text); flex: 1; font-weight: 500; }
+  .insight-row .i-chg {
+    font-weight: 700; font-variant-numeric: tabular-nums;
+    font-size: 13px; flex-shrink: 0;
+  }
+  .i-chg.up { color: #b91c1c; }
+  .i-chg.dn { color: #1d4ed8; }
+  .i-chg.flat { color: var(--text-dim); }
+  .insight-tag {
+    display: inline-flex; align-items: center;
+    background: #fef9c3; color: #713f12;
+    border: 1px solid #fde68a; border-radius: 5px;
+    font-size: 11px; font-weight: 600; padding: 1px 7px; flex-shrink: 0;
+  }
+  .insight-tag.red { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+  .insight-tag.blue { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+  .insight-tag.green { background: #dcfce7; color: #166534; border-color: #86efac; }
+  .insight-chip-row { display: flex; flex-wrap: wrap; gap: 5px; padding-top: 2px; }
+  .insight-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 3px 10px; font-size: 12px;
+  }
+  .insight-chip .ci { font-weight: 700; }
+  .insight-chip .ci.up { color: #b91c1c; }
+  .insight-chip .ci.dn { color: #1d4ed8; }
+  .insight-loading { text-align: center; color: var(--text-dim); font-size: 13px; padding: 40px 0; }
+  .insight-overlay-bg {
+    display: none; position: fixed; inset: 0; z-index: 249;
+    background: rgba(15,23,42,0.18);
+    transition: opacity 0.28s;
+  }
+  .insight-overlay-bg.open { display: block; }
+  @media (max-width: 440px) {
+    #insight-panel { width: 100vw; right: -100vw; }
+    #insight-panel.open { right: 0; }
+  }
+
   /* 좁은 뷰포트에서 topbar 가독성 보존 (컬럼 숨김은 하지 않음) */
   @media (max-width: 640px) {
     .topbar { padding: 11px 13px; gap: 9px; }
@@ -761,6 +836,7 @@
   </select>
   <button id="group-toggle" class="btn" type="button" title="섹터별로 묶어서 보기">섹터별 그룹</button>
   <button id="fav-filter-btn" class="btn" type="button" title="즐겨찾기 종목만 보기">⭐ 즐겨찾기</button>
+  <button id="insight-btn" class="btn" type="button" title="오늘의 인사이트">💡 인사이트</button>
   <span class="spacer"></span>
   <span class="status-pill" id="save-status" title="입력 값은 이 브라우저에만 저장됩니다">로컬 저장</span>
   <span class="meta" id="meta"></span>
@@ -904,6 +980,20 @@
     <div id="feed-highlights" class="diary-feed"></div>
   </div>
 </div><!-- /page-diary -->
+
+<!-- ── 인사이트 패널 ── -->
+<div id="insight-overlay-bg" class="insight-overlay-bg"></div>
+<div id="insight-panel">
+  <div class="insight-header">
+    <span style="font-size:18px;">💡</span>
+    <h2>오늘의 인사이트</h2>
+    <span class="insight-date" id="insight-date"></span>
+    <button class="insight-close" id="insight-close-btn" title="닫기">✕</button>
+  </div>
+  <div class="insight-body" id="insight-body">
+    <div class="insight-loading">분석 중...</div>
+  </div>
+</div>
 
 <!-- ── 공용 모달 (position:fixed → 탭 밖에 위치해야 함) ── -->
 
@@ -1473,7 +1563,7 @@ function compareStocks(a, b, key, dirSign) {
   return String(av).localeCompare(String(bv), 'ko') * dirSign;
 }
 
-function buildGroupRow(sectorName, count, totalMcap) {
+function buildGroupRow(sectorName, count, avgChange) {
   const colors = sectorColors(sectorName);
   const tr = document.createElement('tr');
   tr.className = 'group-row';
@@ -1490,8 +1580,14 @@ function buildGroupRow(sectorName, count, totalMcap) {
   const meta = document.createElement('span');
   meta.className = 'group-meta';
   const partsM = [`${count}개 종목`];
-  if (totalMcap) partsM.push(`합산 시총 ${fmt(totalMcap, 0)} 억`);
-  meta.textContent = partsM.join(' · ');
+  if (avgChange !== undefined && avgChange !== null && !isNaN(avgChange)) {
+    const sign = avgChange >= 0 ? '+' : '';
+    const color = avgChange > 0 ? '#b91c1c' : avgChange < 0 ? '#1d4ed8' : '#6b7480';
+    partsM.push(`<span style="color:${color};font-weight:600;">평균 ${sign}${avgChange.toFixed(2)}%</span>`);
+    meta.innerHTML = partsM.join(' · ');
+  } else {
+    meta.textContent = partsM.join(' · ');
+  }
   td.appendChild(span);
   td.appendChild(meta);
   tr.appendChild(td);
@@ -1542,10 +1638,11 @@ function render() {
       if (!groups.has(sec)) groups.set(sec, []);
       groups.get(sec).push(s);
     });
-    // 그룹 정렬: 시총 합 큰 순 (미분류는 항상 마지막)
+    // 그룹 정렬: 섹터명 ㄱㄴㄷ 순 (미분류는 항상 마지막)
     const entries = [...groups.entries()].map(([k, arr]) => {
-      const total = arr.reduce((a, x) => a + (parseNum(x.market_cap_oku) || 0), 0);
-      return { sector: k, items: arr, total };
+      const valid = arr.filter(x => typeof x.price_change_pct === 'number' && !isNaN(x.price_change_pct));
+      const avgChange = valid.length ? valid.reduce((a, x) => a + x.price_change_pct, 0) / valid.length : null;
+      return { sector: k, items: arr, avgChange };
     });
     entries.sort((a, b) => {
       if (a.sector === SECTOR_UNCATEGORIZED) return 1;
@@ -1556,12 +1653,12 @@ function render() {
       if (!aKo && bKo) return 1;
       return a.sector.localeCompare(b.sector, 'ko');
     });
-    entries.forEach(({ sector, items, total }) => {
+    entries.forEach(({ sector, items, avgChange }) => {
       // 그룹 내부도 현재 sortKey가 있으면 정렬, 없으면 시총 큰 순
       const innerKey = state.sortKey || 'market_cap_oku';
       const innerDir = state.sortKey ? dirSign : -1;
       const sorted = [...items].sort((a, b) => compareStocks(a, b, innerKey, innerDir));
-      tbody.appendChild(buildGroupRow(sector, items.length, total));
+      tbody.appendChild(buildGroupRow(sector, items.length, avgChange));
       const barColor = sectorColors(sector).bar;
       sorted.forEach(s => {
         const row = renderRow(s);
@@ -3150,6 +3247,197 @@ window.addEventListener('pageshow', (e) => {
 
 // 텔레그램 잔재 localStorage 한 번 정리 (탭 제거 후 1회 cleanup)
 try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
+
+// ── 인사이트 패널 ──────────────────────────────────────────────
+(function() {
+  const panel   = document.getElementById('insight-panel');
+  const overlay = document.getElementById('insight-overlay-bg');
+  const body    = document.getElementById('insight-body');
+  const dateEl  = document.getElementById('insight-date');
+  const openBtn = document.getElementById('insight-btn');
+  const closeBtn= document.getElementById('insight-close-btn');
+
+  function openInsight() {
+    buildInsight();
+    panel.classList.add('open');
+    overlay.classList.add('open');
+  }
+  function closeInsight() {
+    panel.classList.remove('open');
+    overlay.classList.remove('open');
+  }
+  openBtn.addEventListener('click', openInsight);
+  closeBtn.addEventListener('click', closeInsight);
+  overlay.addEventListener('click', closeInsight);
+
+  function chgClass(v) { return v > 0 ? 'up' : v < 0 ? 'dn' : 'flat'; }
+  function chgSign(v)  { return v > 0 ? '+' : ''; }
+  function fmtPct(v)   { return `${chgSign(v)}${v.toFixed(2)}%`; }
+
+  function buildInsight() {
+    const stocks = (state && state.stocks) ? state.stocks : [];
+    if (!stocks.length) { body.innerHTML = '<div class="insight-loading">데이터 없음</div>'; return; }
+
+    // 날짜
+    const now = new Date();
+    const kst = new Date(now.getTime() + 9*3600*1000);
+    dateEl.textContent = kst.toISOString().slice(0,10);
+
+    // price_change_pct 있는 종목만
+    const valid = stocks.filter(s => typeof s.price_change_pct === 'number' && !isNaN(s.price_change_pct));
+    const sorted = [...valid].sort((a,b) => b.price_change_pct - a.price_change_pct);
+
+    // 상위 상승 / 하락
+    const topGainers = sorted.slice(0, 5);
+    const topLosers  = sorted.slice(-5).reverse();
+
+    // 특이 등락 (|pct| >= 5%)
+    const spike = valid.filter(s => Math.abs(s.price_change_pct) >= 5)
+                       .sort((a,b) => Math.abs(b.price_change_pct) - Math.abs(a.price_change_pct));
+
+    // 52주 신고가/신저가 (price_history 기준)
+    const hiStocks = [], loStocks = [];
+    stocks.forEach(s => {
+      const hist = s.price_history;
+      const cur  = s.price_native;
+      if (!hist || !hist.length || !cur) return;
+      const hi52 = Math.max(...hist);
+      const lo52 = Math.min(...hist);
+      if (cur >= hi52 * 0.99) hiStocks.push(s);
+      else if (cur <= lo52 * 1.01) loStocks.push(s);
+    });
+
+    // 섹터별 평균 등락
+    const secMap = new Map();
+    valid.forEach(s => {
+      const sec = s.sector || '미분류';
+      if (!secMap.has(sec)) secMap.set(sec, []);
+      secMap.get(sec).push(s.price_change_pct);
+    });
+    const secAvg = [...secMap.entries()]
+      .map(([sec, vals]) => ({ sec, avg: vals.reduce((a,v)=>a+v,0)/vals.length }))
+      .sort((a,b) => b.avg - a.avg);
+
+    // 전체 평균
+    const overallAvg = valid.reduce((a,s)=>a+s.price_change_pct,0)/valid.length;
+    const rising = valid.filter(s => s.price_change_pct > 0).length;
+    const falling = valid.filter(s => s.price_change_pct < 0).length;
+
+    // HTML 조립
+    let html = '';
+
+    // 종합 요약
+    html += `<div class="insight-section">
+      <div class="insight-section-title">📊 종합 요약</div>
+      <div class="insight-row">
+        <span class="i-name">포트폴리오 평균 등락</span>
+        <span class="i-chg ${chgClass(overallAvg)}">${fmtPct(overallAvg)}</span>
+      </div>
+      <div class="insight-row">
+        <span class="i-name">상승 / 보합 / 하락</span>
+        <span style="font-size:13px;font-weight:600;">
+          <span style="color:#b91c1c">${rising}</span>
+          / <span style="color:#6b7480">${valid.filter(s=>s.price_change_pct===0).length}</span>
+          / <span style="color:#1d4ed8">${falling}</span>
+        </span>
+      </div>
+    </div>`;
+
+    // 섹터 히트맵
+    html += `<div class="insight-section">
+      <div class="insight-section-title">🗂 섹터별 평균 등락</div>
+      <div class="insight-chip-row">`;
+    secAvg.forEach(({ sec, avg }) => {
+      const cls = chgClass(avg);
+      html += `<span class="insight-chip"><span>${sec}</span><span class="ci ${cls}">${fmtPct(avg)}</span></span>`;
+    });
+    html += `</div></div>`;
+
+    // 급등락 알림 (5% 이상)
+    if (spike.length) {
+      html += `<div class="insight-section">
+        <div class="insight-section-title">⚡ 급등락 (±5% 이상)</div>`;
+      spike.forEach(s => {
+        const tag = s.price_change_pct >= 5
+          ? `<span class="insight-tag red">급등</span>`
+          : `<span class="insight-tag blue">급락</span>`;
+        html += `<div class="insight-row">
+          <span class="i-name">${s.name}</span>
+          ${tag}
+          <span class="i-chg ${chgClass(s.price_change_pct)}">${fmtPct(s.price_change_pct)}</span>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    // 상위 상승
+    html += `<div class="insight-section">
+      <div class="insight-section-title">🔼 상위 상승</div>`;
+    topGainers.forEach(s => {
+      html += `<div class="insight-row">
+        <span class="i-name">${s.name}</span>
+        <span class="i-chg ${chgClass(s.price_change_pct)}">${fmtPct(s.price_change_pct)}</span>
+      </div>`;
+    });
+    html += `</div>`;
+
+    // 상위 하락
+    html += `<div class="insight-section">
+      <div class="insight-section-title">🔽 상위 하락</div>`;
+    topLosers.forEach(s => {
+      html += `<div class="insight-row">
+        <span class="i-name">${s.name}</span>
+        <span class="i-chg ${chgClass(s.price_change_pct)}">${fmtPct(s.price_change_pct)}</span>
+      </div>`;
+    });
+    html += `</div>`;
+
+    // 52주 신고가 근접
+    if (hiStocks.length) {
+      html += `<div class="insight-section">
+        <div class="insight-section-title">🏔 52주 신고가 근접 (1% 이내)</div>`;
+      hiStocks.forEach(s => {
+        html += `<div class="insight-row">
+          <span class="i-name">${s.name}</span>
+          <span class="insight-tag green">신고가</span>
+          <span class="i-chg ${chgClass(s.price_change_pct)}">${fmtPct(s.price_change_pct)}</span>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    // 52주 신저가 근접
+    if (loStocks.length) {
+      html += `<div class="insight-section">
+        <div class="insight-section-title">📉 52주 신저가 근접 (1% 이내)</div>`;
+      loStocks.forEach(s => {
+        html += `<div class="insight-row">
+          <span class="i-name">${s.name}</span>
+          <span class="insight-tag red">신저가</span>
+          <span class="i-chg ${chgClass(s.price_change_pct)}">${fmtPct(s.price_change_pct)}</span>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    // 즐겨찾기 이탈 (즐겨찾기 중 하락폭 큰 순)
+    const favStocks = valid.filter(s => s.favorite).sort((a,b)=>a.price_change_pct-b.price_change_pct);
+    if (favStocks.length) {
+      html += `<div class="insight-section">
+        <div class="insight-section-title">⭐ 즐겨찾기 등락 요약</div>`;
+      favStocks.forEach(s => {
+        html += `<div class="insight-row">
+          <span class="i-name">${s.name}</span>
+          <span class="i-chg ${chgClass(s.price_change_pct)}">${fmtPct(s.price_change_pct)}</span>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    body.innerHTML = html;
+  }
+})();
+// ────────────────────────────────────────────────────────────────
 </script>
 </body>
 </html>
