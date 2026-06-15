@@ -3307,7 +3307,7 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
 
     // 특이 등락 (|pct| >= 5%)
     const spike = valid.filter(s => Math.abs(s.price_change_pct) >= 5)
-                       .sort((a,b) => Math.abs(b.price_change_pct) - Math.abs(a.price_change_pct));
+                       .sort((a,b) => b.price_change_pct - a.price_change_pct);
 
     // 52주 신고가/신저가 (price_history 기준)
     const hiStocks = [], loStocks = [];
