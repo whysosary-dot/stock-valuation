@@ -777,6 +777,8 @@
   .insight-chip .ci { font-weight: 700; }
   .insight-chip .ci.up { color: #b91c1c; }
   .insight-chip .ci.dn { color: #1d4ed8; }
+  .i-name-link { color: var(--text); text-decoration: none; font-weight: 500; }
+  .i-name-link:hover { color: var(--accent); text-decoration: underline; }
   .insight-loading { text-align: center; color: var(--text-dim); font-size: 13px; padding: 40px 0; }
   .insight-overlay-bg {
     display: none; position: fixed; inset: 0; z-index: 249;
@@ -3273,6 +3275,18 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
   function chgClass(v) { return v > 0 ? 'up' : v < 0 ? 'dn' : 'flat'; }
   function chgSign(v)  { return v > 0 ? '+' : ''; }
   function fmtPct(v)   { return `${chgSign(v)}${v.toFixed(2)}%`; }
+  function naverUrl(s) {
+    const ticker = s.ticker || '';
+    const isKorean = ticker.endsWith('.KS') || ticker.endsWith('.KQ');
+    const code = ticker.split('.')[0];
+    const naverCode = s.naver_code || code;
+    return isKorean
+      ? `https://m.stock.naver.com/domestic/stock/${code}/total`
+      : `https://m.stock.naver.com/worldstock/stock/${naverCode}/total`;
+  }
+  function nameLink(s) {
+    return `<a href="${naverUrl(s)}" target="_blank" rel="noopener" class="i-name-link">${s.name}</a>`;
+  }
 
   function buildInsight() {
     const stocks = (state && state.stocks) ? state.stocks : [];
@@ -3362,7 +3376,7 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
           ? `<span class="insight-tag red">급등</span>`
           : `<span class="insight-tag blue">급락</span>`;
         html += `<div class="insight-row">
-          <span class="i-name">${s.name}</span>
+          ${nameLink(s)}
           ${tag}
           <span class="i-chg ${chgClass(s.price_change_pct)}">${fmtPct(s.price_change_pct)}</span>
         </div>`;
@@ -3427,7 +3441,7 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
         <div class="insight-section-title">⭐ 즐겨찾기 등락 요약</div>`;
       favStocks.forEach(s => {
         html += `<div class="insight-row">
-          <span class="i-name">${s.name}</span>
+          ${nameLink(s)}
           <span class="i-chg ${chgClass(s.price_change_pct)}">${fmtPct(s.price_change_pct)}</span>
         </div>`;
       });
