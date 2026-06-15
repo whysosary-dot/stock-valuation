@@ -18657,6 +18657,34 @@
         73200.0,
         74000.0
       ]
+    },
+    {
+      "name": "하이브",
+      "ticker": "352820.KS",
+      "sector": "엔터",
+      "currency": "KRW",
+      "favorite": false
+    },
+    {
+      "name": "에스엠",
+      "ticker": "041510.KS",
+      "sector": "엔터",
+      "currency": "KRW",
+      "favorite": false
+    },
+    {
+      "name": "JYP Ent.",
+      "ticker": "035900.KS",
+      "sector": "엔터",
+      "currency": "KRW",
+      "favorite": false
+    },
+    {
+      "name": "YG엔터테인먼트",
+      "ticker": "122870.KS",
+      "sector": "엔터",
+      "currency": "KRW",
+      "favorite": false
     }
   ]
 }
