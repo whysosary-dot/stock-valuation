@@ -9097,7 +9097,7 @@
       "currency": "KRW",
       "price_native": 772000.0,
       "price_change_pct": 0.0,
-      "sector": "항공우주/방산",
+      "sector": "방산",
       "price_history": [
         606555.75,
         540820.625,
@@ -9383,7 +9383,7 @@
       "currency": "KRW",
       "price_native": 36700.0,
       "price_change_pct": 0.0,
-      "sector": "항공우주/방산",
+      "sector": "방산",
       "price_history": [
         10660.0,
         11140.0,
@@ -17306,6 +17306,41 @@
         204.5,
         217.0
       ]
+    },
+    {
+      "name": "현대로템",
+      "ticker": "064350.KS",
+      "sector": "방산",
+      "currency": "KRW",
+      "favorite": false
+    },
+    {
+      "name": "한국항공우주산업",
+      "ticker": "047810.KS",
+      "sector": "방산",
+      "currency": "KRW",
+      "favorite": false
+    },
+    {
+      "name": "한화에어로스페이스",
+      "ticker": "012450.KS",
+      "sector": "방산",
+      "currency": "KRW",
+      "favorite": false
+    },
+    {
+      "name": "엠앤씨솔루션",
+      "ticker": "484870.KS",
+      "sector": "방산",
+      "currency": "KRW",
+      "favorite": false
+    },
+    {
+      "name": "아이쓰리시스템",
+      "ticker": "214430.KQ",
+      "sector": "방산",
+      "currency": "KRW",
+      "favorite": false
     }
   ]
 }
