@@ -19001,7 +19001,7 @@
     },
     {
       "name": "에스엠",
-      "ticker": "041510.KS",
+      "ticker": "041510.KQ",
       "sector": "엔터",
       "currency": "KRW",
       "favorite": false,
@@ -19284,7 +19284,7 @@
     },
     {
       "name": "JYP Ent.",
-      "ticker": "035900.KS",
+      "ticker": "035900.KQ",
       "sector": "엔터",
       "currency": "KRW",
       "favorite": false,
@@ -19567,7 +19567,7 @@
     },
     {
       "name": "YG엔터테인먼트",
-      "ticker": "122870.KS",
+      "ticker": "122870.KQ",
       "sector": "엔터",
       "currency": "KRW",
       "favorite": false,
