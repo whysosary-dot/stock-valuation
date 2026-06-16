@@ -1053,6 +1053,7 @@ const SECTOR_UNCATEGORIZED = '未분류';
 const COLS = [
   { key: 'name',            label: '기업명',        type: 'ro-text', sortable: true,  align: 'left' },
   { key: 'sector',          label: '섹터',          type: 'sector',  sortable: true,  align: 'center' },
+  { key: 'market_cap_oku',  label: '현재시총 (억)',  type: 'current', sortable: true, capCol: true },
   { key: 'price_change_pct', label: '등락률',        type: 'change-pct',  sortable: true,  align: 'center' },
   { key: '_upside',         label: '상방 %',        type: 'calc',    sortable: true },
   { key: '_downside',       label: '하방 %',        type: 'calc',    sortable: true },
@@ -1060,7 +1061,6 @@ const COLS = [
   { key: '_chart',          label: '1년 차트',       type: 'chart',   sortable: false, align: 'center' },
   { key: '_chart3m',        label: '3개월 차트',     type: 'chart3m', sortable: false, align: 'center' },
   { key: 'price_native',    label: '현재주가',      type: 'current-price', sortable: true },
-  { key: 'market_cap_oku',  label: '현재시총 (억)',  type: 'current', sortable: true, capCol: true },
   { key: 'target_cap_oku',  label: '목표시총 (억)',  type: 'num',     sortable: true, capCol: true },
   { key: 'safety_cap_oku',  label: '안전시총 (억)',  type: 'num',     sortable: true, capCol: true },
   { key: '_op_sum',         label: '영업이익 합',    type: 'calc',    sortable: false, toggle: 'quarterly' },
