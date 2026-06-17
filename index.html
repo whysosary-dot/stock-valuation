@@ -3274,7 +3274,7 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
 
   function chgClass(v) { return v > 0 ? 'up' : v < 0 ? 'dn' : 'flat'; }
   function chgSign(v)  { return v > 0 ? '+' : ''; }
-  function fmtPct(v)   { return `${chgSign(v)}${v.toFixed(2)}%`; }
+  function fmtPct(v)   { return (v == null || isNaN(v)) ? '-' : `${chgSign(v)}${v.toFixed(2)}%`; }
   function naverUrl(s) {
     const ticker = s.ticker || '';
     const isKorean = ticker.endsWith('.KS') || ticker.endsWith('.KQ');
