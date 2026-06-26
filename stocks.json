@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-06-26T07:10:22",
-  "usdkrw": 1538.32,
+  "updated_at": "2026-06-26T07:10:50",
+  "usdkrw": 1538.68,
   "stocks": [
     {
       "name": "SGC에너지",
@@ -20572,10 +20572,10 @@
       "name": "GS건설",
       "ticker": "006360.KS",
       "sector": "건설",
-      "market_cap_oku": 19524.4,
+      "market_cap_oku": 19779.1,
       "currency": "KRW",
-      "price_native": 23000.0,
-      "price_change_pct": null,
+      "price_native": 23300.0,
+      "price_change_pct": -4.12,
       "price_history": [
         20855.3242,
         20365.7617,
@@ -20860,10 +20860,10 @@
       "name": "DL이앤씨",
       "ticker": "375500.KS",
       "sector": "건설",
-      "market_cap_oku": 24670.7,
+      "market_cap_oku": 22458.3,
       "currency": "KRW",
-      "price_native": 59300.0,
-      "price_change_pct": null,
+      "price_native": 59800.0,
+      "price_change_pct": -3.39,
       "price_history": [
         53966.8242,
         49033.8398,
@@ -21147,11 +21147,11 @@
     {
       "name": "신세계",
       "ticker": "004170.KS",
-      "market_cap_oku": 63828.7,
+      "market_cap_oku": 64880.8,
       "currency": "KRW",
-      "price_native": 728000.0,
+      "price_native": 740000.0,
       "sector": "유통",
-      "price_change_pct": null,
+      "price_change_pct": -0.13,
       "price_history": [
         185526.4375,
         184249.6562,
