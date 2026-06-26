@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-06-26T07:09:25",
-  "usdkrw": 1538.39,
+  "updated_at": "2026-06-26T07:10:22",
+  "usdkrw": 1538.32,
   "stocks": [
     {
       "name": "SGC에너지",
@@ -15561,10 +15561,10 @@
       "ticker": "439260.KS",
       "sector": "조선",
       "favorite": false,
-      "market_cap_oku": 18949.1,
+      "market_cap_oku": 18968.2,
       "currency": "KRW",
-      "price_native": 49750.0,
-      "price_change_pct": null,
+      "price_native": 49800.0,
+      "price_change_pct": -7.09,
       "price_history": [
         92063.7578,
         100134.2812,
@@ -15739,9 +15739,9 @@
       "currency": "EUR",
       "favorite": false,
       "naver_code": "HY9H.F",
-      "market_cap_oku": 18131780.2,
-      "price_native": 1655.0,
-      "price_change_pct": null,
+      "market_cap_oku": 16761953.4,
+      "price_native": 1535.0,
+      "price_change_pct": -7.25,
       "price_history": [
         176.7109,
         168.2487,
@@ -16030,9 +16030,9 @@
       "currency": "EUR",
       "favorite": false,
       "naver_code": "SSUN.F",
-      "market_cap_oku": 12810263.6,
-      "price_native": 3160.0,
-      "price_change_pct": null,
+      "market_cap_oku": 12323799.5,
+      "price_native": 3050.0,
+      "price_change_pct": -3.48,
       "price_history": [
         768.0509,
         806.858,
@@ -16319,9 +16319,9 @@
       "ticker": "032350.KS",
       "currency": "KRW",
       "sector": "카지노",
-      "market_cap_oku": 11287.5,
-      "price_native": 14180.0,
-      "price_change_pct": null,
+      "market_cap_oku": 11279.5,
+      "price_native": 14170.0,
+      "price_change_pct": -3.14,
       "price_history": [
         16940,
         17440,
@@ -16607,9 +16607,9 @@
       "ticker": "114090.KS",
       "currency": "KRW",
       "sector": "카지노",
-      "market_cap_oku": 6377.3,
-      "price_native": 10310.0,
-      "price_change_pct": null,
+      "market_cap_oku": 6408.2,
+      "price_native": 10360.0,
+      "price_change_pct": -3.36,
       "price_history": [
         14391.248,
         15792.6787,
@@ -16895,9 +16895,9 @@
       "ticker": "034230.KS",
       "currency": "KRW",
       "sector": "카지노",
-      "market_cap_oku": 10873.4,
-      "price_native": 12390.0,
-      "price_change_pct": null,
+      "market_cap_oku": 10890.9,
+      "price_native": 12410.0,
+      "price_change_pct": -5.05,
       "price_history": [
         14860.7676,
         15871.2998,
@@ -17181,11 +17181,11 @@
     {
       "name": "ESMT",
       "ticker": "3006.TW",
-      "market_cap_oku": 994078.8,
+      "market_cap_oku": 990819.7,
       "currency": "TWD",
       "price_native": 227.0,
       "sector": "반도체",
-      "price_change_pct": null,
+      "price_change_pct": -5.42,
       "favorite": false,
       "naver_code": "3006.TW",
       "price_history": [
@@ -17474,9 +17474,9 @@
       "sector": "방산",
       "currency": "KRW",
       "favorite": false,
-      "market_cap_oku": 182158.5,
-      "price_native": 166900.0,
-      "price_change_pct": null,
+      "market_cap_oku": 185323.6,
+      "price_native": 169800.0,
+      "price_change_pct": -7.21,
       "price_history": [
         200345.2812,
         180011.7188,
@@ -17763,9 +17763,9 @@
       "sector": "방산",
       "currency": "KRW",
       "favorite": false,
-      "market_cap_oku": 137927.3,
-      "price_native": 141500.0,
-      "price_change_pct": null,
+      "market_cap_oku": 138024.8,
+      "price_native": 141600.0,
+      "price_change_pct": -0.42,
       "price_history": [
         90938.2344,
         84456.8906,
@@ -18052,9 +18052,9 @@
       "sector": "방산",
       "currency": "KRW",
       "favorite": false,
-      "market_cap_oku": 514487.9,
-      "price_native": 1000000.0,
-      "price_change_pct": null,
+      "market_cap_oku": 520147.2,
+      "price_native": 1011000.0,
+      "price_change_pct": -5.43,
       "price_history": [
         882839.0625,
         772732.1875,
@@ -18341,9 +18341,9 @@
       "sector": "방산",
       "currency": "KRW",
       "favorite": false,
-      "market_cap_oku": 6055.3,
-      "price_native": 22050.0,
-      "price_change_pct": null,
+      "market_cap_oku": 5972.9,
+      "price_native": 21750.0,
+      "price_change_pct": -13.69,
       "price_history": [
         155138.8906,
         141302.9844,
@@ -18553,9 +18553,9 @@
       "sector": "방산",
       "currency": "KRW",
       "favorite": false,
-      "market_cap_oku": 4048.2,
-      "price_native": 55400.0,
-      "price_change_pct": null,
+      "market_cap_oku": 4040.9,
+      "price_native": 55300.0,
+      "price_change_pct": -6.9,
       "price_history": [
         99227.8984,
         94455.4141,
@@ -18842,9 +18842,9 @@
       "sector": "엔터",
       "currency": "KRW",
       "favorite": false,
-      "market_cap_oku": 75125.3,
-      "price_native": 176500.0,
-      "price_change_pct": null,
+      "market_cap_oku": 75678.6,
+      "price_native": 177800.0,
+      "price_change_pct": -5.27,
       "price_history": [
         305067.9062,
         275110.3125,
@@ -19410,9 +19410,9 @@
         70600,
         68500
       ],
-      "market_cap_oku": 15385.2,
-      "price_native": 67200.0,
-      "price_change_pct": null
+      "market_cap_oku": 15225.0,
+      "price_native": 66500.0,
+      "price_change_pct": -2.92
     },
     {
       "name": "JYP Ent.",
@@ -19701,7 +19701,7 @@
       ],
       "market_cap_oku": 15870.7,
       "price_native": 47900.0,
-      "price_change_pct": null
+      "price_change_pct": -3.43
     },
     {
       "name": "YG엔터테인먼트",
@@ -19988,18 +19988,18 @@
         43000,
         40800
       ],
-      "market_cap_oku": 7261.1,
-      "price_native": 39150.0,
-      "price_change_pct": null
+      "market_cap_oku": 7251.8,
+      "price_native": 39100.0,
+      "price_change_pct": -4.17
     },
     {
       "name": "삼성E&A",
       "ticker": "028050.KS",
       "sector": "건설",
-      "market_cap_oku": 80752.0,
+      "market_cap_oku": 81242.0,
       "currency": "KRW",
-      "price_native": 41200.0,
-      "price_change_pct": null,
+      "price_native": 41450.0,
+      "price_change_pct": -4.05,
       "price_history": [
         21287.7051,
         23126.1875,
@@ -20284,10 +20284,10 @@
       "name": "대우건설",
       "ticker": "047040.KS",
       "sector": "건설",
-      "market_cap_oku": 74288.1,
+      "market_cap_oku": 74740.1,
       "currency": "KRW",
-      "price_native": 18080.0,
-      "price_change_pct": null,
+      "price_native": 18190.0,
+      "price_change_pct": -8.41,
       "price_history": [
         4240,
         4095,
