@@ -1596,8 +1596,7 @@ function buildGroupRow(sectorName, count, avgChange) {
   const meta = document.createElement('span');
   meta.className = 'group-meta';
   const partsM = [`${count}개 종목`];
-  if (isCollapsed) partsM.push('(접힘)');
-  if (!isCollapsed && avgChange !== undefined && avgChange !== null && !isNaN(avgChange)) {
+  if (avgChange !== undefined && avgChange !== null && !isNaN(avgChange)) {
     const sign = avgChange >= 0 ? '+' : '';
     const color = avgChange > 0 ? '#b91c1c' : avgChange < 0 ? '#1d4ed8' : '#6b7480';
     partsM.push(`<span style="color:${color};font-weight:600;">평균 ${sign}${avgChange.toFixed(2)}%</span>`);
