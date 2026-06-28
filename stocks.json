@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-28T04:02:42",
+  "updated_at": "2026-06-28T05:29:40",
   "usdkrw": 1535.0,
   "stocks": [
     {
@@ -4456,7 +4456,7 @@
       "market_cap_oku": 37754.59,
       "price_native": 184000,
       "currency": "KRW",
-      "sector": "반도체 소부장",
+      "sector": "반도체 후공정 소부장",
       "price_change_pct": -3.77,
       "price_history": [
         58919.6016,
@@ -11203,7 +11203,7 @@
     {
       "name": "티엘비",
       "ticker": "356860.KQ",
-      "sector": "반도체 소부장",
+      "sector": "반도체 소재",
       "market_cap_oku": 7858.72,
       "currency": "KRW",
       "price_native": 76600,
@@ -12370,7 +12370,7 @@
       "market_cap_oku": 32301.61,
       "currency": "KRW",
       "price_native": 48600,
-      "sector": "반도체",
+      "sector": "반도체 후공정",
       "price_change_pct": 0,
       "price_history": [
         12245.7529,
@@ -22020,7 +22020,7 @@
       "market_cap_oku": 4441.1,
       "currency": "KRW",
       "price_native": 23100,
-      "sector": "반도체 소부장",
+      "sector": "반도체 소재",
       "price_change_pct": -5.91,
       "price_history": [
         22658.584,
