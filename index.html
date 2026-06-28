@@ -264,14 +264,23 @@
     font-weight: 700;
     color: var(--text);
     font-size: 14px;
+    cursor: pointer;
+    user-select: none;
     /* box-shadow는 JS에서 inset 5px 0 0 [strong-color] 으로 덮어씀 */
     box-shadow: inset 5px 0 0 var(--border-strong);
+    transition: filter .12s;
   }
+  tr.group-row:hover td { filter: brightness(0.97); }
   tr.group-row .group-name { display: inline-flex; align-items: center; gap: 8px; }
   tr.group-row .group-dot {
     width: 10px; height: 10px; border-radius: 50%;
     background: currentColor; opacity: 0.95;
   }
+  tr.group-row .group-chevron {
+    font-size: 12px; opacity: 0.6; transition: transform .2s;
+    display: inline-block; width: 14px; text-align: center;
+  }
+  tr.group-row.collapsed .group-chevron { transform: rotate(-90deg); }
   tr.group-row .group-meta {
     color: var(--text-dim); font-weight: 500; margin-left: 10px; font-size: 13px;
   }
@@ -1104,6 +1113,7 @@ let state = {
   sortKey: '_upside',
   sortDir: 'desc',
   showQuarterly: false,  // "영업이익 합" 토글
+  collapsedSectors: new Set(),  // 접힌 섹터 집합
 };
 
 function loadUi() {
@@ -1115,6 +1125,7 @@ function saveUi() {
     sectorFilter: state.sectorFilter,
     groupBySector: state.groupBySector,
     favoriteOnly: state.favoriteOnly,
+    collapsedSectors: [...state.collapsedSectors],
   }));
 }
 
@@ -1567,8 +1578,10 @@ function compareStocks(a, b, key, dirSign) {
 
 function buildGroupRow(sectorName, count, avgChange) {
   const colors = sectorColors(sectorName);
+  const isCollapsed = state.collapsedSectors.has(sectorName);
   const tr = document.createElement('tr');
-  tr.className = 'group-row';
+  tr.className = 'group-row' + (isCollapsed ? ' collapsed' : '');
+  tr.dataset.sector = sectorName;
   const td = document.createElement('td');
   td.colSpan = COLS.length;
   td.className = 'text-left';
@@ -1578,11 +1591,12 @@ function buildGroupRow(sectorName, count, avgChange) {
   const span = document.createElement('span');
   span.className = 'group-name';
   span.style.color = colors.fg;
-  span.innerHTML = `<span class="group-dot" style="background:${colors.bar};opacity:1"></span>${sectorName === SECTOR_UNCATEGORIZED ? '미분류' : sectorName}`;
+  span.innerHTML = `<span class="group-chevron">▼</span><span class="group-dot" style="background:${colors.bar};opacity:1"></span>${sectorName === SECTOR_UNCATEGORIZED ? '미분류' : sectorName}`;
   const meta = document.createElement('span');
   meta.className = 'group-meta';
   const partsM = [`${count}개 종목`];
-  if (avgChange !== undefined && avgChange !== null && !isNaN(avgChange)) {
+  if (isCollapsed) partsM.push('(접힘)');
+  if (!isCollapsed && avgChange !== undefined && avgChange !== null && !isNaN(avgChange)) {
     const sign = avgChange >= 0 ? '+' : '';
     const color = avgChange > 0 ? '#b91c1c' : avgChange < 0 ? '#1d4ed8' : '#6b7480';
     partsM.push(`<span style="color:${color};font-weight:600;">평균 ${sign}${avgChange.toFixed(2)}%</span>`);
@@ -1593,6 +1607,16 @@ function buildGroupRow(sectorName, count, avgChange) {
   td.appendChild(span);
   td.appendChild(meta);
   tr.appendChild(td);
+  // 클릭으로 접기/펼치기
+  tr.addEventListener('click', () => {
+    if (state.collapsedSectors.has(sectorName)) {
+      state.collapsedSectors.delete(sectorName);
+    } else {
+      state.collapsedSectors.add(sectorName);
+    }
+    saveUi();
+    render();
+  });
   return tr;
 }
 
@@ -1661,6 +1685,8 @@ function render() {
       const innerDir = state.sortKey ? dirSign : -1;
       const sorted = [...items].sort((a, b) => compareStocks(a, b, innerKey, innerDir));
       tbody.appendChild(buildGroupRow(sector, items.length, avgChange));
+      // 접힌 섹터는 행 숨김
+      if (state.collapsedSectors.has(sector)) return;
       const barColor = sectorColors(sector).bar;
       sorted.forEach(s => {
         const row = renderRow(s);
@@ -1835,6 +1861,7 @@ async function init() {
   state.sectorFilter = ui.sectorFilter || '';
   state.groupBySector = !!ui.groupBySector;
   state.favoriteOnly = !!ui.favoriteOnly;
+  state.collapsedSectors = new Set(Array.isArray(ui.collapsedSectors) ? ui.collapsedSectors : []);
 
   try {
     const gh = await fetchFromGitHub();
