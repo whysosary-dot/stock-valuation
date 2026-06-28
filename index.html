@@ -846,8 +846,7 @@
     <option value="">전체 섹터</option>
   </select>
   <button id="group-toggle" class="btn" type="button" title="섹터별로 묶어서 보기">섹터별 그룹</button>
-  <button id="collapse-all-btn" class="btn" type="button" title="모든 섹터 접기" style="display:none">전부 접기</button>
-  <button id="expand-all-btn" class="btn" type="button" title="모든 섹터 펼치기" style="display:none">전부 펼치기</button>
+  <button id="collapse-all-btn" class="btn" type="button" style="display:none">전부 접기</button>
   <button id="fav-filter-btn" class="btn" type="button" title="즐겨찾기 종목만 보기">⭐ 즐겨찾기</button>
   <button id="insight-btn" class="btn" type="button" title="오늘의 인사이트">💡 인사이트</button>
   <span class="spacer"></span>
@@ -1761,9 +1760,13 @@ function syncToggleButton() {
   const btn = document.getElementById('group-toggle');
   if (!btn) return;
   btn.classList.toggle('toggle-on', !!state.groupBySector);
-  const show = !!state.groupBySector;
-  document.getElementById('collapse-all-btn').style.display = show ? '' : 'none';
-  document.getElementById('expand-all-btn').style.display = show ? '' : 'none';
+  const caBtn = document.getElementById('collapse-all-btn');
+  if (!caBtn) return;
+  caBtn.style.display = state.groupBySector ? '' : 'none';
+  const allCollapsed = state.stocks.length > 0 &&
+    [...new Set(state.stocks.map(s => s.sector || '미분류'))].every(s => state.collapsedSectors.has(s));
+  caBtn.textContent = allCollapsed ? '전부 펼치기' : '전부 접기';
+  caBtn.title = allCollapsed ? '모든 섹터 펼치기' : '모든 섹터 접기';
 }
 
 function syncFavButton() {
@@ -1889,14 +1892,9 @@ async function init() {
   });
 
   document.getElementById('collapse-all-btn').addEventListener('click', () => {
-    const sectors = [...new Set(state.stocks.map(s => s.sector || ''))].map(s => s || '미분류');
-    state.collapsedSectors = new Set(sectors);
-    saveUi();
-    render();
-  });
-
-  document.getElementById('expand-all-btn').addEventListener('click', () => {
-    state.collapsedSectors = new Set();
+    const sectors = [...new Set(state.stocks.map(s => s.sector || '미분류'))];
+    const allCollapsed = sectors.every(s => state.collapsedSectors.has(s));
+    state.collapsedSectors = allCollapsed ? new Set() : new Set(sectors);
     saveUi();
     render();
   });
