@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-28T05:42:03",
+  "updated_at": "2026-06-28T05:44:33",
   "usdkrw": 1535.0,
   "stocks": [
     {
@@ -4456,7 +4456,7 @@
       "market_cap_oku": 37754.59,
       "price_native": 184000,
       "currency": "KRW",
-      "sector": "반도체 후공정 소부장",
+      "sector": "반도체 후공정 부품",
       "price_change_pct": -3.77,
       "price_history": [
         58919.6016,
