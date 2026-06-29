@@ -720,10 +720,8 @@
   .star-btn.active { opacity: 1; color: #d4a017; }
   .star-btn:hover { opacity: 0.7; }
   .name-wrap { display: flex; align-items: center; gap: 1px; }
-  /* 즐겨찾기 필터 버튼 활성 색 */
-  .btn.fav-on { background: #fff8e1; border-color: #d4a017; color: #7a5400; }
-  /* 매수 리스트 필터 버튼 활성 색 */
-  .btn.buy-on { background: #e8f5e9; border-color: #2e7d32; color: #1b5e20; }
+  /* 즐겨찾기(매수 리스트) 필터 버튼 활성 색 */
+  .btn.fav-on { background: #e8f5e9; border-color: #2e7d32; color: #1b5e20; }
 
   /* ── 인사이트 패널 ── */
   #insight-panel {
@@ -850,8 +848,7 @@
   </select>
   <button id="group-toggle" class="btn" type="button" title="섹터별로 묶어서 보기">섹터별 그룹</button>
   <button id="collapse-all-btn" class="btn" type="button" style="display:none">접기</button>
-  <button id="fav-filter-btn" class="btn" type="button" title="즐겨찾기 종목만 보기">⭐ 즐겨찾기</button>
-  <button id="buy-filter-btn" class="btn" type="button" title="매수 리스트 종목만 보기">📋 매수 리스트</button>
+  <button id="fav-filter-btn" class="btn" type="button" title="매수 리스트 종목만 보기">📋 매수 리스트</button>
   <button id="insight-btn" class="btn" type="button" title="오늘의 인사이트">💡 인사이트</button>
   <span class="spacer"></span>
   <span class="status-pill" id="save-status" title="입력 값은 이 브라우저에만 저장됩니다">로컬 저장</span>
@@ -1125,7 +1122,6 @@ let state = {
   sectorFilter: '',
   groupBySector: false,
   favoriteOnly: false,
-  buyListOnly: false,
   sortKey: '_upside',
   sortDir: 'desc',
   showQuarterly: false,  // "영업이익 합" 토글
@@ -1141,7 +1137,6 @@ function saveUi() {
     sectorFilter: state.sectorFilter,
     groupBySector: state.groupBySector,
     favoriteOnly: state.favoriteOnly,
-    buyListOnly: state.buyListOnly,
     collapsedSectors: [...state.collapsedSectors],
   }));
 }
@@ -1360,13 +1355,13 @@ function renderRow(s) {
       const star = document.createElement('button');
       star.className = 'star-btn' + (s.favorite ? ' active' : '');
       star.textContent = '★';
-      star.title = s.favorite ? '즐겨찾기 해제' : '즐겨찾기 추가';
+      star.title = s.favorite ? '매수 리스트 해제' : '매수 리스트 추가';
       star.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         s.favorite = s.favorite ? false : true;
         star.className = 'star-btn' + (s.favorite ? ' active' : '');
-        star.title = s.favorite ? '즐겨찾기 해제' : '즐겨찾기 추가';
+        star.title = s.favorite ? '매수 리스트 해제' : '매수 리스트 추가';
         queueSave();
         // 즐겨찾기 필터가 켜진 상태에서 별 해제 시 목록 재렌더
         if (state.favoriteOnly) render();
@@ -1648,9 +1643,6 @@ function render() {
   if (state.favoriteOnly) {
     list = list.filter(s => s.favorite);
   }
-  if (state.buyListOnly) {
-    list = list.filter(s => s.buy_list);
-  }
   if (state.filter) {
     const q = state.filter.toLowerCase();
     list = list.filter(s =>
@@ -1722,7 +1714,6 @@ function render() {
   updateSectorFilterOptions();
   syncToggleButton();
   syncFavButton();
-  syncBuyButton();
   requestAnimationFrame(applyStickyOffsets);
 
   const m = document.getElementById('meta');
@@ -1735,8 +1726,7 @@ function render() {
   }
   if (state.usdkrw) parts.push(`USDKRW ${Number(state.usdkrw).toFixed(1)}`);
   parts.push(`${state.stocks.length}개 종목`);
-  if (state.favoriteOnly) parts.push(`⭐ 즐겨찾기 ${state.stocks.filter(s=>s.favorite).length}개`);
-  if (state.buyListOnly) parts.push(`📋 매수 리스트 ${state.stocks.filter(s=>s.buy_list).length}개`);
+  if (state.favoriteOnly) parts.push(`📋 매수 리스트 ${state.stocks.filter(s=>s.favorite).length}개`);
   if (state.sectorFilter) parts.push(`섹터: ${state.sectorFilter}`);
   m.textContent = parts.join(' · ');
 }
@@ -1793,12 +1783,6 @@ function syncFavButton() {
   const btn = document.getElementById('fav-filter-btn');
   if (!btn) return;
   btn.classList.toggle('fav-on', !!state.favoriteOnly);
-}
-
-function syncBuyButton() {
-  const btn = document.getElementById('buy-filter-btn');
-  if (!btn) return;
-  btn.classList.toggle('buy-on', !!state.buyListOnly);
 }
 
 function applyStickyOffsets() {
@@ -1895,7 +1879,6 @@ async function init() {
   state.sectorFilter = ui.sectorFilter || '';
   state.groupBySector = !!ui.groupBySector;
   state.favoriteOnly = !!ui.favoriteOnly;
-  state.buyListOnly = !!ui.buyListOnly;
   state.collapsedSectors = new Set(Array.isArray(ui.collapsedSectors) ? ui.collapsedSectors : []);
 
   try {
@@ -1934,12 +1917,6 @@ async function init() {
 
   document.getElementById('fav-filter-btn').addEventListener('click', () => {
     state.favoriteOnly = !state.favoriteOnly;
-    saveUi();
-    render();
-  });
-
-  document.getElementById('buy-filter-btn').addEventListener('click', () => {
-    state.buyListOnly = !state.buyListOnly;
     saveUi();
     render();
   });
@@ -3516,7 +3493,7 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
     const favStocks = valid.filter(s => s.favorite).sort((a,b)=>a.price_change_pct-b.price_change_pct);
     if (favStocks.length) {
       html += `<div class="insight-section">
-        <div class="insight-section-title">⭐ 즐겨찾기 등락 요약</div>`;
+        <div class="insight-section-title">📋 매수 리스트 등락 요약</div>`;
       favStocks.forEach(s => {
         html += `<div class="insight-row">
           ${nameLink(s)}
