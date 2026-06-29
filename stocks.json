@@ -7,7 +7,7 @@
       "ticker": "005090.KS",
       "market_cap_oku": 5928.6,
       "currency": "KRW",
-      "price_native": 41800.0,
+      "price_native": 41800,
       "sector": "에너지",
       "price_change_pct": 6.63,
       "price_history": [
@@ -297,7 +297,7 @@
       "ticker": "196170.KQ",
       "market_cap_oku": 197184.8,
       "currency": "KRW",
-      "price_native": 373000.0,
+      "price_native": 373000,
       "sector": "바이오",
       "price_change_pct": 8.59,
       "price_history": [
@@ -594,7 +594,7 @@
       "ticker": "082740.KS",
       "market_cap_oku": 43297.9,
       "currency": "KRW",
-      "price_native": 51500.0,
+      "price_native": 51500,
       "sector": "조선",
       "price_change_pct": 10.4,
       "price_history": [
@@ -894,7 +894,7 @@
       "q4_op": 500,
       "market_cap_oku": 3542.8,
       "currency": "KRW",
-      "price_native": 18150.0,
+      "price_native": 18150,
       "sector": "게임",
       "price_change_pct": 11.01,
       "price_history": [
@@ -1195,7 +1195,7 @@
       "q4_op": 500,
       "market_cap_oku": 7513.1,
       "currency": "KRW",
-      "price_native": 20950.0,
+      "price_native": 20950,
       "sector": "공작기계",
       "price_change_pct": 18.76,
       "price_history": [
@@ -1496,7 +1496,7 @@
       "q4_op": 4000,
       "market_cap_oku": 21912.3,
       "currency": "KRW",
-      "price_native": 37500.0,
+      "price_native": 37500,
       "sector": "공작기계",
       "price_change_pct": 2.04,
       "price_history": [
@@ -1788,7 +1788,7 @@
       "ticker": "099190.KQ",
       "market_cap_oku": 4471.4,
       "currency": "KRW",
-      "price_native": 15740.0,
+      "price_native": 15740,
       "sector": "바이오",
       "price_change_pct": 7.15,
       "price_history": [
@@ -2077,7 +2077,7 @@
       "ticker": "140410.KQ",
       "market_cap_oku": 18235.3,
       "currency": "KRW",
-      "price_native": 60700.0,
+      "price_native": 60700,
       "sector": "바이오",
       "price_change_pct": 9.17,
       "price_history": [
@@ -2384,7 +2384,7 @@
       "q4_op": 3000000,
       "market_cap_oku": 18935370.4,
       "currency": "KRW",
-      "price_native": 323000.0,
+      "price_native": 323000,
       "sector": "반도체",
       "price_change_pct": -4.86,
       "price_history": [
@@ -2683,9 +2683,9 @@
       "q3_op": null,
       "q4_rev": null,
       "q4_op": 2000000,
-      "market_cap_oku": 18867943.0,
+      "market_cap_oku": 18867943,
       "currency": "KRW",
-      "price_native": 2628000.0,
+      "price_native": 2628000,
       "sector": "반도체",
       "price_change_pct": -1.68,
       "price_history": [
@@ -2976,7 +2976,7 @@
       "ticker": "009540.KS",
       "market_cap_oku": 258992.3,
       "currency": "KRW",
-      "price_native": 363500.0,
+      "price_native": 363500,
       "sector": "조선",
       "price_change_pct": 5.21,
       "price_history": [
@@ -3273,7 +3273,7 @@
       "ticker": "440110.KQ",
       "market_cap_oku": 42796.1,
       "currency": "KRW",
-      "price_native": 85700.0,
+      "price_native": 85700,
       "sector": "반도체",
       "price_change_pct": 3.25,
       "price_history": [
@@ -3563,7 +3563,7 @@
       "ticker": "091580.KQ",
       "market_cap_oku": 2195.2,
       "currency": "KRW",
-      "price_native": 16510.0,
+      "price_native": 16510,
       "sector": "2차전지",
       "price_change_pct": 14.89,
       "price_history": [
@@ -3870,7 +3870,7 @@
       "q4_op": null,
       "market_cap_oku": 2035.9,
       "currency": "KRW",
-      "price_native": 5330.0,
+      "price_native": 5330,
       "sector": "2차전지",
       "price_change_pct": 15.74,
       "price_history": [
@@ -4158,7 +4158,7 @@
       "name": "네오티스",
       "ticker": "085910.KQ",
       "market_cap_oku": 2882.9,
-      "price_native": 22100.0,
+      "price_native": 22100,
       "currency": "KRW",
       "sector": "반도체 부품",
       "price_change_pct": 12.01,
@@ -4454,7 +4454,7 @@
       "name": "ISC",
       "ticker": "095340.KQ",
       "market_cap_oku": 38021.3,
-      "price_native": 185900.0,
+      "price_native": 185900,
       "currency": "KRW",
       "sector": "반도체 후공정 부품",
       "price_change_pct": 1.03,
@@ -5036,7 +5036,7 @@
       "sector": "게임",
       "market_cap_oku": 22580.3,
       "currency": "KRW",
-      "price_native": 36850.0,
+      "price_native": 36850,
       "price_change_pct": 7.91,
       "price_history": [
         41250,
@@ -5324,7 +5324,7 @@
       "ticker": "009450.KS",
       "market_cap_oku": 9134.3,
       "currency": "KRW",
-      "price_native": 63100.0,
+      "price_native": 63100,
       "sector": "에너지",
       "price_change_pct": 6.59,
       "naver_code": "009450.KS",
@@ -6976,7 +6976,7 @@
       "ticker": "285A.T",
       "market_cap_oku": 4451873.9,
       "currency": "JPY",
-      "price_native": 88450.0,
+      "price_native": 88450,
       "sector": "반도체",
       "price_change_pct": -4.05,
       "price_history": [
@@ -7188,7 +7188,7 @@
       "ticker": "107640.KQ",
       "market_cap_oku": 3254.3,
       "currency": "KRW",
-      "price_native": 36250.0,
+      "price_native": 36250,
       "price_change_pct": 15.63,
       "sector": "2차전지",
       "price_history": [
@@ -7477,7 +7477,7 @@
       "ticker": "178320.KQ",
       "market_cap_oku": 33441.9,
       "currency": "KRW",
-      "price_native": 52800.0,
+      "price_native": 52800,
       "price_change_pct": 8.09,
       "sector": "2차전지",
       "price_history": [
@@ -7766,7 +7766,7 @@
       "ticker": "013030.KQ",
       "market_cap_oku": 3730.5,
       "currency": "KRW",
-      "price_native": 31650.0,
+      "price_native": 31650,
       "price_change_pct": 6.75,
       "sector": "피팅/밸브",
       "price_history": [
@@ -8055,7 +8055,7 @@
       "ticker": "052690.KS",
       "market_cap_oku": 42532.6,
       "currency": "KRW",
-      "price_native": 110700.0,
+      "price_native": 110700,
       "price_change_pct": 10.81,
       "sector": "에너지",
       "price_history": [
@@ -8344,7 +8344,7 @@
       "ticker": "278470.KS",
       "market_cap_oku": 144698.5,
       "currency": "KRW",
-      "price_native": 386000.0,
+      "price_native": 386000,
       "price_change_pct": 6.34,
       "sector": "미용",
       "price_history": [
@@ -8602,7 +8602,7 @@
       "ticker": "329180.KS",
       "market_cap_oku": 628547.3,
       "currency": "KRW",
-      "price_native": 592000.0,
+      "price_native": 592000,
       "price_change_pct": 4.96,
       "sector": "조선",
       "price_history": [
@@ -8892,7 +8892,7 @@
       "ticker": "065680.KQ",
       "market_cap_oku": 2540.2,
       "currency": "KRW",
-      "price_native": 31200.0,
+      "price_native": 31200,
       "price_change_pct": 7.96,
       "sector": "미용",
       "price_history": [
@@ -9181,7 +9181,7 @@
       "ticker": "079550.KS",
       "market_cap_oku": 163620.9,
       "currency": "KRW",
-      "price_native": 745000.0,
+      "price_native": 745000,
       "price_change_pct": 1.36,
       "sector": "방산",
       "price_history": [
@@ -9471,7 +9471,7 @@
       "ticker": "347700.KQ",
       "market_cap_oku": 9662.4,
       "currency": "KRW",
-      "price_native": 20350.0,
+      "price_native": 20350,
       "price_change_pct": 17.63,
       "sector": "방산",
       "price_history": [
@@ -9760,7 +9760,7 @@
       "ticker": "010130.KS",
       "market_cap_oku": 229831.7,
       "currency": "KRW",
-      "price_native": 1125000.0,
+      "price_native": 1125000,
       "price_change_pct": 6.53,
       "sector": "원자재",
       "price_history": [
@@ -10338,7 +10338,7 @@
       "ticker": "6103.T",
       "market_cap_oku": 25327.1,
       "currency": "JPY",
-      "price_native": 4550.0,
+      "price_native": 4550,
       "sector": "공작기계",
       "price_change_pct": 1.9,
       "naver_code": "6103.T",
@@ -10627,7 +10627,7 @@
       "ticker": "6954.T",
       "market_cap_oku": 622622.6,
       "currency": "JPY",
-      "price_native": 7051.0,
+      "price_native": 7051,
       "sector": "공작기계",
       "price_change_pct": 0.36,
       "naver_code": "6954.T",
@@ -10916,7 +10916,7 @@
       "ticker": "083450.KQ",
       "market_cap_oku": 9247.5,
       "currency": "KRW",
-      "price_native": 51900.0,
+      "price_native": 51900,
       "price_change_pct": 9.96,
       "sector": "반도체 전공정 장비",
       "price_history": [
@@ -11206,7 +11206,7 @@
       "sector": "반도체 소재",
       "market_cap_oku": 7735.6,
       "currency": "KRW",
-      "price_native": 75900.0,
+      "price_native": 75900,
       "price_change_pct": -0.91,
       "price_history": [
         21900.6328,
@@ -11496,7 +11496,7 @@
       "sector": "데이터센터",
       "market_cap_oku": 5180.8,
       "currency": "KRW",
-      "price_native": 106200.0,
+      "price_native": 106200,
       "price_change_pct": 5.57,
       "price_history": [
         97898.8125,
@@ -11785,7 +11785,7 @@
       "sector": "물류",
       "market_cap_oku": 1344.3,
       "currency": "KRW",
-      "price_native": 4105.0,
+      "price_native": 4105,
       "price_change_pct": 5.12,
       "price_history": [
         2945,
@@ -12073,7 +12073,7 @@
       "ticker": "080220.KQ",
       "market_cap_oku": 32605.2,
       "currency": "KRW",
-      "price_native": 96900.0,
+      "price_native": 96900,
       "sector": "반도체",
       "price_change_pct": -2.32,
       "price_history": [
@@ -12370,7 +12370,7 @@
       "ticker": "067310.KQ",
       "market_cap_oku": 32800.1,
       "currency": "KRW",
-      "price_native": 49400.0,
+      "price_native": 49400,
       "sector": "반도체 후공정",
       "price_change_pct": 1.65,
       "price_history": [
@@ -12666,7 +12666,7 @@
       "ticker": "000990.KS",
       "market_cap_oku": 60829.5,
       "currency": "KRW",
-      "price_native": 143600.0,
+      "price_native": 143600,
       "sector": "반도체",
       "price_change_pct": -9.29,
       "price_history": [
@@ -12956,7 +12956,7 @@
       "ticker": "7974.T",
       "market_cap_oku": 763613.4,
       "currency": "JPY",
-      "price_native": 6935.0,
+      "price_native": 6935,
       "sector": "게임",
       "price_change_pct": 5.25,
       "price_history": [
@@ -13244,7 +13244,7 @@
       "ticker": "9697.T",
       "market_cap_oku": 121039.1,
       "currency": "JPY",
-      "price_native": 3049.0,
+      "price_native": 3049,
       "sector": "게임",
       "price_change_pct": 3.44,
       "price_history": [
@@ -13532,7 +13532,7 @@
       "ticker": "2408.TW",
       "market_cap_oku": 21588293.4,
       "currency": "TWD",
-      "price_native": 453.0,
+      "price_native": 453,
       "sector": "반도체",
       "price_change_pct": 0.89,
       "price_history": [
@@ -13822,7 +13822,7 @@
       "ticker": "2344.TW",
       "market_cap_oku": 14049447.7,
       "currency": "TWD",
-      "price_native": 203.0,
+      "price_native": 203,
       "sector": "반도체",
       "price_change_pct": -1.69,
       "price_history": [
@@ -14112,7 +14112,7 @@
       "ticker": "7014.T",
       "market_cap_oku": 23428.1,
       "currency": "JPY",
-      "price_native": 3590.0,
+      "price_native": 3590,
       "sector": "조선",
       "price_change_pct": -2.71,
       "favorite": false,
@@ -14402,7 +14402,7 @@
       "ticker": "7003.T",
       "market_cap_oku": 38702.2,
       "currency": "JPY",
-      "price_native": 4066.0,
+      "price_native": 4066,
       "sector": "조선",
       "price_change_pct": -0.54,
       "favorite": false,
@@ -14694,7 +14694,7 @@
       "favorite": false,
       "market_cap_oku": 207957.7,
       "currency": "KRW",
-      "price_native": 24450.0,
+      "price_native": 24450,
       "price_change_pct": 6.3,
       "price_history": [
         16160,
@@ -14984,7 +14984,7 @@
       "favorite": false,
       "market_cap_oku": 321369.3,
       "currency": "KRW",
-      "price_native": 105500.0,
+      "price_native": 105500,
       "price_change_pct": 7.65,
       "price_history": [
         79400,
@@ -15274,7 +15274,7 @@
       "favorite": false,
       "market_cap_oku": 20013.7,
       "currency": "KRW",
-      "price_native": 58900.0,
+      "price_native": 58900,
       "price_change_pct": 6.32,
       "price_history": [
         50100,
@@ -15564,7 +15564,7 @@
       "favorite": false,
       "market_cap_oku": 20453.6,
       "currency": "KRW",
-      "price_native": 53900.0,
+      "price_native": 53900,
       "price_change_pct": 8.23,
       "price_history": [
         92063.7578,
@@ -15740,8 +15740,8 @@
       "currency": "EUR",
       "favorite": false,
       "naver_code": "HY9H.F",
-      "market_cap_oku": 16703662.0,
-      "price_native": 1500.0,
+      "market_cap_oku": 16703662,
+      "price_native": 1500,
       "price_change_pct": -1.96,
       "price_history": [
         176.7109,
@@ -16032,7 +16032,7 @@
       "favorite": false,
       "naver_code": "SSUN.F",
       "market_cap_oku": 12664450.2,
-      "price_native": 3020.0,
+      "price_native": 3020,
       "price_change_pct": -3.67,
       "price_history": [
         768.0509,
@@ -16321,7 +16321,7 @@
       "currency": "KRW",
       "sector": "카지노",
       "market_cap_oku": 11844.7,
-      "price_native": 14890.0,
+      "price_native": 14890,
       "price_change_pct": 5.08,
       "price_history": [
         16940,
@@ -16608,8 +16608,8 @@
       "ticker": "114090.KS",
       "currency": "KRW",
       "sector": "카지노",
-      "market_cap_oku": 6699.0,
-      "price_native": 10840.0,
+      "market_cap_oku": 6699,
+      "price_native": 10840,
       "price_change_pct": 4.63,
       "price_history": [
         14391.248,
@@ -16897,7 +16897,7 @@
       "currency": "KRW",
       "sector": "카지노",
       "market_cap_oku": 12637.3,
-      "price_native": 14370.0,
+      "price_native": 14370,
       "price_change_pct": 15.79,
       "price_history": [
         14860.7676,
@@ -17476,7 +17476,7 @@
       "currency": "KRW",
       "favorite": false,
       "market_cap_oku": 200821.8,
-      "price_native": 184900.0,
+      "price_native": 184900,
       "price_change_pct": 8.89,
       "price_history": [
         200345.2812,
@@ -17764,8 +17764,8 @@
       "sector": "방산",
       "currency": "KRW",
       "favorite": false,
-      "market_cap_oku": 146895.0,
-      "price_native": 150400.0,
+      "market_cap_oku": 146895,
+      "price_native": 150400,
       "price_change_pct": 6.21,
       "price_history": [
         90938.2344,
@@ -18054,7 +18054,7 @@
       "currency": "KRW",
       "favorite": false,
       "market_cap_oku": 523748.7,
-      "price_native": 1020000.0,
+      "price_native": 1020000,
       "price_change_pct": 0.89,
       "price_history": [
         882839.0625,
@@ -18343,7 +18343,7 @@
       "currency": "KRW",
       "favorite": false,
       "market_cap_oku": 7208.7,
-      "price_native": 26550.0,
+      "price_native": 26550,
       "price_change_pct": 22.07,
       "price_history": [
         51712.9648,
@@ -18555,7 +18555,7 @@
       "currency": "KRW",
       "favorite": false,
       "market_cap_oku": 4318.6,
-      "price_native": 60500.0,
+      "price_native": 60500,
       "price_change_pct": 9.4,
       "price_history": [
         99227.8984,
@@ -18844,7 +18844,7 @@
       "currency": "KRW",
       "favorite": false,
       "market_cap_oku": 83446.5,
-      "price_native": 195300.0,
+      "price_native": 195300,
       "price_change_pct": 9.84,
       "price_history": [
         305067.9062,
@@ -19411,8 +19411,8 @@
         68500,
         66500
       ],
-      "market_cap_oku": 17171.0,
-      "price_native": 74600.0,
+      "market_cap_oku": 17171,
+      "price_native": 74600,
       "price_change_pct": 12.18
     },
     {
@@ -19701,7 +19701,7 @@
         47900
       ],
       "market_cap_oku": 17394.9,
-      "price_native": 53000.0,
+      "price_native": 53000,
       "price_change_pct": 10.65
     },
     {
@@ -19990,16 +19990,16 @@
         39100
       ],
       "market_cap_oku": 8225.5,
-      "price_native": 44150.0,
+      "price_native": 44150,
       "price_change_pct": 12.92
     },
     {
       "name": "삼성E&A",
       "ticker": "028050.KS",
       "sector": "건설",
-      "market_cap_oku": 93590.0,
+      "market_cap_oku": 93590,
       "currency": "KRW",
-      "price_native": 47650.0,
+      "price_native": 47650,
       "price_change_pct": 14.96,
       "price_history": [
         21287.7051,
@@ -20287,7 +20287,7 @@
       "sector": "건설",
       "market_cap_oku": 81889.5,
       "currency": "KRW",
-      "price_native": 19810.0,
+      "price_native": 19810,
       "price_change_pct": 8.91,
       "price_history": [
         4240,
@@ -20575,7 +20575,7 @@
       "sector": "건설",
       "market_cap_oku": 21561.8,
       "currency": "KRW",
-      "price_native": 25250.0,
+      "price_native": 25250,
       "price_change_pct": 8.37,
       "price_history": [
         20855.3242,
@@ -20863,7 +20863,7 @@
       "sector": "건설",
       "market_cap_oku": 24786.7,
       "currency": "KRW",
-      "price_native": 65500.0,
+      "price_native": 65500,
       "price_change_pct": 9.53,
       "price_history": [
         53966.8242,
@@ -21150,7 +21150,7 @@
       "ticker": "004170.KS",
       "market_cap_oku": 64091.7,
       "currency": "KRW",
-      "price_native": 729000.0,
+      "price_native": 729000,
       "sector": "유통",
       "price_change_pct": -1.49,
       "price_history": [
@@ -21440,7 +21440,7 @@
       "ticker": "095610.KQ",
       "market_cap_oku": 32205.2,
       "currency": "KRW",
-      "price_native": 179700.0,
+      "price_native": 179700,
       "sector": "반도체 전공정 장비",
       "price_change_pct": -1.96,
       "price_history": [
@@ -21730,7 +21730,7 @@
       "ticker": "089970.KQ",
       "market_cap_oku": 26340.2,
       "currency": "KRW",
-      "price_native": 106100.0,
+      "price_native": 106100,
       "sector": "반도체 전공정 장비",
       "price_change_pct": -1.39,
       "price_history": [
@@ -22020,7 +22020,7 @@
       "ticker": "272290.KQ",
       "market_cap_oku": 4969.8,
       "currency": "KRW",
-      "price_native": 25750.0,
+      "price_native": 25750,
       "sector": "반도체 소재",
       "price_change_pct": 11.47,
       "price_history": [
@@ -22310,7 +22310,7 @@
       "ticker": "319660.KQ",
       "market_cap_oku": 52284.9,
       "currency": "KRW",
-      "price_native": 177800.0,
+      "price_native": 177800,
       "sector": "반도체 전공정 장비",
       "price_change_pct": -5.53,
       "price_history": [
@@ -22600,7 +22600,7 @@
       "ticker": "9468.T",
       "market_cap_oku": 47630.4,
       "currency": "JPY",
-      "price_native": 3444.0,
+      "price_native": 3444,
       "sector": "게임",
       "price_change_pct": 2.53,
       "price_history": [
@@ -22890,7 +22890,7 @@
       "ticker": "3659.T",
       "market_cap_oku": 162905.5,
       "currency": "JPY",
-      "price_native": 2176.0,
+      "price_native": 2176,
       "sector": "게임",
       "price_change_pct": 3.3,
       "price_history": [
@@ -23180,7 +23180,7 @@
       "ticker": "225570.KQ",
       "market_cap_oku": 5452.3,
       "currency": "KRW",
-      "price_native": 8640.0,
+      "price_native": 8640,
       "sector": "게임",
       "price_change_pct": 9.23,
       "price_history": [
@@ -23760,7 +23760,7 @@
       "ticker": "419530.KQ",
       "market_cap_oku": 2149.4,
       "currency": "KRW",
-      "price_native": 23100.0,
+      "price_native": 23100,
       "sector": "콘텐츠",
       "price_change_pct": 12.68,
       "price_history": [
@@ -24340,7 +24340,7 @@
       "ticker": "9992.HK",
       "market_cap_oku": 411029.5,
       "currency": "HKD",
-      "price_native": 159.0,
+      "price_native": 159,
       "sector": "콘텐츠",
       "price_change_pct": 0.32,
       "price_history": [
@@ -24628,7 +24628,7 @@
       "ticker": "144960.KQ",
       "market_cap_oku": 2998.5,
       "currency": "KRW",
-      "price_native": 7400.0,
+      "price_native": 7400,
       "sector": "반도체 전공정 장비",
       "price_change_pct": 4.67,
       "price_history": [
@@ -24918,7 +24918,7 @@
       "ticker": "187870.KQ",
       "market_cap_oku": 1920.4,
       "currency": "KRW",
-      "price_native": 14310.0,
+      "price_native": 14310,
       "sector": "반도체 전공정 장비",
       "price_change_pct": 5.22,
       "price_history": [
@@ -25208,7 +25208,7 @@
       "ticker": "084370.KQ",
       "market_cap_oku": 37805.8,
       "currency": "KRW",
-      "price_native": 164800.0,
+      "price_native": 164800,
       "sector": "반도체 전공정 장비",
       "price_change_pct": -4.52,
       "price_history": [
@@ -25498,7 +25498,7 @@
       "ticker": "036930.KQ",
       "market_cap_oku": 81198.1,
       "currency": "KRW",
-      "price_native": 176600.0,
+      "price_native": 176600,
       "sector": "반도체 전공정 장비",
       "price_change_pct": 6.64,
       "price_history": [
@@ -25788,7 +25788,7 @@
       "ticker": "079370.KQ",
       "market_cap_oku": 3130.5,
       "currency": "KRW",
-      "price_native": 10310.0,
+      "price_native": 10310,
       "sector": "반도체 전공정 장비",
       "price_change_pct": 9.68,
       "price_history": [
@@ -26076,9 +26076,9 @@
     {
       "name": "원익IPS",
       "ticker": "240810.KQ",
-      "market_cap_oku": 78433.0,
+      "market_cap_oku": 78433,
       "currency": "KRW",
-      "price_native": 159000.0,
+      "price_native": 159000,
       "sector": "반도체 전공정 장비",
       "price_change_pct": -2.93,
       "price_history": [
@@ -26368,7 +26368,7 @@
       "ticker": "083310.KQ",
       "market_cap_oku": 1620.7,
       "currency": "KRW",
-      "price_native": 10500.0,
+      "price_native": 10500,
       "sector": "반도체 전공정 장비",
       "price_change_pct": 13.64,
       "price_history": [
@@ -26658,7 +26658,7 @@
       "ticker": "039030.KQ",
       "market_cap_oku": 56916.3,
       "currency": "KRW",
-      "price_native": 456500.0,
+      "price_native": 456500,
       "sector": "반도체 전공정 장비",
       "price_change_pct": -5.88,
       "price_history": [
@@ -26948,7 +26948,7 @@
       "ticker": "031980.KQ",
       "market_cap_oku": 28979.9,
       "currency": "KRW",
-      "price_native": 134700.0,
+      "price_native": 134700,
       "sector": "반도체 전공정 장비",
       "price_change_pct": -0.52,
       "price_history": [
@@ -27238,7 +27238,7 @@
       "ticker": "322310.KQ",
       "market_cap_oku": 2063.7,
       "currency": "KRW",
-      "price_native": 22050.0,
+      "price_native": 22050,
       "sector": "반도체 전공정 장비",
       "price_change_pct": 12.61,
       "price_history": [
@@ -27528,7 +27528,7 @@
       "ticker": "122640.KQ",
       "market_cap_oku": 6697.5,
       "currency": "KRW",
-      "price_native": 32250.0,
+      "price_native": 32250,
       "sector": "반도체 전공정 장비",
       "price_change_pct": -2.27,
       "price_history": [
@@ -27816,9 +27816,9 @@
     {
       "name": "인텍플러스",
       "ticker": "064290.KQ",
-      "market_cap_oku": 5070.0,
+      "market_cap_oku": 5070,
       "currency": "KRW",
-      "price_native": 40950.0,
+      "price_native": 40950,
       "sector": "반도체 전공정 장비",
       "price_change_pct": -3.76,
       "price_history": [
@@ -28108,7 +28108,7 @@
       "ticker": "403870.KQ",
       "market_cap_oku": 43681.2,
       "currency": "KRW",
-      "price_native": 53700.0,
+      "price_native": 53700,
       "sector": "반도체 전공정 장비",
       "price_change_pct": 1.9,
       "price_history": [
@@ -28398,7 +28398,7 @@
       "ticker": "281820.KS",
       "market_cap_oku": 17997.5,
       "currency": "KRW",
-      "price_native": 90900.0,
+      "price_native": 90900,
       "sector": "반도체 전공정 장비",
       "price_change_pct": 9.92,
       "price_history": [
@@ -28688,7 +28688,7 @@
       "ticker": "045100.KQ",
       "market_cap_oku": 5157.3,
       "currency": "KRW",
-      "price_native": 29750.0,
+      "price_native": 29750,
       "sector": "반도체 전공정 장비",
       "price_change_pct": 9.78,
       "price_history": [
@@ -28978,7 +28978,7 @@
       "ticker": "039440.KQ",
       "market_cap_oku": 4257.3,
       "currency": "KRW",
-      "price_native": 27500.0,
+      "price_native": 27500,
       "sector": "반도체 전공정 장비",
       "price_change_pct": 10.22,
       "price_history": [
@@ -29268,7 +29268,7 @@
       "ticker": "140860.KQ",
       "market_cap_oku": 16893.5,
       "currency": "KRW",
-      "price_native": 243000.0,
+      "price_native": 243000,
       "sector": "반도체 전공정 장비",
       "price_change_pct": 0.62,
       "price_history": [
@@ -29558,7 +29558,7 @@
       "ticker": "348210.KQ",
       "market_cap_oku": 5082.4,
       "currency": "KRW",
-      "price_native": 49150.0,
+      "price_native": 49150,
       "sector": "반도체 전공정 장비",
       "price_change_pct": 12.21,
       "price_history": [
@@ -29848,7 +29848,7 @@
       "ticker": "131290.KQ",
       "market_cap_oku": 24777.6,
       "currency": "KRW",
-      "price_native": 224000.0,
+      "price_native": 224000,
       "sector": "반도체 부품",
       "price_change_pct": 0.22,
       "price_history": [
