@@ -2502,14 +2502,16 @@ function updateTabCounts() {
 
 /* ── 저장 (디바운스) — value 는 HTML 일 수도 plain text 일 수도 있음 ── */
 function diarySave(key, section, value, badgeEl) {
+  // diary.data를 즉시 갱신 — pagehide 플러시가 항상 최신 내용을 저장하도록
+  const probe = document.createElement('div');
+  probe.innerHTML = String(value || '');
+  const hasContent = (probe.innerText || '').replace(/ /g, ' ').trim().length > 0;
+  if (hasContent) diary.data[section][key] = value;
+  else delete diary.data[section][key];
+
+  // localStorage 쓰기 · UI 갱신은 debounce
   clearTimeout(diary.saveTimers[key]);
   diary.saveTimers[key] = setTimeout(() => {
-    // 시각적 빈 콘텐츠( <br>·&nbsp;·공백만 )도 빈 것으로 간주
-    const probe = document.createElement('div');
-    probe.innerHTML = String(value || '');
-    const hasContent = (probe.innerText || '').replace(/ /g, ' ').trim().length > 0;
-    if (hasContent) diary.data[section][key] = value;
-    else delete diary.data[section][key];
     saveDiaryData(diary.data);
     updateTabCounts();
     if (badgeEl) {
