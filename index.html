@@ -833,6 +833,7 @@
   <button class="page-tab-btn" data-page="etfmonitor">📡 ETF Monitor</button>
   <button class="page-tab-btn" data-page="earning">💰 Earning</button>
   <button class="page-tab-btn" data-page="interest">👀 Interest</button>
+  <button class="page-tab-btn" data-page="fnguide">📑 FNguide</button>
   <button class="page-tab-btn" data-page="research">🔬 Research</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
   <div class="tabs-spacer"></div>
@@ -973,6 +974,16 @@
     title="Interest Briefing"
   ></iframe>
 </div><!-- /page-interest -->
+
+<div id="page-fnguide" class="page">
+  <iframe
+    id="fnguide-frame"
+    src="https://comp.fnguide.com/SVO2/ASP/SVD_Report_Summary.asp?pGB=1&gicode=A005930&cID=&MenuYn=Y&ReportGB=&NewMenuID=901&stkGb=701"
+    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
+    loading="lazy"
+    title="FNguide Report"
+  ></iframe>
+</div><!-- /page-fnguide -->
 
 <div id="page-research" class="page">
   <iframe
@@ -1968,6 +1979,7 @@ const IFRAME_TAB_SRC = {
   awake:     'https://whysosary-dot.github.io/awake-disclosure/',
   earning:   'https://whysosary-dot.github.io/kospi-kosdaq-dashboard/',
   interest:  'https://whysosary-dot.github.io/watchlist-briefing/',
+  fnguide:   'https://comp.fnguide.com/SVO2/ASP/SVD_Report_Summary.asp?pGB=1&gicode=A005930&cID=&MenuYn=Y&ReportGB=&NewMenuID=901&stkGb=701',
   research:  'https://whysosary-dot.github.io/investment-notes/',
 };
 
