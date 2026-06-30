@@ -832,6 +832,7 @@
   <button class="page-tab-btn" data-page="awake">🔔 Awake</button>
   <button class="page-tab-btn" data-page="etfmonitor">📡 ETF Monitor</button>
   <button class="page-tab-btn" data-page="earning">💰 Earning</button>
+  <button class="page-tab-btn" data-page="interest">👀 Interest</button>
   <button class="page-tab-btn" data-page="research">🔬 Research</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
   <div class="tabs-spacer"></div>
@@ -962,6 +963,16 @@
     title="Earning Dashboard"
   ></iframe>
 </div><!-- /page-earning -->
+
+<div id="page-interest" class="page">
+  <iframe
+    id="interest-frame"
+    src="https://whysosary-dot.github.io/watchlist-briefing/"
+    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
+    loading="lazy"
+    title="Interest Briefing"
+  ></iframe>
+</div><!-- /page-interest -->
 
 <div id="page-research" class="page">
   <iframe
@@ -1956,6 +1967,7 @@ const IFRAME_TAB_SRC = {
   krmarket:  'https://whysosary-dot.github.io/kr-market-briefing/',
   awake:     'https://whysosary-dot.github.io/awake-disclosure/',
   earning:   'https://whysosary-dot.github.io/kospi-kosdaq-dashboard/',
+  interest:  'https://whysosary-dot.github.io/watchlist-briefing/',
   research:  'https://whysosary-dot.github.io/investment-notes/',
 };
 
@@ -2057,6 +2069,7 @@ const TAB_REPOS = {
   krmarket:  { repo: 'whysosary-dot/kr-market-briefing' },
   awake:     { repo: 'whysosary-dot/awake-disclosure' },
   earning:   { repo: 'whysosary-dot/kospi-kosdaq-dashboard' },
+  interest:  { repo: 'whysosary-dot/watchlist-briefing' },
   research:  { repo: 'whysosary-dot/investment-notes' },
   diary:     { repo: 'whysosary-dot/stock-valuation', path: 'diary.json' },
 };
