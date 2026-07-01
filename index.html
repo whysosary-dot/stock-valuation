@@ -3230,10 +3230,12 @@ async function ghApiGet(pat, path) {
 }
 
 async function ghApiPut(pat, path, contentStr, sha, message) {
-  // UTF-8 → base64 (한글 포함)
+  // UTF-8 → base64 (한글 포함, 청크 방식 — Safari iOS 대용량 안전)
   const bytes = new TextEncoder().encode(contentStr);
+  const CHUNK = 8192;
   let bin = '';
-  bytes.forEach(b => bin += String.fromCharCode(b));
+  for (let i = 0; i < bytes.length; i += CHUNK)
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
   const b64 = btoa(bin);
   const body = { message, content: b64, branch: GH.BRANCH };
   if (sha) body.sha = sha;
@@ -3258,11 +3260,23 @@ async function ghCommitAll() {
   try {
     const today = new Date().toISOString().slice(0, 10);
 
-    // ── 1. stocks.json : GitHub 최신 버전 받아서 유저 입력 필드만 덮어쓰기 ──
-    const stocksFile = await ghApiGet(pat, GH.PATH);
-    if (!stocksFile) throw new Error('stocks.json을 GitHub에서 찾을 수 없음');
-    const stocksRaw = new TextDecoder().decode(Uint8Array.from(atob(stocksFile.content.replace(/\n/g,'')), c => c.charCodeAt(0)));
-    const stocksData = JSON.parse(stocksRaw);
+    // ── 1. stocks.json : raw URL(직접 JSON) + Trees API(SHA) 병렬 조회 ──
+    // Contents API는 556KB 파일을 base64 래핑해 응답이 750KB+ → Safari iOS 파싱 실패
+    const [treeRes, rawRes] = await Promise.all([
+      fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/git/trees/${GH.BRANCH}`, {
+        headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'User-Agent': 'sv-browser' }
+      }),
+      fetch(`https://raw.githubusercontent.com/${GH.OWNER}/${GH.REPO}/${GH.BRANCH}/${GH.PATH}?t=${Date.now()}`, {
+        cache: 'no-store'
+      })
+    ]);
+    if (!treeRes.ok) throw new Error(`GET tree: ${treeRes.status}`);
+    if (!rawRes.ok)  throw new Error(`GET raw stocks: ${rawRes.status}`);
+    const treeData  = await treeRes.json();
+    const treeEntry = treeData.tree.find(e => e.path === GH.PATH);
+    if (!treeEntry) throw new Error('stocks.json을 트리에서 찾을 수 없음');
+    const stocksSha = treeEntry.sha;
+    const stocksData = await rawRes.json();
     // localStorage 대신 현재 메모리 state에서 직접 읽기 (즐겨찾기 등 미저장 변경 포함)
     const liveInputs = {};
     for (const s of state.stocks) {
@@ -3280,7 +3294,7 @@ async function ghCommitAll() {
       for (const f of USER_FIELDS) { if (ui[f] !== undefined) out[f] = ui[f]; }
       return out;
     });
-    await ghApiPut(pat, GH.PATH, JSON.stringify(stocksData, null, 2), stocksFile.sha,
+    await ghApiPut(pat, GH.PATH, JSON.stringify(stocksData, null, 2), stocksSha,
       `sync: 밸류에이션 입력값 업데이트 ${today}`);
 
     // ── 2. diary.json : localStorage 다이어리 전체 커밋 ──
