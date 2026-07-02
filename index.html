@@ -838,7 +838,7 @@
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
   <div class="tabs-spacer"></div>
   <button id="gh-settings-btn" class="gh-settings-btn" title="GitHub 토큰 설정">⚙️</button>
-  <button id="gh-commit-btn" class="gh-commit-btn" title="밸류에이션 + 다이어리 GitHub에 커밋">☁️ 커밋 &amp; 푸시</button>
+  <button id="gh-commit-btn" class="gh-commit-btn" title="밸류에이션·다이어리 + 스크리너·Awake·ETF 즐겨찾기 통합 커밋">☁️ 커밋 &amp; 푸시</button>
 </nav>
 
 <div id="page-valuation" class="page active">
@@ -3208,7 +3208,7 @@ document.getElementById('pat-save').addEventListener('click', () => {
   if (!val || val.startsWith('•')) { toast('토큰을 입력하세요', 'err', 2000); return; }
   localStorage.setItem(LS_PAT_KEY, val);
   document.getElementById('pat-status').style.display = 'block';
-  document.getElementById('gh-commit-btn').title = '밸류에이션 + 다이어리 GitHub에 커밋';
+  document.getElementById('gh-commit-btn').title = '밸류에이션·다이어리 + 스크리너·Awake·ETF 즐겨찾기 통합 커밋';
   toast('토큰 저장됨 ✓', 'ok', 2000);
   setTimeout(closePatModal, 700);
 });
@@ -3248,10 +3248,73 @@ async function ghApiPut(pat, path, contentStr, sha, message) {
   return r.json();
 }
 
+/* ── 자식 탭(스크리너/Awake/ETF Monitor) 통합 커밋 ── */
+const SV_CHILD_TABS = [
+  { frameId:'screener-frame',   repo:'stock-screener',   label:'스크리너' },
+  { frameId:'awake-frame',      repo:'awake-disclosure', label:'Awake' },
+  { frameId:'etfmonitor-frame', repo:'etf-monitor',      label:'ETF' },
+];
+const SV_MSG_ORIGIN = 'https://whysosary-dot.github.io';
+
+// lazy iframe이라 아직 로드 전일 수 있음 → 강제 로드 + ping/pong으로 준비 확인
+function svEnsureFrameReady(frame, timeoutMs) {
+  return new Promise(function(resolve){
+    var settled=false, iv=null, to=null;
+    function finish(ok){
+      if (settled) return; settled=true;
+      window.removeEventListener('message', onMsg);
+      if (iv) clearInterval(iv);
+      if (to) clearTimeout(to);
+      resolve(ok);
+    }
+    function onMsg(e){
+      if (e.origin===SV_MSG_ORIGIN && e.data && e.data.type==='sv-pong' && e.source===frame.contentWindow) finish(true);
+    }
+    function ping(){ try { if (frame.contentWindow) frame.contentWindow.postMessage({type:'sv-ping'}, SV_MSG_ORIGIN); } catch(_){} }
+    window.addEventListener('message', onMsg);
+    frame.loading = 'eager'; // lazy 해제 → 숨겨진 탭도 로드 시작
+    ping();
+    iv = setInterval(ping, 700);
+    to = setTimeout(function(){ finish(false); }, timeoutMs || 12000);
+  });
+}
+
+function svCommitChild(frame, timeoutMs) {
+  return new Promise(function(resolve){
+    var settled=false, to=null;
+    function finish(res){
+      if (settled) return; settled=true;
+      window.removeEventListener('message', onMsg);
+      if (to) clearTimeout(to);
+      resolve(res);
+    }
+    function onMsg(e){
+      if (e.origin===SV_MSG_ORIGIN && e.data && e.data.type==='sv-commit-result' && e.source===frame.contentWindow) finish(e.data);
+    }
+    window.addEventListener('message', onMsg);
+    try { frame.contentWindow.postMessage({type:'sv-commit'}, SV_MSG_ORIGIN); }
+    catch(err){ finish({ok:false, msg:'메시지 전송 실패'}); return; }
+    to = setTimeout(function(){ finish({ok:false, msg:'응답 시간 초과'}); }, timeoutMs || 30000);
+  });
+}
+
+async function svCommitChildren() {
+  const results = [];
+  for (const t of SV_CHILD_TABS) {
+    const frame = document.getElementById(t.frameId);
+    if (!frame) { results.push({ label:t.label, ok:false, msg:'iframe 없음' }); continue; }
+    const ready = await svEnsureFrameReady(frame);
+    if (!ready) { results.push({ label:t.label, ok:false, msg:'탭 로드 실패' }); continue; }
+    const r = await svCommitChild(frame);
+    results.push({ label:t.label, ok:!!r.ok, msg:r.msg||'' });
+  }
+  return results;
+}
+
 async function ghCommitAll() {
   const pat = localStorage.getItem(LS_PAT_KEY) || '';
   if (!pat) { openPatModal(); return; }
-  if (!confirm('밸류에이션 입력값과 다이어리를 GitHub에 커밋 & 푸시할까요?')) return;
+  if (!confirm('밸류에이션·다이어리 + 스크리너·Awake·ETF 즐겨찾기를 GitHub에 모두 커밋 & 푸시할까요?')) return;
 
   const btn = document.getElementById('gh-commit-btn');
   btn.disabled = true;
@@ -3306,7 +3369,16 @@ async function ghCommitAll() {
     const newDiarySha = diaryPutRes && diaryPutRes.content && diaryPutRes.content.sha;
     if (newDiarySha) localStorage.setItem(DIARY_GH_SHA_KEY, String(newDiarySha));
 
-    toast('✅ GitHub 커밋 완료!', 'ok', 3500);
+    // ── 3. 자식 탭 통합 커밋 : 스크리너 / Awake / ETF Monitor ──
+    btn.textContent = '탭 커밋 중...';
+    const childResults = await svCommitChildren();
+    const failed = childResults.filter(r => !r.ok);
+    if (failed.length) {
+      toast('⚠️ 밸류·다이어리 커밋 완료 / 일부 탭 실패: ' +
+        failed.map(r => r.label + '(' + r.msg + ')').join(', '), 'err', 6000);
+    } else {
+      toast('✅ 통합 커밋 완료! (밸류·다이어리·스크리너·Awake·ETF)', 'ok', 3500);
+    }
   } catch (e) {
     if (e.message.includes('401') || e.message.includes('403')) {
       toast('❌ 토큰 오류 — ⚙️ 버튼에서 토큰을 확인하세요', 'err', 5000);
