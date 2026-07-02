@@ -838,7 +838,7 @@
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
   <div class="tabs-spacer"></div>
   <button id="gh-settings-btn" class="gh-settings-btn" title="GitHub 토큰 설정">⚙️</button>
-  <button id="gh-commit-btn" class="gh-commit-btn" title="밸류에이션·다이어리 + 전체 탭(스크리너·Awake·ETF·Dart·실적·리서치) 통합 커밋">☁️ 커밋 &amp; 푸시</button>
+  <button id="gh-commit-btn" class="gh-commit-btn" title="밸류에이션·다이어리 + 전체 탭(스크리너·Awake·ETF·Dart·실적·리서치·TP) 통합 커밋">☁️ 커밋 &amp; 푸시</button>
 </nav>
 
 <div id="page-valuation" class="page active">
@@ -3208,7 +3208,7 @@ document.getElementById('pat-save').addEventListener('click', () => {
   if (!val || val.startsWith('•')) { toast('토큰을 입력하세요', 'err', 2000); return; }
   localStorage.setItem(LS_PAT_KEY, val);
   document.getElementById('pat-status').style.display = 'block';
-  document.getElementById('gh-commit-btn').title = '밸류에이션·다이어리 + 전체 탭(스크리너·Awake·ETF·Dart·실적·리서치) 통합 커밋';
+  document.getElementById('gh-commit-btn').title = '밸류에이션·다이어리 + 전체 탭(스크리너·Awake·ETF·Dart·실적·리서치·TP) 통합 커밋';
   toast('토큰 저장됨 ✓', 'ok', 2000);
   setTimeout(closePatModal, 700);
 });
@@ -3256,6 +3256,7 @@ const SV_CHILD_TABS = [
   { frameId:'dart-frame',       repo:'dart-monitoring',        label:'Dart' },
   { frameId:'earning-frame',    repo:'kospi-kosdaq-dashboard', label:'실적' },
   { frameId:'research-frame',   repo:'investment-notes',       label:'리서치' },
+  { frameId:'tptracker-frame',  repo:'tp-tracker',             label:'TP' },
 ];
 const SV_MSG_ORIGIN = 'https://whysosary-dot.github.io';
 
@@ -3323,7 +3324,7 @@ async function svCommitChildren() {
 async function ghCommitAll() {
   const pat = localStorage.getItem(LS_PAT_KEY) || '';
   if (!pat) { openPatModal(); return; }
-  if (!confirm('밸류에이션·다이어리 + 전체 탭(스크리너·Awake·ETF·Dart·실적·리서치)을 GitHub에 모두 커밋 & 푸시할까요?')) return;
+  if (!confirm('밸류에이션·다이어리 + 전체 탭(스크리너·Awake·ETF·Dart·실적·리서치·TP)을 GitHub에 모두 커밋 & 푸시할까요?')) return;
 
   const btn = document.getElementById('gh-commit-btn');
   btn.disabled = true;
@@ -3386,7 +3387,7 @@ async function ghCommitAll() {
       toast('⚠️ 밸류·다이어리 커밋 완료 / 일부 탭 실패: ' +
         failed.map(r => r.label + '(' + r.msg + ')').join(', '), 'err', 6000);
     } else {
-      toast('✅ 통합 커밋 완료! (밸류·다이어리 + 스크리너·Awake·ETF·Dart·실적·리서치)', 'ok', 3500);
+      toast('✅ 통합 커밋 완료! (밸류·다이어리 + 7개 탭)', 'ok', 3500);
     }
   } catch (e) {
     if (e.message.includes('401') || e.message.includes('403')) {
