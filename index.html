@@ -815,6 +815,144 @@
   }
 
 </style>
+<!-- ═══════ Modern Skin (UI 리뉴얼 오버라이드 — 기능·마크업 원본 그대로) ═══════ -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style id="modern-skin">
+:root{
+  --bg:#eef1f7;
+  --panel:#ffffff;
+  --panel-2:#f4f6fb;
+  --border:#e5e9f1;
+  --border-strong:#d3d9e5;
+  --text:#141b26;
+  --text-dim:#69738a;
+  --accent:#3056f0;
+  --accent-soft:#e9edfe;
+  --blue:#2f56e8;
+  --red:#d3273e;
+  --header:#f6f8fc;
+  --row-hover:#f3f6fd;
+  --focus:#dbe4ff;
+  --readonly:#fbfcfe;
+  --sk-radius:14px;
+  --sk-shadow:0 1px 2px rgba(20,27,45,.05),0 4px 14px rgba(20,27,45,.05);
+}
+body{
+  font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif;
+  letter-spacing:-.01em;
+  background:
+    radial-gradient(900px 380px at 85% -10%, rgba(48,86,240,.06), transparent 60%),
+    radial-gradient(700px 300px at -10% 110%, rgba(48,86,240,.05), transparent 55%),
+    var(--bg);
+}
+/* ── 스크롤바 ── */
+*::-webkit-scrollbar{width:9px;height:9px}
+*::-webkit-scrollbar-thumb{background:#c9d1e0;border-radius:8px;border:2px solid transparent;background-clip:content-box}
+*::-webkit-scrollbar-thumb:hover{background:#aab5cc;background-clip:content-box}
+*::-webkit-scrollbar-track{background:transparent}
+/* ── 탑바 ── */
+.topbar{
+  background:rgba(255,255,255,.88);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+  padding:12px 18px;
+  padding-top:calc(12px + env(safe-area-inset-top));
+}
+.topbar h1{font-size:17.5px;font-weight:800;letter-spacing:-.02em}
+.topbar h1 .dot{
+  width:11px;height:11px;
+  background:linear-gradient(135deg,#3056f0,#7c9bff);
+  box-shadow:0 0 0 4px rgba(48,86,240,.13);
+}
+.topbar .meta{font-size:12.5px}
+.topbar .status-pill{font-weight:600;font-size:12.5px;padding:6px 12px}
+.topbar input.filter{
+  border-radius:12px;border:1px solid transparent;background:var(--panel-2);
+  padding:9px 14px;font-size:14px;
+}
+.topbar input.filter:focus{background:#fff;border-color:var(--accent);box-shadow:0 0 0 3px var(--focus)}
+select.sector-filter{border-radius:12px !important;background:var(--panel-2) !important;border-color:transparent !important;font-weight:600}
+.btn{
+  border-radius:12px;font-weight:600;font-size:13.5px;
+  border-color:var(--border);box-shadow:0 1px 2px rgba(20,27,45,.04);
+}
+.btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.btn.toggle-on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+/* ── 페이지 탭 → 필 세그먼트 ── */
+.page-tabs{
+  background:transparent;border-bottom:none;
+  padding:10px 14px 4px;gap:6px;
+}
+.page-tab-btn{
+  border:1px solid var(--border);border-radius:999px;
+  background:var(--panel);padding:8px 15px;margin-bottom:0;
+  font-size:13px;font-weight:600;color:var(--text-dim);
+  box-shadow:0 1px 2px rgba(20,27,45,.04);
+  transition:all .15s;
+}
+.page-tab-btn:hover:not(.active){border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.page-tab-btn.active{
+  background:linear-gradient(135deg,#3056f0,#4b71f5);
+  border-color:transparent;color:#fff;font-weight:700;
+  box-shadow:0 3px 10px rgba(48,86,240,.32);
+  border-bottom-color:transparent;
+}
+.page-tabs.collapsed{padding:8px 14px 4px}
+.page-tabs.collapsed .page-tab-btn.active{opacity:1;font-size:13px}
+.tabs-collapse-btn{border:1px solid var(--border);border-radius:999px;background:var(--panel);padding:7px 12px;font-weight:600}
+.gh-commit-btn{
+  border-radius:999px;padding:8px 16px;
+  background:linear-gradient(135deg,#111827,#2b3648);
+  box-shadow:0 3px 10px rgba(17,24,39,.28);
+}
+.gh-settings-btn{border-radius:999px}
+/* ── 테이블 ── */
+.table-wrap{padding:14px 16px 20px}
+table{
+  border-radius:var(--sk-radius);
+  border-color:var(--border);
+  box-shadow:var(--sk-shadow);
+  overflow:hidden;
+}
+th,td{border-right-color:transparent;font-size:14px;padding:10px 13px}
+thead th{
+  font-size:11.5px;font-weight:700;color:var(--text-dim);
+  background:var(--header);letter-spacing:.01em;
+}
+tbody tr:hover{background:var(--row-hover)}
+tr.group-row td{font-weight:700}
+td input, td textarea{border-radius:8px}
+.readonly-cell.name a{font-weight:700}
+.line-badge{border-radius:7px;font-weight:700}
+/* ── 다이어리 ── */
+.diary-topbar{background:transparent;border-bottom:none;padding:12px 16px 4px}
+.diary-tabs{background:var(--panel);border:1px solid var(--border);border-radius:999px;padding:4px;box-shadow:0 1px 2px rgba(20,27,45,.04)}
+.dtab{border-radius:999px;font-weight:600}
+.diary-search-inp{border-radius:12px !important;background:var(--panel) !important}
+.dcard{
+  border-radius:16px !important;
+  border:1px solid var(--border) !important;
+  box-shadow:var(--sk-shadow) !important;
+}
+.dcard:hover{box-shadow:0 4px 18px rgba(20,27,45,.10) !important}
+.dcard-header{border-radius:16px 16px 0 0}
+.diary-new-card-btn{border-radius:16px !important;border-width:1.5px !important;font-weight:700}
+.trade-card{border-radius:13px !important}
+.trade-inp{border-radius:9px !important}
+.trade-type-sel{border-radius:9px !important;font-weight:700}
+.memo-edit{border-radius:10px !important}
+/* ── 토스트/모달 ── */
+.toast{border-radius:13px;box-shadow:0 10px 30px rgba(15,23,42,.18);font-weight:600}
+.pat-inp{border-radius:11px}
+/* ── 인사이트 ── */
+.insight-chip{border-radius:999px !important;font-weight:600}
+/* ── 모바일 ── */
+@media (max-width:700px){
+  .topbar{padding-left:14px;padding-right:14px}
+  .table-wrap{padding:10px 10px 16px}
+  .page-tabs{padding:8px 10px 4px}
+}
+</style>
 </head>
 <body>
 
@@ -838,7 +976,7 @@
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
   <div class="tabs-spacer"></div>
   <button id="gh-settings-btn" class="gh-settings-btn" title="GitHub 토큰 설정">⚙️</button>
-  <button id="gh-commit-btn" class="gh-commit-btn" title="밸류에이션·다이어리 + 전체 탭(스크리너·Awake·ETF·Dart·실적·리서치·TP) 통합 커밋">☁️ 커밋 &amp; 푸시</button>
+  <button id="gh-commit-btn" class="gh-commit-btn" title="밸류에이션 + 다이어리 GitHub에 커밋">☁️ 커밋 &amp; 푸시</button>
 </nav>
 
 <div id="page-valuation" class="page active">
@@ -3208,7 +3346,7 @@ document.getElementById('pat-save').addEventListener('click', () => {
   if (!val || val.startsWith('•')) { toast('토큰을 입력하세요', 'err', 2000); return; }
   localStorage.setItem(LS_PAT_KEY, val);
   document.getElementById('pat-status').style.display = 'block';
-  document.getElementById('gh-commit-btn').title = '밸류에이션·다이어리 + 전체 탭(스크리너·Awake·ETF·Dart·실적·리서치·TP) 통합 커밋';
+  document.getElementById('gh-commit-btn').title = '밸류에이션 + 다이어리 GitHub에 커밋';
   toast('토큰 저장됨 ✓', 'ok', 2000);
   setTimeout(closePatModal, 700);
 });
@@ -3248,83 +3386,10 @@ async function ghApiPut(pat, path, contentStr, sha, message) {
   return r.json();
 }
 
-/* ── 자식 탭(스크리너/Awake/ETF Monitor) 통합 커밋 ── */
-const SV_CHILD_TABS = [
-  { frameId:'screener-frame',   repo:'stock-screener',         label:'스크리너' },
-  { frameId:'awake-frame',      repo:'awake-disclosure',       label:'Awake' },
-  { frameId:'etfmonitor-frame', repo:'etf-monitor',            label:'ETF' },
-  { frameId:'dart-frame',       repo:'dart-monitoring',        label:'Dart' },
-  { frameId:'earning-frame',    repo:'kospi-kosdaq-dashboard', label:'실적' },
-  { frameId:'research-frame',   repo:'investment-notes',       label:'리서치' },
-  { frameId:'tptracker-frame',  repo:'tp-tracker',             label:'TP' },
-];
-const SV_MSG_ORIGIN = 'https://whysosary-dot.github.io';
-
-// lazy iframe이라 아직 로드 전일 수 있음 → 강제 로드 + ping/pong으로 준비 확인
-function svEnsureFrameReady(frame, timeoutMs) {
-  return new Promise(function(resolve){
-    var settled=false, iv=null, to=null;
-    function finish(ok){
-      if (settled) return; settled=true;
-      window.removeEventListener('message', onMsg);
-      if (iv) clearInterval(iv);
-      if (to) clearTimeout(to);
-      resolve(ok);
-    }
-    function onMsg(e){
-      if (e.origin===SV_MSG_ORIGIN && e.data && e.data.type==='sv-pong' && e.source===frame.contentWindow) finish(true);
-    }
-    function ping(){ try { if (frame.contentWindow) frame.contentWindow.postMessage({type:'sv-ping'}, SV_MSG_ORIGIN); } catch(_){} }
-    window.addEventListener('message', onMsg);
-    frame.loading = 'eager'; // lazy 해제 → 숨겨진 탭도 로드 시작
-    ping();
-    iv = setInterval(ping, 700);
-    to = setTimeout(function(){ finish(false); }, timeoutMs || 12000);
-  });
-}
-
-function svCommitChild(frame, timeoutMs) {
-  return new Promise(function(resolve){
-    var settled=false, to=null;
-    function finish(res){
-      if (settled) return; settled=true;
-      window.removeEventListener('message', onMsg);
-      if (to) clearTimeout(to);
-      resolve(res);
-    }
-    function onMsg(e){
-      if (e.origin===SV_MSG_ORIGIN && e.data && e.data.type==='sv-commit-result' && e.source===frame.contentWindow) finish(e.data);
-    }
-    window.addEventListener('message', onMsg);
-    try { frame.contentWindow.postMessage({type:'sv-commit'}, SV_MSG_ORIGIN); }
-    catch(err){ finish({ok:false, msg:'메시지 전송 실패'}); return; }
-    to = setTimeout(function(){ finish({ok:false, msg:'응답 시간 초과'}); }, timeoutMs || 30000);
-  });
-}
-
-async function svCommitChildren() {
-  const results = [];
-  for (const t of SV_CHILD_TABS) {
-    const frame = document.getElementById(t.frameId);
-    if (!frame) { results.push({ label:t.label, ok:false, msg:'iframe 없음' }); continue; }
-    let ready = await svEnsureFrameReady(frame);
-    if (!ready) {
-      // 브리지 없는 하위 페이지(리포트 등)로 이동해 있을 수 있음 → 루트로 되돌린 뒤 재시도
-      try { frame.contentWindow.location.replace(frame.getAttribute('src')); }
-      catch(_) { frame.src = frame.getAttribute('src'); }
-      ready = await svEnsureFrameReady(frame);
-    }
-    if (!ready) { results.push({ label:t.label, ok:false, msg:'탭 로드 실패' }); continue; }
-    const r = await svCommitChild(frame);
-    results.push({ label:t.label, ok:!!r.ok, msg:r.msg||'' });
-  }
-  return results;
-}
-
 async function ghCommitAll() {
   const pat = localStorage.getItem(LS_PAT_KEY) || '';
   if (!pat) { openPatModal(); return; }
-  if (!confirm('밸류에이션·다이어리 + 전체 탭(스크리너·Awake·ETF·Dart·실적·리서치·TP)을 GitHub에 모두 커밋 & 푸시할까요?')) return;
+  if (!confirm('밸류에이션 입력값과 다이어리를 GitHub에 커밋 & 푸시할까요?')) return;
 
   const btn = document.getElementById('gh-commit-btn');
   btn.disabled = true;
@@ -3379,16 +3444,7 @@ async function ghCommitAll() {
     const newDiarySha = diaryPutRes && diaryPutRes.content && diaryPutRes.content.sha;
     if (newDiarySha) localStorage.setItem(DIARY_GH_SHA_KEY, String(newDiarySha));
 
-    // ── 3. 자식 탭 통합 커밋 : 스크리너 / Awake / ETF Monitor ──
-    btn.textContent = '탭 커밋 중...';
-    const childResults = await svCommitChildren();
-    const failed = childResults.filter(r => !r.ok);
-    if (failed.length) {
-      toast('⚠️ 밸류·다이어리 커밋 완료 / 일부 탭 실패: ' +
-        failed.map(r => r.label + '(' + r.msg + ')').join(', '), 'err', 6000);
-    } else {
-      toast('✅ 통합 커밋 완료! (밸류·다이어리 + 7개 탭)', 'ok', 3500);
-    }
+    toast('✅ GitHub 커밋 완료!', 'ok', 3500);
   } catch (e) {
     if (e.message.includes('401') || e.message.includes('403')) {
       toast('❌ 토큰 오류 — ⚙️ 버튼에서 토큰을 확인하세요', 'err', 5000);
@@ -3630,6 +3686,74 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
   }
 })();
 // ────────────────────────────────────────────────────────────────
+</script>
+<!-- ═══════ 지표 탭 네이티브 렌더링 (클릭 없이 전체 차트 한눈에) ═══════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+#index-native{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:14px 16px 26px}
+.ixn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;max-width:1280px;margin:0 auto}
+@media(max-width:700px){.ixn-grid{grid-template-columns:1fr}}
+.ixn-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--sk-radius,14px);padding:14px;box-shadow:var(--sk-shadow,0 1px 3px rgba(0,0,0,.05))}
+.ixn-card h4{margin:0 0 2px;font-size:14px;font-weight:700}
+.ixn-card .src{font-size:11px;color:var(--text-dim);margin-bottom:8px}
+.ixn-box{height:170px;position:relative}
+.ixn-load{padding:50px;text-align:center;color:var(--text-dim);font-size:14px}
+</style>
+<script>
+(function(){
+  const page = document.getElementById('page-index');
+  if(!page) return;
+  page.innerHTML = '<div id="index-native"><div class="ixn-load">지표 불러오는 중…</div></div>';
+  try{ delete IFRAME_TAB_SRC.index; }catch(e){}
+  let loaded = false;
+  function extractArr(txt, marker){
+    const i = txt.indexOf(marker); if(i<0) return null;
+    const start = txt.indexOf('[', i);
+    let d=0, inStr=null, escp=false;
+    for(let j=start;j<txt.length;j++){
+      const c = txt[j];
+      if(inStr){ if(escp)escp=false; else if(c==='\\')escp=true; else if(c===inStr)inStr=null; continue; }
+      if(c==='"'||c==="'"||c==='`'){ inStr=c; continue; }
+      if(c==='/'&&txt[j+1]==='/'){ j=txt.indexOf('\n',j); if(j<0)break; continue; }
+      if(c==='/'&&txt[j+1]==='*'){ j=txt.indexOf('*/',j)+1; if(j<1)break; continue; }
+      if(c==='[') d++;
+      else if(c===']'){ d--; if(!d){ try{ return new Function('return '+txt.slice(start,j+1))(); }catch(e){ return null; } } }
+    }
+    return null;
+  }
+  async function renderIndexNative(){
+    if(loaded) return; loaded = true;
+    const box = document.getElementById('index-native');
+    try{
+      const r = await fetch('https://raw.githubusercontent.com/whysosary-dot/invest-index/main/index.html?t='+Math.floor(Date.now()/3e5), {cache:'no-store'});
+      const html = await r.text();
+      const inds = extractArr(html, 'const INDICATORS');
+      if(!inds || !inds.length) throw new Error('no data');
+      box.innerHTML = '<div class="ixn-grid">' + inds.map((ind,i)=>`
+        <div class="ixn-card"><h4>${ind.name} <span style="font-weight:400;font-size:11px;color:var(--text-dim)">${ind.unit||''}</span></h4>
+        <div class="src">${ind.source||''}${ind.category?' · '+ind.category:''}</div>
+        <div class="ixn-box"><canvas id="ixn-${i}"></canvas></div></div>`).join('') + '</div>';
+      inds.forEach((ind,i)=>{
+        const data = (ind.data||[]).filter(d=>d&&d.value!=null);
+        const cv = document.getElementById('ixn-'+i); if(!cv||!data.length) return;
+        new Chart(cv, { type:'line',
+          data:{ labels:data.map(d=>d.label), datasets:[{ data:data.map(d=>d.value),
+            borderColor:ind.color||'#3056f0', borderWidth:2,
+            pointRadius:data.length>40?0:2.5, pointHitRadius:8, tension:.25 }] },
+          options:{ responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{display:false} },
+            scales:{ x:{ticks:{maxTicksLimit:6,font:{size:9.5},color:'#9aa3b8'},grid:{display:false}},
+              y:{ticks:{font:{size:9.5},color:'#9aa3b8',maxTicksLimit:5},grid:{color:'#f0f2f7'}} } } });
+      });
+    }catch(e){
+      box.innerHTML = '<div class="ixn-load">지표 데이터를 불러오지 못했습니다. <button class="btn" onclick="location.reload()">새로고침</button></div>';
+      loaded = false;
+    }
+  }
+  const orig = window.activatePage;
+  window.activatePage = function(p, o){ orig(p, o); if(p==='index') renderIndexNative(); };
+  if((location.hash||'').replace('#','')==='index') renderIndexNative();
+})();
 </script>
 </body>
 </html>
