@@ -3757,5 +3757,176 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
   if((location.hash||'').replace('#','')==='index') renderIndexNative();
 })();
 </script>
+
+<!-- ═══════ 홈 탭 (데일리 인사이트 + 한눈 요약) ═══════ -->
+<style>
+#home-wrap{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:14px 16px 28px}
+.hm-inner{max-width:1180px;margin:0 auto}
+.hm-hero{background:linear-gradient(135deg,#182036,#26355e 55%,#3056f0);color:#fff;border-radius:18px;
+  padding:20px 22px;box-shadow:0 8px 26px rgba(24,32,54,.25);margin-bottom:14px}
+.hm-hero .hm-date{font-size:12px;font-weight:700;opacity:.65;letter-spacing:.02em;margin-bottom:7px}
+.hm-hero .hm-headline{font-size:18px;font-weight:800;line-height:1.45;letter-spacing:-.01em;margin-bottom:14px}
+.hm-secs{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
+.hm-sec{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:11px 13px}
+.hm-sec h5{margin:0 0 7px;font-size:12.5px;font-weight:800;opacity:.9}
+.hm-sec ul{margin:0;padding-left:16px}
+.hm-sec li{font-size:12.5px;line-height:1.6;opacity:.92;margin-bottom:4px}
+.hm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:13px}
+@media(max-width:700px){#home-wrap{padding:10px 12px 24px}.hm-grid{grid-template-columns:1fr}.hm-hero .hm-headline{font-size:16px}}
+.hm-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--sk-radius,14px);
+  padding:14px 16px;box-shadow:var(--sk-shadow,0 1px 3px rgba(0,0,0,.05))}
+.hm-card h4{margin:0 0 10px;font-size:13.5px;font-weight:800;display:flex;align-items:center;gap:6px}
+.hm-card h4 .go{margin-left:auto;font-size:11.5px;font-weight:600;color:var(--accent);cursor:pointer;white-space:nowrap}
+.hm-row{display:flex;align-items:center;gap:9px;padding:6.5px 0;border-bottom:1px solid var(--panel-2);font-size:13px}
+.hm-row:last-child{border-bottom:none}
+.hm-row .rk{width:16px;text-align:center;font-size:11px;font-weight:800;color:#9aa3b8;flex:none}
+.hm-row .nm{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm-row .nm small{color:#9aa3b8;font-weight:400;font-size:10.5px;margin-left:5px}
+.hm-row .pc{font-weight:800;font-variant-numeric:tabular-nums}
+.hm-row .pc.u{color:#d3273e}.hm-row .pc.d{color:#2f56e8}
+.hm-bar{display:flex;align-items:center;gap:9px;padding:4.5px 0;font-size:12px}
+.hm-bar .bl{width:88px;flex:none;font-weight:600;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm-bar .tr{flex:1;position:relative;height:14px}
+.hm-bar .tr::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--border-strong)}
+.hm-bar .fi{position:absolute;top:2px;bottom:2px;border-radius:4px}
+.hm-bar .bv{width:48px;text-align:right;font-weight:700;font-size:11.5px}
+.hm-evt{display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--panel-2);font-size:12.5px;align-items:flex-start}
+.hm-evt:last-child{border-bottom:none}
+.hm-evt .dd{flex:none;font-size:10.5px;font-weight:800;background:var(--accent-soft);color:var(--accent);
+  border-radius:7px;padding:3px 7px;margin-top:1px;white-space:nowrap}
+.hm-evt .tt{flex:1;min-width:0;line-height:1.5}
+.hm-evt .tt small{display:block;color:#9aa3b8;font-size:10.5px}
+.hm-load{padding:50px;text-align:center;color:var(--text-dim);font-size:14px}
+.hm-note{font-size:11px;color:#9aa3b8;text-align:center;margin-top:12px}
+</style>
+<script>
+(function(){
+  /* 탭 버튼·페이지 삽입 (원본 마크업/JS 무수정) */
+  const tabs = document.querySelector('.page-tabs');
+  const firstBtn = tabs && tabs.querySelector('.page-tab-btn');
+  if(!tabs||!firstBtn) return;
+  const btn = document.createElement('button');
+  btn.className = 'page-tab-btn'; btn.dataset.page = 'home';
+  btn.innerHTML = '<span class="update-dot"></span>홈';
+  tabs.insertBefore(btn, firstBtn);
+  btn.addEventListener('click', ()=>activatePage('home'));
+  const pv = document.getElementById('page-valuation');
+  const ph = document.createElement('div');
+  ph.id = 'page-home'; ph.className = 'page';
+  ph.innerHTML = '<div id="home-wrap"><div class="hm-load">홈 로딩 중…</div></div>';
+  pv.parentNode.insertBefore(ph, pv);
+
+  const RAWU = (repo,p)=>`https://raw.githubusercontent.com/whysosary-dot/${repo}/main/${p}`;
+  const bust = u=>u+(u.includes('?')?'&':'?')+'t='+Math.floor(Date.now()/3e5);
+  const jf = async u=>{ const r=await fetch(bust(u),{cache:'no-store'}); if(!r.ok) throw 0; return r.json(); };
+  const tf = async u=>{ const r=await fetch(bust(u),{cache:'no-store'}); if(!r.ok) throw 0; return r.text(); };
+  const esc = s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const DOWK = ['일','월','화','수','목','금','토'];
+  function xArr(txt, marker){
+    const i = txt.indexOf(marker); if(i<0) return null;
+    const st = txt.indexOf('[', i);
+    let d=0, q=null, e2=false;
+    for(let j=st;j<txt.length;j++){
+      const c = txt[j];
+      if(q){ if(e2)e2=false; else if(c==='\\')e2=true; else if(c===q)q=null; continue; }
+      if(c==='"'||c==="'"||c==='`'){ q=c; continue; }
+      if(c==='/'&&txt[j+1]==='/'){ j=txt.indexOf('\n',j); if(j<0)break; continue; }
+      if(c==='[') d++;
+      else if(c===']'){ d--; if(!d){ try{ return new Function('return '+txt.slice(st,j+1))(); }catch(x){ return null; } } }
+    }
+    return null;
+  }
+  let loaded = false;
+  async function renderHome(){
+    if(loaded) return; loaded = true;
+    const box = document.getElementById('home-wrap');
+    const [ins, sd, wb, agg, calHtml] = await Promise.allSettled([
+      jf(RAWU('stock-valuation','home_insights.json')),
+      jf(RAWU('stock-valuation','stocks.json')),
+      jf(RAWU('watchlist-briefing','briefings/manifest.json')),
+      jf(RAWU('awake-disclosure','daily_aggregates.json')),
+      tf(RAWU('investment-calendar','index.html'))
+    ]).then(rs=>rs.map(r=>r.status==='fulfilled'?r.value:null));
+
+    let html = '<div class="hm-inner">';
+    /* ① 인사이트 히어로 */
+    if(ins && ins.headline){
+      const d = new Date((ins.date||'')+'T00:00:00');
+      html += `<div class="hm-hero">
+        <div class="hm-date">📌 ${esc(ins.date)} (${DOWK[d.getDay()]||''}) · 데일리 인사이트</div>
+        <div class="hm-headline">${esc(ins.headline)}</div>
+        <div class="hm-secs">${(ins.sections||[]).map(s=>`<div class="hm-sec"><h5>${esc(s.icon||'')} ${esc(s.title)}</h5>
+          <ul>${(s.items||[]).map(it=>`<li>${esc(it)}</li>`).join('')}</ul></div>`).join('')}</div>
+      </div>`;
+    } else {
+      html += `<div class="hm-hero"><div class="hm-headline">데일리 인사이트가 아직 없습니다.</div>
+        <div style="font-size:12.5px;opacity:.75">home_insights.json이 생성되면 이 자리에 전날 주요 업데이트 요약이 표시됩니다. (스케줄 연동 예정)</div></div>`;
+    }
+    html += '<div class="hm-grid">';
+    /* ② 등락 TOP */
+    if(sd && sd.stocks){
+      const st = sd.stocks.filter(s=>s.price_change_pct!=null);
+      const g = [...st].sort((a,b)=>b.price_change_pct-a.price_change_pct).slice(0,5);
+      const l = [...st].sort((a,b)=>a.price_change_pct-b.price_change_pct).slice(0,5);
+      const row = (s,i)=>`<div class="hm-row"><span class="rk">${i+1}</span>
+        <span class="nm">${esc(s.name)}<small>${esc(s.sector||'')}</small></span>
+        <span class="pc ${s.price_change_pct>=0?'u':'d'}">${s.price_change_pct>0?'+':''}${s.price_change_pct.toFixed(2)}%</span></div>`;
+      html += `<div class="hm-card"><h4>🔺 상승 TOP5 <span class="go" data-go="valuation">밸류 →</span></h4>${g.map(row).join('')}</div>`;
+      html += `<div class="hm-card"><h4>🔻 하락 TOP5</h4>${l.map(row).join('')}</div>`;
+      /* 섹터 동향 */
+      const sec = {};
+      st.forEach(s=>{ let k=s.sector||'기타'; if(k.startsWith('반도체'))k='반도체'; (sec[k]=sec[k]||[]).push(s.price_change_pct); });
+      const sa = Object.entries(sec).map(([k,v])=>[k,v.reduce((a,b)=>a+b,0)/v.length]).sort((a,b)=>b[1]-a[1]);
+      const mx = Math.max(.5,...sa.map(x=>Math.abs(x[1])));
+      html += `<div class="hm-card"><h4>🧭 섹터 동향 <span style="font-weight:400;font-size:11px;color:#9aa3b8">1일 평균</span></h4>
+        ${sa.map(([k,v])=>{ const w=Math.abs(v)/mx*47;
+          const stl = v>=0?`left:50%;width:${w}%;background:#d3273e`:`right:50%;width:${w}%;background:#2f56e8`;
+          return `<div class="hm-bar"><span class="bl">${esc(k)}</span><span class="tr"><span class="fi" style="${stl}"></span></span>
+            <span class="bv" style="color:${v>=0?'#d3273e':'#2f56e8'}">${v>0?'+':''}${v.toFixed(2)}%</span></div>`;}).join('')}</div>`;
+    }
+    /* ③ 다가오는 일정 */
+    if(calHtml){
+      const evts = xArr(calHtml,'EVENTS=')||[];
+      const today = new Date(); today.setHours(0,0,0,0);
+      const tstr = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+      const up = evts.filter(e=>e.date>=tstr).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,7);
+      html += `<div class="hm-card"><h4>📅 다가오는 일정 <span class="go" data-go="calendar">캘린더 →</span></h4>
+        ${up.map(e=>{ const dd=Math.round((new Date(e.date+'T00:00:00')-today)/864e5);
+          return `<div class="hm-evt"><span class="dd">${dd===0?'D-DAY':'D-'+dd}</span>
+            <span class="tt" style="${e.important?'color:#d3273e;font-weight:700':''}">${esc(e.title.length>56?e.title.slice(0,56)+'…':e.title)}
+            <small>${esc(e.date)} · ${esc(e.company||'')}</small></span></div>`;}).join('')||'<div class="hm-load" style="padding:20px">예정 일정 없음</div>'}</div>`;
+    }
+    /* ④ 최신 브리핑 + 공시 */
+    let brf = '';
+    if(wb && wb.briefings && wb.briefings[0]){
+      brf += wb.briefings.slice(0,3).map(b=>`<div class="hm-evt"><span class="dd">${esc(b.date.slice(5))}</span>
+        <span class="tt">${esc(b.headline)}</span></div>`).join('');
+    }
+    if(brf) html += `<div class="hm-card"><h4>🗞️ 관심종목 브리핑 <span class="go" data-go="interest">브리핑 →</span></h4>${brf}</div>`;
+    if(agg && agg.by_date){
+      const dates = Object.keys(agg.by_date).sort();
+      const last = dates[dates.length-1];
+      const day = agg.by_date[last]||{};
+      const sig = day.signal_count||day.by_signal||{};
+      const ind = Object.entries(day.by_industry||{}).sort((a,b)=>b[1]-a[1]).slice(0,4);
+      html += `<div class="hm-card"><h4>📢 공시 시그널 <span style="font-weight:400;font-size:11px;color:#9aa3b8">${esc(last)}</span><span class="go" data-go="awake">공시 →</span></h4>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px">
+          ${['강매수','매수','중립','매도'].map(k=>{ const n=sig[k]||0;
+            const c = k.includes('매수')?'#fdeef0;color:#d3273e':(k==='매도'?'#e9f1fd;color:#2f56e8':'var(--panel-2);color:#69738a');
+            return `<span style="font-size:12px;font-weight:800;padding:5px 11px;border-radius:999px;background:${c}">${k} ${n}</span>`;}).join('')}
+        </div>
+        <div style="font-size:12px;color:var(--text-dim);line-height:1.7">${ind.map(([k,v])=>`${esc(k)} ${v}건`).join(' · ')}</div></div>`;
+    }
+    html += '</div><div class="hm-note">인사이트는 home_insights.json 기준 · 나머지 카드는 실시간 데이터 집계</div></div>';
+    box.innerHTML = html;
+    box.querySelectorAll('[data-go]').forEach(x=>x.addEventListener('click',()=>activatePage(x.dataset.go)));
+  }
+  const prev = window.activatePage;
+  window.activatePage = function(p, o){ prev(p, o); if(p==='home') renderHome(); };
+  /* 기본 첫 화면 = 홈 (해시 없을 때) */
+  if(!location.hash){ activatePage('home', {skipHistory:true}); }
+  else if(location.hash==='#home'){ activatePage('home', {skipHistory:true}); }
+})();
+</script>
 </body>
 </html>
