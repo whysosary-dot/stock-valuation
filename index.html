@@ -3755,5 +3755,23 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
   if((location.hash||'').replace('#','')==='index') renderIndexNative();
 })();
 </script>
+
+<!-- ═══════ news 탭: 임베드 시 링크를 현재 창(_top)으로 (뒤로가기 체인 유지) ═══════ -->
+<script>
+(function(){
+  const fr = document.getElementById('news-frame');
+  if(!fr) return;
+  fr.addEventListener('load', function(){
+    try{
+      const doc = fr.contentDocument;
+      if(!doc) return;
+      doc.addEventListener('click', function(e){
+        const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+        if(a && /^https?:/i.test(a.href)) a.target = '_top';
+      }, true);
+    }catch(err){ /* cross-origin 등 접근 불가 시 무시 */ }
+  });
+})();
+</script>
 </body>
 </html>
