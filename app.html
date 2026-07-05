@@ -913,8 +913,12 @@ table{
   border-radius:var(--sk-radius);
   border-color:var(--border);
   box-shadow:var(--sk-shadow);
-  overflow:hidden;
+  /* overflow:hidden 금지 — 기업명·섹터 열고정(sticky)이 깨짐. 라운드는 셀 단위로 */
 }
+thead th:first-child{border-top-left-radius:var(--sk-radius)}
+thead th:last-child{border-top-right-radius:var(--sk-radius)}
+tbody tr:last-child td:first-child{border-bottom-left-radius:var(--sk-radius)}
+tbody tr:last-child td:last-child{border-bottom-right-radius:var(--sk-radius)}
 th,td{border-right-color:transparent;font-size:14px;padding:10px 13px}
 thead th{
   font-size:11.5px;font-weight:700;color:var(--text-dim);
