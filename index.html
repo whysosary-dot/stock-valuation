@@ -3698,6 +3698,15 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
 .ixn-card .src{font-size:11px;color:var(--text-dim);margin-bottom:8px}
 .ixn-box{height:170px;position:relative}
 .ixn-load{padding:50px;text-align:center;color:var(--text-dim);font-size:14px}
+.ixn-t{cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none}
+.ixn-t:hover{color:var(--accent)}
+.ixn-toggle{margin-left:auto;font-size:11px;font-weight:700;color:var(--accent);white-space:nowrap}
+.ixn-data{max-height:280px;overflow:auto;border:1px solid var(--panel-2);border-radius:10px}
+.ixn-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.ixn-tbl th{position:sticky;top:0;background:var(--header);font-size:10.5px;color:var(--text-dim);text-align:right;padding:6px 9px;border-bottom:1px solid var(--border)}
+.ixn-tbl th:first-child,.ixn-tbl td:first-child{text-align:left}
+.ixn-tbl td{padding:5.5px 9px;text-align:right;border-bottom:1px solid var(--panel-2);font-variant-numeric:tabular-nums}
+.ixn-tbl tr:last-child td{border-bottom:none}
 </style>
 <script>
 (function(){
@@ -3730,9 +3739,10 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
       const inds = extractArr(html, 'const INDICATORS');
       if(!inds || !inds.length) throw new Error('no data');
       box.innerHTML = '<div class="ixn-grid">' + inds.map((ind,i)=>`
-        <div class="ixn-card"><h4>${ind.name} <span style="font-weight:400;font-size:11px;color:var(--text-dim)">${ind.unit||''}</span></h4>
+        <div class="ixn-card"><h4 class="ixn-t" data-i="${i}">${ind.name} <span style="font-weight:400;font-size:11px;color:var(--text-dim)">${ind.unit||''}</span><span class="ixn-toggle">데이터 ▸</span></h4>
         <div class="src">${ind.source||''}${ind.category?' · '+ind.category:''}</div>
-        <div class="ixn-box"><canvas id="ixn-${i}"></canvas></div></div>`).join('') + '</div>';
+        <div class="ixn-box"><canvas id="ixn-${i}"></canvas></div>
+        <div class="ixn-data" id="ixnd-${i}" hidden></div></div>`).join('') + '</div>';
       inds.forEach((ind,i)=>{
         const data = (ind.data||[]).filter(d=>d&&d.value!=null);
         const cv = document.getElementById('ixn-'+i); if(!cv||!data.length) return;
@@ -3745,6 +3755,27 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
             scales:{ x:{ticks:{maxTicksLimit:6,font:{size:9.5},color:'#9aa3b8'},grid:{display:false}},
               y:{ticks:{font:{size:9.5},color:'#9aa3b8',maxTicksLimit:5},grid:{color:'#f0f2f7'}} } } });
       });
+      /* 지표 이름 클릭 → 차트 ↔ raw 데이터 테이블 토글 */
+      box.querySelectorAll('.ixn-t').forEach(t=>t.addEventListener('click', ()=>{
+        const i = +t.dataset.i, ind = inds[i];
+        const dv = document.getElementById('ixnd-'+i);
+        const cb = t.closest('.ixn-card').querySelector('.ixn-box');
+        const tg = t.querySelector('.ixn-toggle');
+        if(dv.hidden){
+          if(!dv.innerHTML){
+            const rows = (ind.data||[]).filter(d=>d&&d.value!=null).slice().reverse();
+            dv.innerHTML = '<table class="ixn-tbl"><thead><tr><th>기간</th><th>값'+(ind.unit?' ('+ind.unit+')':'')+'</th><th>전기比</th></tr></thead><tbody>'
+              + rows.map((d,j)=>{ const prev = rows[j+1];
+                  const chg = (prev&&prev.value) ? (d.value/prev.value-1)*100 : null;
+                  return `<tr><td>${d.label}</td><td>${Number(d.value).toLocaleString()}</td>
+                    <td style="color:${chg==null?'#9aa3b8':(chg>=0?'#d3273e':'#2f56e8')};font-weight:600">${chg==null?'–':(chg>0?'+':'')+chg.toFixed(1)+'%'}</td></tr>`; }).join('')
+              + '</tbody></table>';
+          }
+          dv.hidden = false; cb.style.display = 'none'; tg.textContent = '차트 ▸';
+        } else {
+          dv.hidden = true; cb.style.display = ''; tg.textContent = '데이터 ▸';
+        }
+      }));
     }catch(e){
       box.innerHTML = '<div class="ixn-load">지표 데이터를 불러오지 못했습니다. <button class="btn" onclick="location.reload()">새로고침</button></div>';
       loaded = false;
