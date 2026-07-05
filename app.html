@@ -215,10 +215,15 @@ table.tbl{border-collapse:collapse;width:100%;font-size:13px;min-width:640px}
 .aw-card .ins{font-size:12.5px;line-height:1.6;color:var(--text)}
 .aw-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
 /* 지표 */
-.ind-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
-.ind-card h4{margin:0 0 2px;font-size:14px;font-weight:700}
-.ind-card .src{font-size:10.5px;color:var(--faint);margin-bottom:8px}
-.ind-card .chart-box{height:150px;position:relative}
+.ind-grid{gap:20px}
+.ind-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px 26px 22px;
+  box-shadow:var(--shadow);transition:box-shadow .2s,transform .2s}
+.ind-card:hover{box-shadow:0 6px 18px rgba(16,24,40,.09);transform:translateY(-1px)}
+.ind-card h4{margin:0 0 4px;font-size:17px;font-weight:800;letter-spacing:-.2px}
+.ind-card h4 .unit{font-weight:400;font-size:13px;color:var(--faint);margin-left:6px}
+.ind-card .src{font-size:12.5px;color:var(--faint);margin-bottom:18px}
+.ind-card .chart-box{height:230px;position:relative}
+@media(max-width:720px){.ind-card{padding:20px 18px 18px}.ind-card .chart-box{height:190px}}
 /* 노트 */
 .note-row{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:13px 15px;
   margin-bottom:9px;cursor:pointer;box-shadow:var(--shadow)}
@@ -1417,9 +1422,9 @@ async function renderIndicators(){
     });
     if(!inds||!inds.length) throw new Error('no data');
     el.innerHTML = subnavHTML('research','indicators') + `
-    <div class="grid g2">${inds.map((ind,i)=>`
+    <div class="grid g2 ind-grid">${inds.map((ind,i)=>`
       <div class="ind-card">
-        <h4>${esc(ind.name)} <span style="font-weight:400;font-size:11px;color:var(--faint)">${esc(ind.unit||'')}</span></h4>
+        <h4>${esc(ind.name)}<span class="unit">${esc(ind.unit||'')}</span></h4>
         <div class="src">${esc(ind.source||'')} · ${esc(ind.category||'')}</div>
         <div class="chart-box"><canvas id="ind-${i}"></canvas></div>
       </div>`).join('')}</div>`;
@@ -1427,14 +1432,16 @@ async function renderIndicators(){
       const data = (ind.data||[]).filter(d=>d&&d.value!=null);
       const cv = document.getElementById('ind-'+i); if(!cv||!data.length) return;
       charts['ind'+i]?.destroy();
+      const c = ind.color||'#2563eb';
       charts['ind'+i] = new Chart(cv, { type:'line',
         data:{ labels:data.map(d=>d.label), datasets:[{ data:data.map(d=>d.value),
-          borderColor:ind.color||'#2563eb', borderWidth:2, pointRadius:data.length>40?0:2,
-          pointHitRadius:8, tension:.25, fill:false }] },
+          borderColor:c, backgroundColor:c, borderWidth:2.5, pointRadius:data.length>40?0:4,
+          pointBackgroundColor:c, pointBorderColor:c, pointHoverRadius:6,
+          pointHitRadius:10, tension:.3, fill:false }] },
         options:{ responsive:true, maintainAspectRatio:false,
           plugins:{ legend:{display:false} },
-          scales:{ x:{ticks:{maxTicksLimit:6,font:{size:9.5},color:'#9ca3af'},grid:{display:false}},
-            y:{ticks:{font:{size:9.5},color:'#9ca3af',maxTicksLimit:5},grid:{color:'#f0f2f6'}} } } });
+          scales:{ x:{ticks:{maxTicksLimit:6,font:{size:12},color:'#9ca3af'},grid:{display:false}},
+            y:{ticks:{font:{size:12},color:'#9ca3af',maxTicksLimit:5},grid:{color:'#eef1f6'}} } } });
     });
   }catch(e){
     el.innerHTML = subnavHTML('research','indicators') + '<div class="card empty">지표 데이터를 불러오지 못했습니다.</div>';
