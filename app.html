@@ -26,6 +26,7 @@
   --side-w:224px; --tab-h:58px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif;
@@ -199,6 +200,22 @@ table.tbl{border-collapse:collapse;width:100%;font-size:13px;min-width:640px}
 .link-card .d{font-size:11px;color:var(--faint);margin-top:2px}
 .section-title{font-size:16px;font-weight:800;margin:22px 2px 10px;letter-spacing:-.3px}
 .section-title:first-child{margin-top:8px}
+/* 앱 런처 & 뷰어 */
+.qapps{display:flex;gap:13px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 2px 10px;scrollbar-width:none}
+.qapps::-webkit-scrollbar{display:none}
+.qapp{flex:none;width:62px;border:none;background:none;cursor:pointer;font-family:inherit;text-align:center;padding:0}
+.qapp .qi{width:54px;height:54px;margin:0 auto;border-radius:16px;background:var(--card);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:var(--shadow)}
+.qapp:active .qi{transform:scale(.93)}
+.qapp .qt{display:block;font-size:10.5px;font-weight:600;color:var(--dim);margin-top:5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.appview{position:fixed;inset:0;z-index:90;background:var(--bg);display:flex;flex-direction:column}
+.appview-hd{flex:none;display:flex;align-items:center;gap:8px;padding:8px 12px;
+  padding-top:calc(8px + env(safe-area-inset-top));background:var(--card);border-bottom:1px solid var(--border)}
+.appview-chips{display:flex;gap:6px;overflow-x:auto;flex:1;scrollbar-width:none;padding:2px;-webkit-overflow-scrolling:touch}
+.appview-chips::-webkit-scrollbar{display:none}
+#av-frames{flex:1;position:relative;background:#fff}
+#av-frames iframe{position:absolute;inset:0;width:100%;height:100%;border:none;background:#fff}
 /* 로딩/토스트 */
 #loading{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;
   gap:14px;align-items:center;justify-content:center;color:var(--dim);font-size:14px}
@@ -228,11 +245,19 @@ canvas{max-width:100%}
       <section id="page-screener" class="page"></section>
       <section id="page-valuation" class="page"></section>
       <section id="page-compare" class="page"></section>
-      <section id="page-more" class="page"></section>
+      <section id="page-apps" class="page"></section>
     </main>
   </div>
 </div>
 <nav class="tabbar"><div class="tabbar-inner" id="nav-bottom"></div></nav>
+<div class="appview" id="appview" hidden>
+  <div class="appview-hd">
+    <button class="icon-btn" id="av-close">✕</button>
+    <div class="appview-chips" id="av-chips"></div>
+    <a class="icon-btn" id="av-ext" target="_blank" rel="noopener" style="text-decoration:none" title="새 탭에서 열기">↗</a>
+  </div>
+  <div id="av-frames"></div>
+</div>
 <div class="modal-ov" id="modal-ov" hidden><div class="modal" id="modal"></div></div>
 <div id="loading"><div class="spinner"></div><div>데이터 불러오는 중…</div></div>
 <script>
@@ -328,11 +353,11 @@ const ICONS = {
   screener:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.8-3.8"/></svg>',
   valuation:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>',
   compare:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 3 6-7 3 3"/><path d="M3 21h18"/></svg>',
-  more:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>'
+  apps:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg>'
 };
 const PAGES = [
   {id:'home', label:'홈'}, {id:'heatmap', label:'히트맵'}, {id:'screener', label:'스크리너'},
-  {id:'valuation', label:'밸류'}, {id:'compare', label:'비교'}, {id:'more', label:'더보기'} ];
+  {id:'valuation', label:'밸류'}, {id:'compare', label:'비교'}, {id:'apps', label:'앱'} ];
 let currentPage = 'home';
 function buildNav(){
   $('#nav-side').innerHTML = PAGES.map(p=>
@@ -350,7 +375,7 @@ function showPage(id, force){
   try{ history.replaceState(null,'','#'+id); }catch(e){}
   if(!rendered[id]||force){
     ({home:renderHome, heatmap:renderHeatmap, screener:renderScreener,
-      valuation:renderValuation, compare:renderCompare, more:renderMore})[id]?.();
+      valuation:renderValuation, compare:renderCompare, apps:renderApps})[id]?.();
     rendered[id]=true;
   }
 }
@@ -399,6 +424,8 @@ function renderHome(){
       <div class="val" style="font-size:16px">${esc((META.updated_at||'').replace('T',' ').slice(5,16))}</div>
       <div class="cap">stocks.json 자동 갱신</div></div>
   </div>
+  <div class="section-title">🚀 내 앱</div>
+  <div class="qapps">${APPS.map(a=>`<button class="qapp" data-app="${a.id}"><span class="qi">${a.ic}</span><span class="qt">${esc(a.name)}</span></button>`).join('')}</div>
   <div class="section-title">⭐ 즐겨찾기</div>
   ${favs.length ? `<div class="hscroll" id="fav-strip"></div>` : `<div class="card empty">즐겨찾기가 없습니다. 종목 상세나 밸류 탭에서 ★를 눌러 추가하세요.</div>`}
   <div class="grid g2" style="margin-top:16px">
@@ -440,6 +467,7 @@ function renderHome(){
   }).join('');
   el.querySelectorAll('.mv-row').forEach(r=>r.addEventListener('click',()=>{
     const s = STOCKS.find(x=>x.ticker===r.dataset.t); if(s) openDetail(s); }));
+  el.querySelectorAll('.qapp').forEach(b=>b.addEventListener('click',()=>openApp(b.dataset.app)));
 }
 
 /* ═══════════ 히트맵 ═══════════ */
@@ -881,30 +909,30 @@ function drawQuarterly(s){
         y:{ticks:{font:{size:10},color:'#9ca3af'},grid:{color:'#f0f2f6'}} } } });
 }
 
-/* ═══════════ 더보기 ═══════════ */
+/* ═══════════ 앱 (임베드 런처) ═══════════ */
 const APPS = [
-  ['📋','기존 대시보드','밸류에이션 원본 테이블','index.html'],
-  ['📅','투자 캘린더','섹터별 일정 관리','https://whysosary-dot.github.io/investment-calendar/'],
-  ['📈','투자 지표','매크로/인덱스','https://whysosary-dot.github.io/invest-index/'],
-  ['🎯','TP 트래커','목표가 추적','https://whysosary-dot.github.io/tp-tracker/'],
-  ['🔍','스톡 스크리너','조건 검색','https://whysosary-dot.github.io/stock-screener/'],
-  ['📢','DART 모니터링','공시 감시','https://whysosary-dot.github.io/dart-monitoring/'],
-  ['🗞️','증권 사이트 모음','뉴스/리서치 링크','https://whysosary-dot.github.io/stock-sites/'],
-  ['🇺🇸','미국 마켓 브리핑','US 시황','https://whysosary-dot.github.io/us-market-briefing/'],
-  ['🇰🇷','한국 마켓 브리핑','KR 시황','https://whysosary-dot.github.io/kr-market-briefing/'],
-  ['⏰','Awake 공시','공시 알림','https://whysosary-dot.github.io/awake-disclosure/'],
-  ['🧾','실적 대시보드','코스피/코스닥 실적','https://whysosary-dot.github.io/kospi-kosdaq-dashboard/'],
-  ['👀','관심종목 브리핑','워치리스트','https://whysosary-dot.github.io/watchlist-briefing/'],
-  ['📚','투자 노트','리서치 노트','https://whysosary-dot.github.io/investment-notes/'],
-  ['💹','ETF 모니터','ETF 추적','https://whysosary-dot.github.io/etf-monitor/'],
-  ['🏛️','FnGuide','기업 리포트','https://comp.fnguide.com/SVO2/ASP/SVD_Report_Summary.asp?pGB=1&gicode=A005930&cID=&MenuYn=Y&ReportGB=&NewMenuID=901&stkGb=701'],
+  {id:'dash',    ic:'📋', name:'대시보드',     desc:'밸류에이션 원본 테이블', url:'index.html'},
+  {id:'calendar',ic:'📅', name:'투자 캘린더',  desc:'섹터별 일정 관리', url:'https://whysosary-dot.github.io/investment-calendar/'},
+  {id:'invidx',  ic:'📈', name:'투자 지표',    desc:'매크로/인덱스', url:'https://whysosary-dot.github.io/invest-index/'},
+  {id:'tp',      ic:'🎯', name:'TP 트래커',    desc:'목표가 추적', url:'https://whysosary-dot.github.io/tp-tracker/'},
+  {id:'scr',     ic:'🔍', name:'스크리너',     desc:'조건 검색', url:'https://whysosary-dot.github.io/stock-screener/'},
+  {id:'dart',    ic:'📢', name:'DART',        desc:'공시 모니터링', url:'https://whysosary-dot.github.io/dart-monitoring/'},
+  {id:'news',    ic:'🗞️', name:'증권 사이트',  desc:'뉴스/리서치 링크', url:'https://whysosary-dot.github.io/stock-sites/'},
+  {id:'us',      ic:'🇺🇸', name:'US 브리핑',   desc:'미국 시황', url:'https://whysosary-dot.github.io/us-market-briefing/'},
+  {id:'kr',      ic:'🇰🇷', name:'KR 브리핑',   desc:'한국 시황', url:'https://whysosary-dot.github.io/kr-market-briefing/'},
+  {id:'awake',   ic:'⏰', name:'Awake 공시',  desc:'공시 알림', url:'https://whysosary-dot.github.io/awake-disclosure/'},
+  {id:'earn',    ic:'🧾', name:'실적',        desc:'코스피/코스닥 실적', url:'https://whysosary-dot.github.io/kospi-kosdaq-dashboard/'},
+  {id:'watch',   ic:'👀', name:'관심종목',     desc:'워치리스트 브리핑', url:'https://whysosary-dot.github.io/watchlist-briefing/'},
+  {id:'notes',   ic:'📚', name:'투자 노트',    desc:'리서치 노트', url:'https://whysosary-dot.github.io/investment-notes/'},
+  {id:'etf',     ic:'💹', name:'ETF 모니터',   desc:'ETF 추적', url:'https://whysosary-dot.github.io/etf-monitor/'},
+  {id:'fng',     ic:'🏛️', name:'FnGuide',     desc:'기업 리포트', url:'https://comp.fnguide.com/SVO2/ASP/SVD_Report_Summary.asp?pGB=1&gicode=A005930&cID=&MenuYn=Y&ReportGB=&NewMenuID=901&stkGb=701'},
 ];
-function renderMore(){
-  $('#page-more').innerHTML = `
-  <div class="section-title">내 투자 앱</div>
+function renderApps(){
+  $('#page-apps').innerHTML = `
+  <div class="section-title">내 투자 앱 <span style="font-weight:400;font-size:12px;color:var(--faint)">탭하면 InvestHub 안에서 바로 열립니다</span></div>
   <div class="link-grid">
-    ${APPS.map(([ic,t,d,u])=>`<a class="link-card" href="${u}" target="${u.startsWith('http')?'_blank':'_self'}" rel="noopener">
-      <div class="ic">${ic}</div><div class="t">${esc(t)}</div><div class="d">${esc(d)}</div></a>`).join('')}
+    ${APPS.map(a=>`<a class="link-card" href="javascript:void(0)" data-app="${a.id}">
+      <div class="ic">${a.ic}</div><div class="t">${esc(a.name)}</div><div class="d">${esc(a.desc)}</div></a>`).join('')}
   </div>
   <div class="section-title">정보</div>
   <div class="card" style="font-size:13px;color:var(--dim);line-height:1.8">
@@ -913,7 +941,40 @@ function renderMore(){
     즐겨찾기(★)는 이 기기 브라우저에만 저장됩니다.<br>
     가격 표시는 현지 통화, 시가총액은 원화 환산(억원) 기준입니다.
   </div>`;
+  $('#page-apps').querySelectorAll('[data-app]').forEach(c=>
+    c.addEventListener('click', ()=>openApp(c.dataset.app)));
 }
+/* 임베드 뷰어: 한 번 연 앱의 iframe은 유지 → 재진입 즉시 표시 */
+let avBuilt = false;
+function openApp(id){
+  const av = $('#appview');
+  if(!avBuilt){
+    $('#av-chips').innerHTML = APPS.map(a=>`<button class="chip" data-a="${a.id}">${a.ic} ${esc(a.name)}</button>`).join('');
+    $('#av-chips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>switchApp(c.dataset.a)));
+    $('#av-close').addEventListener('click', closeAppView);
+    avBuilt = true;
+  }
+  av.hidden = false; document.body.style.overflow = 'hidden';
+  switchApp(id);
+}
+function switchApp(id){
+  const app = APPS.find(a=>a.id===id); if(!app) return;
+  $('#av-ext').href = app.url;
+  $('#av-chips').querySelectorAll('.chip').forEach(c=>{
+    const on = c.dataset.a===id;
+    c.classList.toggle('active', on);
+    if(on) c.scrollIntoView({inline:'center', block:'nearest', behavior:'smooth'});
+  });
+  let f = document.getElementById('avf-'+id);
+  if(!f){
+    f = document.createElement('iframe');
+    f.id = 'avf-'+id; f.src = app.url;
+    $('#av-frames').appendChild(f);
+  }
+  document.querySelectorAll('#av-frames iframe').forEach(x=>
+    x.style.display = (x.id==='avf-'+id) ? 'block' : 'none');
+}
+function closeAppView(){ $('#appview').hidden = true; document.body.style.overflow = ''; }
 
 /* ═══════════ 시작 ═══════════ */
 buildNav();
