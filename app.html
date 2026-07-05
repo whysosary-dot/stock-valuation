@@ -3688,5 +3688,74 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
 })();
 // ────────────────────────────────────────────────────────────────
 </script>
+
+<!-- ═══════ 지표 탭 네이티브 렌더링 (클릭 없이 전체 차트 한눈에) ═══════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+#index-native{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:14px 16px 26px}
+.ixn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;max-width:1280px;margin:0 auto}
+@media(max-width:700px){.ixn-grid{grid-template-columns:1fr}}
+.ixn-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--sk-radius,14px);padding:14px;box-shadow:var(--sk-shadow,0 1px 3px rgba(0,0,0,.05))}
+.ixn-card h4{margin:0 0 2px;font-size:14px;font-weight:700}
+.ixn-card .src{font-size:11px;color:var(--text-dim);margin-bottom:8px}
+.ixn-box{height:170px;position:relative}
+.ixn-load{padding:50px;text-align:center;color:var(--text-dim);font-size:14px}
+</style>
+<script>
+(function(){
+  const page = document.getElementById('page-index');
+  if(!page) return;
+  page.innerHTML = '<div id="index-native"><div class="ixn-load">지표 불러오는 중…</div></div>';
+  try{ delete IFRAME_TAB_SRC.index; }catch(e){}
+  let loaded = false;
+  function extractArr(txt, marker){
+    const i = txt.indexOf(marker); if(i<0) return null;
+    const start = txt.indexOf('[', i);
+    let d=0, inStr=null, escp=false;
+    for(let j=start;j<txt.length;j++){
+      const c = txt[j];
+      if(inStr){ if(escp)escp=false; else if(c==='\\')escp=true; else if(c===inStr)inStr=null; continue; }
+      if(c==='"'||c==="'"||c==='`'){ inStr=c; continue; }
+      if(c==='/'&&txt[j+1]==='/'){ j=txt.indexOf('\n',j); if(j<0)break; continue; }
+      if(c==='/'&&txt[j+1]==='*'){ j=txt.indexOf('*/',j)+1; if(j<1)break; continue; }
+      if(c==='[') d++;
+      else if(c===']'){ d--; if(!d){ try{ return new Function('return '+txt.slice(start,j+1))(); }catch(e){ return null; } } }
+    }
+    return null;
+  }
+  async function renderIndexNative(){
+    if(loaded) return; loaded = true;
+    const box = document.getElementById('index-native');
+    try{
+      const r = await fetch('https://raw.githubusercontent.com/whysosary-dot/invest-index/main/index.html?t='+Math.floor(Date.now()/3e5), {cache:'no-store'});
+      const html = await r.text();
+      const inds = extractArr(html, 'const INDICATORS');
+      if(!inds || !inds.length) throw new Error('no data');
+      box.innerHTML = '<div class="ixn-grid">' + inds.map((ind,i)=>`
+        <div class="ixn-card"><h4>${ind.name} <span style="font-weight:400;font-size:11px;color:var(--text-dim)">${ind.unit||''}</span></h4>
+        <div class="src">${ind.source||''}${ind.category?' · '+ind.category:''}</div>
+        <div class="ixn-box"><canvas id="ixn-${i}"></canvas></div></div>`).join('') + '</div>';
+      inds.forEach((ind,i)=>{
+        const data = (ind.data||[]).filter(d=>d&&d.value!=null);
+        const cv = document.getElementById('ixn-'+i); if(!cv||!data.length) return;
+        new Chart(cv, { type:'line',
+          data:{ labels:data.map(d=>d.label), datasets:[{ data:data.map(d=>d.value),
+            borderColor:ind.color||'#3056f0', borderWidth:2,
+            pointRadius:data.length>40?0:2.5, pointHitRadius:8, tension:.25 }] },
+          options:{ responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{display:false} },
+            scales:{ x:{ticks:{maxTicksLimit:6,font:{size:9.5},color:'#9aa3b8'},grid:{display:false}},
+              y:{ticks:{font:{size:9.5},color:'#9aa3b8',maxTicksLimit:5},grid:{color:'#f0f2f7'}} } } });
+      });
+    }catch(e){
+      box.innerHTML = '<div class="ixn-load">지표 데이터를 불러오지 못했습니다. <button class="btn" onclick="location.reload()">새로고침</button></div>';
+      loaded = false;
+    }
+  }
+  const orig = window.activatePage;
+  window.activatePage = function(p, o){ orig(p, o); if(p==='index') renderIndexNative(); };
+  if((location.hash||'').replace('#','')==='index') renderIndexNative();
+})();
+</script>
 </body>
 </html>
