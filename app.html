@@ -215,15 +215,10 @@ table.tbl{border-collapse:collapse;width:100%;font-size:13px;min-width:640px}
 .aw-card .ins{font-size:12.5px;line-height:1.6;color:var(--text)}
 .aw-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
 /* 지표 */
-.ind-grid{gap:20px}
-.ind-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px 26px 22px;
-  box-shadow:var(--shadow);transition:box-shadow .2s,transform .2s}
-.ind-card:hover{box-shadow:0 6px 18px rgba(16,24,40,.09);transform:translateY(-1px)}
-.ind-card h4{margin:0 0 4px;font-size:17px;font-weight:800;letter-spacing:-.2px}
-.ind-card h4 .unit{font-weight:400;font-size:13px;color:var(--faint);margin-left:6px}
-.ind-card .src{font-size:12.5px;color:var(--faint);margin-bottom:18px}
-.ind-card .chart-box{height:230px;position:relative}
-@media(max-width:720px){.ind-card{padding:20px 18px 18px}.ind-card .chart-box{height:190px}}
+.ind-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+.ind-card h4{margin:0 0 2px;font-size:14px;font-weight:700}
+.ind-card .src{font-size:10.5px;color:var(--faint);margin-bottom:8px}
+.ind-card .chart-box{height:150px;position:relative}
 /* 노트 */
 .note-row{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:13px 15px;
   margin-bottom:9px;cursor:pointer;box-shadow:var(--shadow)}
@@ -297,6 +292,14 @@ table.tbl{border-collapse:collapse;width:100%;font-size:13px;min-width:640px}
 .empty{padding:30px;text-align:center;color:var(--faint);font-size:13.5px}
 .mini-spin{display:flex;justify-content:center;padding:36px}
 .mini-spin i{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tab-h) + env(safe-area-inset-bottom) + 18px);
+  z-index:300;background:#111827;color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;font-weight:600;
+  box-shadow:0 6px 20px rgba(0,0,0,.25);opacity:0;transition:opacity .25s;pointer-events:none;max-width:86vw;text-align:center}
+.toast.show{opacity:1}
+.ef-row{display:flex;gap:8px;margin-bottom:8px;align-items:center;font-size:12.5px}
+.ef-row label{width:86px;flex:none;color:var(--dim);font-weight:600}
+.ef-row input,.ef-row textarea,.ef-row select{flex:1}
+.ef-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
 canvas{max-width:100%}
 </style>
 </head>
@@ -311,6 +314,7 @@ canvas{max-width:100%}
     <header class="hdr">
       <div class="hdr-title" id="hdr-title">홈</div>
       <div class="hdr-meta" id="hdr-meta"></div>
+      <button class="icon-btn" id="btn-commit" title="GitHub 커밋 & 푸시" style="position:relative">☁️<span id="dirty-dot" hidden style="position:absolute;top:3px;right:3px;width:8px;height:8px;border-radius:50%;background:var(--up)"></span></button>
       <button class="icon-btn" id="btn-refresh" title="데이터 새로고침">&#8635;</button>
     </header>
     <main id="content">
@@ -349,6 +353,18 @@ const PAGES_URL = repo => `https://${OWNER}.github.io/${repo}/`;
 let STOCKS = [], META = { updated_at:'', usdkrw:0 };
 const FAV_KEY = 'ih_favs';
 let FAVS = {}; try { FAVS = JSON.parse(localStorage.getItem(FAV_KEY)||'{}'); } catch(e){ FAVS={}; }
+const LS_PAT_KEY = 'sv_github_pat';  /* 기존 대시보드와 토큰 공유 */
+const EDITS_KEY = 'ih_edits', DIARYL_KEY = 'ih_diary_local';
+let EDITS = {}; try{ EDITS = JSON.parse(localStorage.getItem(EDITS_KEY)||'{}'); }catch(e){ EDITS={}; }
+let DIARYL = {daily:{},weekly:{},trades:{}};
+try{ Object.assign(DIARYL, JSON.parse(localStorage.getItem(DIARYL_KEY)||'{}')); }catch(e){}
+const USER_FIELDS = ['target_cap_oku','safety_cap_oku','q1_op','q2_op','q3_op','q4_op','idea','favorite'];
+let lastLoad = 0;
+function saveEdits(){ localStorage.setItem(EDITS_KEY, JSON.stringify(EDITS)); markDirty(); }
+function saveDiaryL(){ localStorage.setItem(DIARYL_KEY, JSON.stringify(DIARYL)); markDirty(); }
+function hasDirty(){ return Object.keys(EDITS).length>0 || Object.keys(FAVS).length>0 ||
+  ['daily','weekly','trades'].some(k=>Object.keys(DIARYL[k]||{}).length>0); }
+function markDirty(){ const d = $('#dirty-dot'); if(d) d.hidden = !hasDirty(); }
 const rendered = {}, charts = {}, CACHE = {};
 
 /* ═══════════ 유틸 ═══════════ */
@@ -366,7 +382,7 @@ function fmtPrice(v,ccy){ if(v==null) return '–';
 const CCY_SYM = {KRW:'원',USD:'$',JPY:'¥',HKD:'HK$',TWD:'NT$',EUR:'€'};
 function normSector(sec){ if(!sec) return '기타'; return sec.startsWith('반도체')?'반도체':sec; }
 function isFav(s){ return FAVS[s.ticker] !== undefined ? !!FAVS[s.ticker] : !!s.favorite; }
-function toggleFav(s){ FAVS[s.ticker] = !isFav(s); localStorage.setItem(FAV_KEY, JSON.stringify(FAVS));
+function toggleFav(s){ FAVS[s.ticker] = !isFav(s); localStorage.setItem(FAV_KEY, JSON.stringify(FAVS)); markDirty();
   rendered.home = false; rendered.valuation = false;
   if(currentPage==='home') renderHome(); if(currentPage==='valuation') renderValuation(); }
 function naverUrl(s){
@@ -384,9 +400,10 @@ async function fetchText(url){
   const r = await fetch(url + (url.includes('?')?'&':'?') + 't=' + Math.floor(Date.now()/3e5), {cache:'no-store'});
   if(!r.ok) throw new Error(r.status); return await r.text(); }
 async function fetchJSON(url){ return JSON.parse(await fetchText(url)); }
-async function cached(key, fn){
-  if(CACHE[key]) return CACHE[key];
-  CACHE[key] = await fn(); return CACHE[key]; }
+async function cached(key, fn, ttl=600e3){
+  const c = CACHE[key];
+  if(c && Date.now()-c.t < ttl) return c.v;
+  const v = await fn(); CACHE[key] = {t:Date.now(), v}; return v; }
 /* JS 소스에서 배열 리터럴 추출 (주석 지원) */
 function extractArray(txt, marker){
   const i = txt.indexOf(marker); if(i<0) return null;
@@ -443,6 +460,8 @@ async function boot(refresh){
     const d = await loadStocks();
     META.updated_at = d.updated_at||''; META.usdkrw = d.usdkrw||0;
     STOCKS = (d.stocks||[]).filter(x=>x&&x.name).map(enrich);
+    STOCKS.forEach(s=>{ const e = EDITS[s.ticker]; if(e){ Object.assign(s, e); enrich(s); } });
+    lastLoad = Date.now(); markDirty();
     Object.keys(rendered).forEach(k=>rendered[k]=false);
     updateMeta(); showPage(currentPage, true);
   }catch(e){
@@ -535,7 +554,8 @@ function showPage(id, force){
   document.querySelectorAll('[data-bp]').forEach(b=>b.classList.toggle('active', b.dataset.bp===bk));
   $('#hdr-title').textContent = NAV.find(n=>n.id===id)?.label||'';
   try{ history.replaceState(null,'','#'+id); }catch(e){}
-  if(!rendered[id]||force){ RENDERERS[id]?.(); rendered[id]=true; }
+  const live = ['etf','calendar','briefing','awake','indicators','notes','diary','menu'].includes(id);
+  if(!rendered[id]||force||live){ RENDERERS[id]?.(); rendered[id]=true; }
 }
 
 /* ═══════════ 홈 ═══════════ */
@@ -842,7 +862,7 @@ function renderValuation(){
     <div class="card kpi"><div class="lbl">안전시총 이하</div>
       <div class="val">${cheap}종목</div><div class="cap">현재시총 ≤ 안전시총</div></div>
     <div class="card kpi"><div class="lbl">즐겨찾기</div>
-      <div class="val">${STOCKS.filter(isFav).length}종목</div><div class="cap">★ 클릭으로 토글 · 목표/안전시총 수정은 기존 대시보드에서</div></div>
+      <div class="val">${STOCKS.filter(isFav).length}종목</div><div class="cap">★ 토글 · 종목 상세에서 ✎ 수정 → 상단 ☁️ 커밋</div></div>
   </div>
   <div class="tbl-wrap" style="max-height:calc(100dvh - 330px);overflow-y:auto">
     <table class="tbl"><thead><tr id="val-head"></tr></thead><tbody id="val-body"></tbody></table>
@@ -1094,10 +1114,12 @@ function openDetail(s){
   ${hasQ?`<div class="m-sec-card"><h4>분기 실적 (억)</h4>
     <div style="height:170px;position:relative"><canvas id="dt-q"></canvas></div></div>`:''}
   ${(s.idea||s.memo)?`<div class="m-sec-card"><h4>${s.idea?'투자 아이디어':'메모'}</h4><div class="idea-txt">${esc(s.idea||s.memo)}</div></div>`:''}
+  ${isStock?`<div class="m-sec-card"><button class="chip" id="dt-edit" style="width:100%;text-align:center">✎ 목표·안전시총 / 분기 영업이익 / 아이디어 수정</button><div id="dt-edit-body" hidden></div></div>`:''}
   <a class="m-link" href="${naverUrl(s)}" target="_blank" rel="noopener">네이버 증권에서 보기 ↗</a>`;
   ov.hidden = false;
   $('#dt-close').addEventListener('click', closeDetail);
   if(isStock) $('#dt-star')?.addEventListener('click', ()=>{ toggleFav(s); $('#dt-star').classList.toggle('on', isFav(s)); });
+  $('#dt-edit')?.addEventListener('click', ()=>toggleEditForm(s));
   m.querySelectorAll('#dt-rng [data-r]').forEach(b=>b.addEventListener('click',()=>{
     dtRange = b.dataset.r;
     m.querySelectorAll('#dt-rng .chip').forEach(c=>c.classList.toggle('active',c.dataset.r===dtRange));
@@ -1422,9 +1444,9 @@ async function renderIndicators(){
     });
     if(!inds||!inds.length) throw new Error('no data');
     el.innerHTML = subnavHTML('research','indicators') + `
-    <div class="grid g2 ind-grid">${inds.map((ind,i)=>`
+    <div class="grid g2">${inds.map((ind,i)=>`
       <div class="ind-card">
-        <h4>${esc(ind.name)}<span class="unit">${esc(ind.unit||'')}</span></h4>
+        <h4>${esc(ind.name)} <span style="font-weight:400;font-size:11px;color:var(--faint)">${esc(ind.unit||'')}</span></h4>
         <div class="src">${esc(ind.source||'')} · ${esc(ind.category||'')}</div>
         <div class="chart-box"><canvas id="ind-${i}"></canvas></div>
       </div>`).join('')}</div>`;
@@ -1432,16 +1454,14 @@ async function renderIndicators(){
       const data = (ind.data||[]).filter(d=>d&&d.value!=null);
       const cv = document.getElementById('ind-'+i); if(!cv||!data.length) return;
       charts['ind'+i]?.destroy();
-      const c = ind.color||'#2563eb';
       charts['ind'+i] = new Chart(cv, { type:'line',
         data:{ labels:data.map(d=>d.label), datasets:[{ data:data.map(d=>d.value),
-          borderColor:c, backgroundColor:c, borderWidth:2.5, pointRadius:data.length>40?0:4,
-          pointBackgroundColor:c, pointBorderColor:c, pointHoverRadius:6,
-          pointHitRadius:10, tension:.3, fill:false }] },
+          borderColor:ind.color||'#2563eb', borderWidth:2, pointRadius:data.length>40?0:2,
+          pointHitRadius:8, tension:.25, fill:false }] },
         options:{ responsive:true, maintainAspectRatio:false,
           plugins:{ legend:{display:false} },
-          scales:{ x:{ticks:{maxTicksLimit:6,font:{size:12},color:'#9ca3af'},grid:{display:false}},
-            y:{ticks:{font:{size:12},color:'#9ca3af',maxTicksLimit:5},grid:{color:'#eef1f6'}} } } });
+          scales:{ x:{ticks:{maxTicksLimit:6,font:{size:9.5},color:'#9ca3af'},grid:{display:false}},
+            y:{ticks:{font:{size:9.5},color:'#9ca3af',maxTicksLimit:5},grid:{color:'#f0f2f6'}} } } });
     });
   }catch(e){
     el.innerHTML = subnavHTML('research','indicators') + '<div class="card empty">지표 데이터를 불러오지 못했습니다.</div>';
@@ -1511,62 +1531,132 @@ function openNoteModal(c){
 }
 RENDERERS.notes = renderNotes;
 
-/* ═══════════ 다이어리 ═══════════ */
-let DIARY = null, diaryTab = 'daily', diaryQ = '';
+/* ═══════════ 다이어리 (읽기 + 작성 + 커밋) ═══════════ */
+let DIARY_GH = null, diaryTab = 'daily', diaryQ = '';
+function diaryMerged(){
+  const gh = DIARY_GH||{};
+  return { daily:{...(gh.daily||{}), ...DIARYL.daily},
+           weekly:{...(gh.weekly||{}), ...DIARYL.weekly},
+           trades:{...(gh.trades||{}), ...DIARYL.trades} };
+}
+function getWeekKey(d){
+  const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = dt.getUTCDay()||7; dt.setUTCDate(dt.getUTCDate()+4-day);
+  const y = dt.getUTCFullYear();
+  const wk = Math.ceil(((dt - Date.UTC(y,0,1))/864e5 + 1)/7);
+  return `${y}-W${String(wk).padStart(2,'0')}`;
+}
+function diaryRender(html){
+  return /<\w+[^>]*>/.test(html) ? html : esc(html).replace(/\n/g,'<br>');
+}
 async function renderDiary(){
   const el = $('#page-diary');
   el.innerHTML = subnavHTML('research','diary') + spin;
   try{
-    DIARY = await cached('diary', async ()=>{
+    DIARY_GH = await cached('diary', async ()=>{
       try{ return await fetchJSON(RAW('stock-valuation','diary.json')); }
-      catch(e){ return await fetchJSON('diary.json'); }
-    });
-    el.innerHTML = subnavHTML('research','diary') + `
-    <div class="controls">
-      <button class="chip ${diaryTab==='daily'?'active':''}" data-dt="daily">일간</button>
-      <button class="chip ${diaryTab==='weekly'?'active':''}" data-dt="weekly">주간</button>
-      <button class="chip ${diaryTab==='trades'?'active':''}" data-dt="trades">매매일지</button>
-      <input class="inp" id="diary-q" placeholder="검색" style="flex:1;min-width:100px" value="${esc(diaryQ)}">
-    </div>
-    <div id="diary-list"></div>
-    <div style="font-size:11px;color:var(--faint);text-align:center;margin-top:6px">작성·수정은 기존 대시보드 다이어리 탭에서</div>`;
-    el.querySelectorAll('[data-dt]').forEach(b=>b.addEventListener('click',()=>{
-      diaryTab = b.dataset.dt;
-      el.querySelectorAll('[data-dt]').forEach(c=>c.classList.toggle('active',c.dataset.dt===diaryTab));
-      drawDiary();
-    }));
-    $('#diary-q').addEventListener('input', e=>{ diaryQ=e.target.value.trim().toLowerCase(); drawDiary(); });
+      catch(e){ return await fetchJSON('diary.json'); } });
+  }catch(e){ DIARY_GH = {daily:{},weekly:{},trades:{}}; }
+  el.innerHTML = subnavHTML('research','diary') + `
+  <div class="controls">
+    <button class="chip ${diaryTab==='daily'?'active':''}" data-dt="daily">일간</button>
+    <button class="chip ${diaryTab==='weekly'?'active':''}" data-dt="weekly">주간</button>
+    <button class="chip ${diaryTab==='trades'?'active':''}" data-dt="trades">매매일지</button>
+    <input class="inp" id="diary-q" placeholder="검색" style="flex:1;min-width:90px" value="${esc(diaryQ)}">
+    <button class="chip" id="diary-add" style="background:var(--accent);border-color:var(--accent);color:#fff">＋ 작성</button>
+  </div>
+  <div id="diary-list"></div>`;
+  el.querySelectorAll('[data-dt]').forEach(b=>b.addEventListener('click',()=>{
+    diaryTab = b.dataset.dt;
+    el.querySelectorAll('[data-dt]').forEach(c=>c.classList.toggle('active',c.dataset.dt===diaryTab));
     drawDiary();
-  }catch(e){
-    el.innerHTML = subnavHTML('research','diary') + '<div class="card empty">다이어리를 불러오지 못했습니다.</div>';
-  }
+  }));
+  $('#diary-q').addEventListener('input', e=>{ diaryQ=e.target.value.trim().toLowerCase(); drawDiary(); });
+  $('#diary-add').addEventListener('click', ()=>openDiaryEditor(diaryTab, null));
+  drawDiary();
 }
 function drawDiary(){
-  const box = $('#diary-list'); if(!box||!DIARY) return;
+  const box = $('#diary-list'); if(!box) return;
+  const M = diaryMerged();
   if(diaryTab==='trades'){
-    const days = Object.entries(DIARY.trades||{}).sort((a,b)=>b[0].localeCompare(a[0]));
+    const days = Object.entries(M.trades).sort((a,b)=>b[0].localeCompare(a[0]));
     box.innerHTML = days.map(([d, arr])=>{
       let list = Array.isArray(arr)?arr:[];
-      if(diaryQ) list = list.filter(t=>(t.name+' '+(t.memo||'')).toLowerCase().includes(diaryQ));
+      if(diaryQ) list = list.filter(t=>((t.name||'')+' '+(t.memo||'')).toLowerCase().includes(diaryQ));
       if(!list.length) return '';
       return `<div class="diary-card"><div class="dt">${fmtDate(d)}</div>
         ${list.map(t=>`<div class="trade-row">
           <span class="bdg ${t.type==='매수'?'u':'d'}">${esc(t.type||'')}</span>
           <b>${esc(t.name||'')}</b>
           <span style="color:var(--dim)">${Number(t.qty||0).toLocaleString()}주 × ${Number(t.price||0).toLocaleString()}원</span>
+          <span class="star" style="margin-left:auto;font-size:13px" data-del="${d}|${esc(String(t.id||''))}">✕</span>
           ${t.memo?`<div class="memo">${esc(t.memo)}</div>`:''}
         </div>`).join('')}</div>`;
-    }).join('')||'<div class="card empty">매매 기록이 없습니다.</div>';
+    }).join('')||'<div class="card empty">매매 기록이 없습니다. ＋ 작성으로 추가하세요.</div>';
+    box.querySelectorAll('[data-del]').forEach(x=>x.addEventListener('click',()=>{
+      const [d,id] = x.dataset.del.split('|');
+      if(!confirm('이 매매 기록을 삭제할까요?')) return;
+      DIARYL.trades[d] = (M.trades[d]||[]).filter(t=>String(t.id)!==id);
+      saveDiaryL(); drawDiary(); toast('삭제됨 — ☁️ 커밋 대기');
+    }));
   } else {
-    const data = DIARY[diaryTab]||{};
-    let entries = Object.entries(data).sort((a,b)=>b[0].localeCompare(a[0]));
+    let entries = Object.entries(M[diaryTab]||{}).sort((a,b)=>b[0].localeCompare(a[0]));
     if(diaryQ) entries = entries.filter(([d,html])=>
       (d+' '+String(html).replace(/<[^>]*>/g,'')).toLowerCase().includes(diaryQ));
     box.innerHTML = entries.slice(0,60).map(([d, html])=>`
-      <div class="diary-card"><div class="dt">${diaryTab==='daily'?fmtDate(d):esc(d)}</div>
-        <div class="diary-body">${html}</div></div>`).join('')
-      ||'<div class="card empty">기록이 없습니다.</div>';
+      <div class="diary-card"><div class="dt">${diaryTab==='daily'?fmtDate(d):esc(d)}
+        <button class="chip sm" style="float:right" data-ed="${esc(d)}">✎</button></div>
+        <div class="diary-body">${diaryRender(String(html))}</div></div>`).join('')
+      ||'<div class="card empty">기록이 없습니다. ＋ 작성으로 추가하세요.</div>';
+    box.querySelectorAll('[data-ed]').forEach(b=>b.addEventListener('click',()=>
+      openDiaryEditor(diaryTab, b.dataset.ed)));
   }
+}
+function openDiaryEditor(tab, key){
+  const merged = diaryMerged();
+  const m = $('#modal');
+  if(tab==='trades'){
+    m.innerHTML = `<div class="m-grab"></div>
+    <div class="m-head"><div class="nm">매매 기록 추가</div><button class="icon-btn x" id="de-close">✕</button></div>
+    <div style="margin-top:14px">
+    <div class="ef-row"><label>날짜</label><input class="inp" id="de-date" type="date" value="${ymd(new Date())}"></div>
+    <div class="ef-row"><label>구분</label><select class="sel" id="de-type"><option>매수</option><option>매도</option></select></div>
+    <div class="ef-row"><label>종목명</label><input class="inp" id="de-name" placeholder="예: 삼성전자"></div>
+    <div class="ef-row"><label>수량</label><input class="inp" id="de-qty" type="number" inputmode="numeric"></div>
+    <div class="ef-row"><label>가격(원)</label><input class="inp" id="de-price" type="number" inputmode="numeric"></div>
+    <div class="ef-row" style="align-items:flex-start"><label>메모</label><textarea class="inp" id="de-memo" rows="3" style="flex:1"></textarea></div>
+    <button class="m-link" id="de-save">저장 (☁️로 커밋)</button></div>`;
+    $('#modal-ov').hidden = false;
+    $('#de-close').addEventListener('click', closeDetail);
+    $('#de-save').addEventListener('click', ()=>{
+      const d = $('#de-date').value;
+      if(!d || !$('#de-name').value.trim()){ toast('날짜와 종목명을 입력하세요'); return; }
+      const arr = (merged.trades[d]||[]).slice();
+      arr.push({ id: Math.random().toString(36).slice(2,10), type: $('#de-type').value,
+        name: $('#de-name').value.trim(), qty: $('#de-qty').value, price: $('#de-price').value,
+        memo: $('#de-memo').value.trim() });
+      DIARYL.trades[d] = arr; saveDiaryL(); closeDetail(); drawDiary(); toast('저장됨 — ☁️ 커밋 대기');
+    });
+    return;
+  }
+  const isNew = !key;
+  key = key || (tab==='daily' ? ymd(new Date()) : getWeekKey(new Date()));
+  const cur = merged[tab][key]||'';
+  m.innerHTML = `<div class="m-grab"></div>
+  <div class="m-head"><div><div class="nm">${tab==='daily'?'일간':'주간'} 기록 ${isNew?'작성':'수정'}</div>
+    <div class="sec">${esc(key)}</div></div><button class="icon-btn x" id="de-close">✕</button></div>
+  <div style="margin-top:14px">
+  ${isNew?`<div class="ef-row"><label>${tab==='daily'?'날짜':'주차'}</label><input class="inp" id="de-key" value="${esc(key)}" ${tab==='daily'?'type="date"':''}></div>`:''}
+  <textarea class="inp" id="de-text" rows="11" style="width:100%;line-height:1.65">${esc(String(cur))}</textarea>
+  <div style="font-size:11px;color:var(--faint);margin:6px 0 10px">기존 글의 HTML 서식 태그는 그대로 두고 수정해도 됩니다. 새 글은 줄바꿈이 자동 반영돼요.</div>
+  <button class="m-link" id="de-save">저장 (☁️로 커밋)</button></div>`;
+  $('#modal-ov').hidden = false;
+  $('#de-close').addEventListener('click', closeDetail);
+  $('#de-save').addEventListener('click', ()=>{
+    const k = isNew ? ($('#de-key').value.trim()||key) : key;
+    DIARYL[tab][k] = $('#de-text').value;
+    saveDiaryL(); closeDetail(); drawDiary(); toast('저장됨 — ☁️ 커밋 대기');
+  });
 }
 RENDERERS.diary = renderDiary;
 
@@ -1603,18 +1693,157 @@ function renderMenu(){
     종목: stocks.json (오후 5시 자동 갱신) · ETF: etf-monitor · 캘린더: investment-calendar<br>
     브리핑: watchlist/kr/us-briefing · 공시: awake-disclosure · 노트: investment-notes<br>
     RSI(14)·수익률·52주 고점 대비는 클라이언트에서 계산 · 즐겨찾기는 이 기기에 저장<br>
-    입력·편집(목표시총, 다이어리 작성 등)은 기존 대시보드에서 하면 여기 자동 반영됩니다.
+    ✎ 입력(목표·안전시총, 분기 영익, 아이디어, 다이어리, 매매일지)은 앱에서 바로 — 상단 ☁️로 GitHub 커밋.<br>
+    기존 대시보드와 같은 토큰·같은 파일을 쓰므로 완전 호환, 스케줄 자동 업데이트는 열 때마다 반영됩니다.
   </div>`;
   $('#page-menu').querySelectorAll('[data-go]').forEach(c=>
     c.addEventListener('click',()=>showPage(c.dataset.go)));
 }
 RENDERERS.menu = renderMenu;
 
+/* ═══════════ 밸류 수정 폼 ═══════════ */
+function toggleEditForm(s){
+  const body = $('#dt-edit-body'); if(!body) return;
+  if(!body.hidden){ body.hidden = true; return; }
+  body.hidden = false;
+  const v = f => { const x = s[f]; return (x==null||x==='')?'':x; };
+  body.innerHTML = `
+  <div style="margin-top:12px">
+    <div class="ef-row"><label>목표시총(억)</label><input class="inp" id="ef-target" type="number" inputmode="decimal" value="${v('target_cap_oku')}"></div>
+    <div class="ef-row"><label>안전시총(억)</label><input class="inp" id="ef-safety" type="number" inputmode="decimal" value="${v('safety_cap_oku')}"></div>
+    <div class="ef-grid">${[1,2,3,4].map(q=>`<div class="ef-row" style="margin:0"><label style="width:58px">Q${q} 영익</label><input class="inp" id="ef-q${q}" type="number" inputmode="decimal" value="${v('q'+q+'_op')}"></div>`).join('')}</div>
+    <div class="ef-row" style="align-items:flex-start"><label>아이디어</label><textarea class="inp" id="ef-idea" rows="4" style="flex:1">${esc(v('idea'))}</textarea></div>
+    <div style="font-size:11px;color:var(--faint);margin-bottom:8px">빈칸 = 변경 안 함 · 0 입력 = 제거 · 저장 후 상단 ☁️로 커밋</div>
+    <button class="m-link" id="ef-save">이 기기에 저장</button>
+  </div>`;
+  $('#ef-save').addEventListener('click', ()=>{
+    const num = id => { const t = $('#'+id).value.trim(); return t===''?undefined:Number(t); };
+    const e = EDITS[s.ticker]||{};
+    const set = (f,val)=>{ if(val!==undefined && !Number.isNaN(val)){ e[f]=val; s[f]=val; } };
+    set('target_cap_oku', num('ef-target')); set('safety_cap_oku', num('ef-safety'));
+    [1,2,3,4].forEach(q=>set(`q${q}_op`, num('ef-q'+q)));
+    const idea = $('#ef-idea').value;
+    if(idea !== (s.idea||'')){ e.idea = idea; s.idea = idea; }
+    if(Object.keys(e).length) EDITS[s.ticker] = e;
+    enrich(s); saveEdits();
+    rendered.valuation = false; rendered.home = false; rendered.screener = false;
+    toast('저장됨 — 상단 ☁️ 버튼으로 커밋하세요');
+    openDetail(s);
+  });
+}
+
+/* ═══════════ GitHub 커밋 & 푸시 ═══════════ */
+function toast(msg, ms=3000){
+  let t = $('#toast');
+  if(!t){ t = document.createElement('div'); t.id='toast'; t.className='toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), ms);
+}
+function getPat(){ return (localStorage.getItem(LS_PAT_KEY)||'').trim(); }
+function b64utf8(str){
+  const bytes = new TextEncoder().encode(str); const CH = 8192; let bin = '';
+  for(let i=0;i<bytes.length;i+=CH) bin += String.fromCharCode.apply(null, bytes.subarray(i,i+CH));
+  return btoa(bin);
+}
+function ghHdr(pat){ return { Authorization:'token '+pat, Accept:'application/vnd.github+json' }; }
+async function ghPut(pat, path, content, sha, message){
+  const body = { message, content:b64utf8(content), branch:'main' };
+  if(sha) body.sha = sha;
+  const r = await fetch(`https://api.github.com/repos/${OWNER}/stock-valuation/contents/${path}`,
+    { method:'PUT', headers:{...ghHdr(pat),'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  if(!r.ok) throw new Error(`PUT ${path} ${r.status}`);
+  return await r.json();
+}
+function openCommit(){
+  const nS = Object.keys(EDITS).length, nF = Object.keys(FAVS).length;
+  const nD = Object.keys(DIARYL.daily).length + Object.keys(DIARYL.weekly).length;
+  const nT = Object.keys(DIARYL.trades).length;
+  const pat = getPat();
+  const m = $('#modal');
+  m.innerHTML = `<div class="m-grab"></div>
+  <div class="m-head"><div class="nm">☁️ 커밋 & 푸시</div><button class="icon-btn x" id="cm-close">✕</button></div>
+  <div class="m-sec-card" style="margin-top:14px"><h4>대기 중인 변경</h4>
+    <div class="val-rows">
+      <div class="r"><span>밸류·아이디어 수정</span><b>${nS}종목</b></div>
+      <div class="r"><span>즐겨찾기 변경</span><b>${nF}건</b></div>
+      <div class="r"><span>다이어리 (일간·주간)</span><b>${nD}건</b></div>
+      <div class="r"><span>매매일지</span><b>${nT}일</b></div>
+    </div></div>
+  <div class="m-sec-card"><h4>GitHub 토큰</h4>
+    ${pat ? `<div style="font-size:13px;color:var(--green);font-weight:700">저장됨 ✓
+        <button class="chip sm" id="cm-delpat" style="margin-left:10px">삭제</button></div>`
+      : `<input class="inp" id="cm-pat" type="password" placeholder="ghp_… (repo 권한 토큰)" style="width:100%">
+        <div style="font-size:11px;color:var(--faint);margin-top:6px">이 기기 브라우저에만 저장됩니다. 기존 대시보드와 같은 토큰을 공유해요.</div>`}
+  </div>
+  <button class="m-link" id="cm-go" ${!hasDirty()?'style="opacity:.45;pointer-events:none"':''}>커밋 & 푸시</button>`;
+  $('#modal-ov').hidden = false;
+  $('#cm-close').addEventListener('click', closeDetail);
+  $('#cm-delpat')?.addEventListener('click', ()=>{ localStorage.removeItem(LS_PAT_KEY); openCommit(); });
+  $('#cm-go').addEventListener('click', ()=>{
+    const inp = $('#cm-pat');
+    if(inp && inp.value.trim()) localStorage.setItem(LS_PAT_KEY, inp.value.trim());
+    commitAll();
+  });
+}
+async function commitAll(){
+  const pat = getPat();
+  if(!pat){ toast('GitHub 토큰을 입력하세요'); return; }
+  const btn = $('#cm-go'); if(btn){ btn.textContent = '커밋 중…'; btn.style.pointerEvents = 'none'; }
+  try{
+    const today = new Date().toISOString().slice(0,10);
+    // 1) stocks.json — 최신본 fetch 후 수정 필드만 병합 (스케줄 업데이트와 충돌 없음)
+    if(Object.keys(EDITS).length || Object.keys(FAVS).length){
+      const [treeRes, rawRes] = await Promise.all([
+        fetch(`https://api.github.com/repos/${OWNER}/stock-valuation/git/trees/main`, { headers: ghHdr(pat) }),
+        fetch(RAW('stock-valuation','stocks.json')+'?t='+Date.now(), { cache:'no-store' }) ]);
+      if(!treeRes.ok) throw new Error('tree '+treeRes.status);
+      if(!rawRes.ok) throw new Error('raw '+rawRes.status);
+      const entry = (await treeRes.json()).tree.find(e=>e.path==='stocks.json');
+      const data = await rawRes.json();
+      data.stocks = (data.stocks||[]).map(s=>{
+        const out = {...s};
+        const e = EDITS[s.ticker];
+        if(e) for(const f of USER_FIELDS) if(e[f]!==undefined) out[f] = e[f];
+        if(FAVS[s.ticker]!==undefined) out.favorite = FAVS[s.ticker];
+        return out;
+      });
+      await ghPut(pat, 'stocks.json', JSON.stringify(data,null,2), entry?.sha, `sync: InvestHub 입력값 ${today}`);
+    }
+    // 2) diary.json — 최신본 fetch 후 로컬 변경 키만 병합
+    if(['daily','weekly','trades'].some(k=>Object.keys(DIARYL[k]).length)){
+      const metaRes = await fetch(`https://api.github.com/repos/${OWNER}/stock-valuation/contents/diary.json?ref=main`, { headers: ghHdr(pat) });
+      const sha = metaRes.ok ? (await metaRes.json()).sha : null;
+      let gh = {daily:{},weekly:{},trades:{}};
+      try{ gh = await fetchJSON(RAW('stock-valuation','diary.json')+'?t='+Date.now()); }catch(e){}
+      const merged = { ...gh,
+        daily:{...(gh.daily||{}), ...DIARYL.daily},
+        weekly:{...(gh.weekly||{}), ...DIARYL.weekly},
+        trades:{...(gh.trades||{}), ...DIARYL.trades} };
+      await ghPut(pat, 'diary.json', JSON.stringify(merged,null,2), sha, `sync: 다이어리 ${today}`);
+      DIARY_GH = merged;
+    }
+    EDITS = {}; FAVS = {}; DIARYL = {daily:{},weekly:{},trades:{}};
+    localStorage.setItem(EDITS_KEY,'{}'); localStorage.setItem(FAV_KEY,'{}');
+    localStorage.setItem(DIARYL_KEY, JSON.stringify(DIARYL));
+    delete CACHE['diary']; markDirty(); closeDetail();
+    toast('✅ GitHub 커밋 완료');
+  }catch(e){
+    const msg = /401|403/.test(e.message) ? '토큰 권한 오류 — 토큰을 확인하세요' : e.message;
+    toast('❌ 커밋 실패: '+msg, 5000);
+    if(btn){ btn.textContent = '다시 시도'; btn.style.pointerEvents = ''; }
+  }
+}
+
 /* ═══════════ 시작 ═══════════ */
 buildNav();
 const hash = location.hash.replace('#','');
 if(NAV.some(n=>n.id===hash)) currentPage = hash;
 $('#btn-refresh').addEventListener('click', ()=>boot(true));
+$('#btn-commit').addEventListener('click', openCommit);
+/* 앱 복귀 시 3분 경과했으면 종목 데이터 자동 새로고침 (스케줄 커밋 미러링) */
+document.addEventListener('visibilitychange', ()=>{
+  if(!document.hidden && lastLoad && Date.now()-lastLoad > 180e3) boot();
+});
 boot();
 </script>
 </body>
