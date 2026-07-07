@@ -3985,5 +3985,32 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
   });
 })();
 </script>
+
+<!-- ═══════ 웹앱(standalone) 복귀 시 자동 최신화 — 타 기기 커밋 반영 ═══════ -->
+<script>
+(function(){
+  let lastFresh = Date.now();
+  const STALE_DATA = 3 * 60 * 1000;      // 3분 — 데이터 재로딩
+  const STALE_PAGE = 12 * 60 * 60 * 1000; // 12시간 — 페이지 자체 새 버전 로드
+  async function freshen(){
+    const idle = Date.now() - lastFresh;
+    if(idle < STALE_DATA) return;
+    if(idle > STALE_PAGE){ location.reload(); return; }
+    lastFresh = Date.now();
+    try{
+      if(typeof fetchFromGitHub==='function' && typeof mergeAndSetStocks==='function'){
+        const gh = await fetchFromGitHub();
+        mergeAndSetStocks(gh);          // 타 기기에서 커밋한 목표시총·아이디어·즐겨찾기 반영
+        if(typeof render==='function') render();
+        if(typeof toast==='function') toast('🔄 최신 데이터로 갱신됨', 'ok', 1800);
+      }
+      if(typeof refreshTabUpdateDots==='function') refreshTabUpdateDots();
+    }catch(e){}
+  }
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) freshen(); });
+  window.addEventListener('pageshow', e=>{ if(e.persisted) freshen(); });
+  window.addEventListener('focus', ()=>freshen());
+})();
+</script>
 </body>
 </html>
