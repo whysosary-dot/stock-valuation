@@ -22,14 +22,14 @@
 
   /* ── 사이드바 ── */
   .sidebar {
-    width: 232px; flex: none; background: var(--panel);
+    width: 348px; flex: none; background: var(--panel);
     border-right: 1px solid var(--border); display: flex; flex-direction: column;
     transition: margin-left .18s ease;
     /* 롱프레스 드래그 시 iOS 텍스트 선택/콜아웃 방지 (검색 input 은 아래서 해제) */
     -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
   }
   .sidebar input { -webkit-user-select: text; user-select: text; }
-  .app.sb-hidden .sidebar { margin-left: -232px; }
+  .app.sb-hidden .sidebar { margin-left: -348px; }
   .sb-toggle {
     border: 1px solid var(--border); background: var(--panel); border-radius: 6px;
     padding: 4px 9px; font-size: 14px; cursor: pointer; color: var(--text-dim); flex: none;
