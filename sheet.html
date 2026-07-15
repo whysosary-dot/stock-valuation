@@ -1733,8 +1733,12 @@ function buildItemCard(s) {
     else body.textContent = '(내용 없음)';
     bodyWrap.appendChild(body);
     card.appendChild(bodyWrap);
-    requestAnimationFrame(() => {
+    // 접힘 판정 — 이미지 로드 후 높이가 늘어나므로 각 이미지 load 시점마다 재측정
+    let noteToggleAdded = false;
+    const tryCollapse = () => {
+      if (noteToggleAdded) return;
       if (bodyWrap.scrollHeight > 800) {
+        noteToggleAdded = true;
         card.classList.add('collapsed');
         const btn = document.createElement('button');
         btn.className = 'fv-toggle';
@@ -1746,7 +1750,14 @@ function buildItemCard(s) {
         });
         bodyWrap.insertAdjacentElement('afterend', btn);
       }
+    };
+    requestAnimationFrame(tryCollapse);
+    body.querySelectorAll('img').forEach(img => {
+      if (img.complete) return;
+      img.addEventListener('load', tryCollapse, { once: true });
     });
+    // 안전망: 이미지 decode 지연 대비 한 번 더
+    setTimeout(tryCollapse, 600);
   }
   else if (s.type === 'gsheet') {
     // 미니 미리보기 iframe (클릭 통과 — 카드 클릭으로 전체 보기)
