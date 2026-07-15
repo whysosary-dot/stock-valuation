@@ -224,11 +224,34 @@ function renderTree() {
       div.addEventListener('dblclick', renameFolder);
       div.querySelector('.ren').addEventListener('click', renameFolder);
       div.querySelector('.del').addEventListener('click', () => {
-        const hasChild = meta.folders.some(x => x.parent === f.id) || meta.sheets.some(s => s.folder === f.id);
-        if (hasChild) { toast('폴더가 비어있지 않습니다. 내부 항목을 먼저 삭제/이동해주세요.', 'err', 3500); return; }
-        if (!confirm(`폴더 "${f.name}" 를 삭제할까요?`)) return;
-        meta.folders = meta.folders.filter(x => x.id !== f.id);
-        if (selectedFolderId === f.id) selectedFolderId = null;
+        // 하위 폴더/시트 재귀 수집
+        const subFolderIds = [];
+        (function collect(fid) {
+          subFolderIds.push(fid);
+          meta.folders.filter(x => x.parent === fid).forEach(c => collect(c.id));
+        })(f.id);
+        const subSheets = meta.sheets.filter(s => subFolderIds.includes(s.folder));
+
+        if (subSheets.length || subFolderIds.length > 1) {
+          const msg = `폴더 "${f.name}" 안에 ` +
+            `${subFolderIds.length - 1 ? `하위 폴더 ${subFolderIds.length - 1}개, ` : ''}` +
+            `시트 ${subSheets.length}개가 있습니다.\n\n전부 함께 삭제할까요?\n(커밋하면 GitHub 에서도 삭제됩니다)`;
+          if (!confirm(msg)) return;
+        } else {
+          if (!confirm(`폴더 "${f.name}" 를 삭제할까요?`)) return;
+        }
+
+        // 하위 시트 삭제 (localStorage 정리 + GitHub 삭제 예약)
+        meta._deleted = meta._deleted || [];
+        subSheets.forEach(s => {
+          localStorage.removeItem(DATA_PREF + s.id);
+          if (s.type !== 'gsheet') meta._deleted.push(s.id);
+          if (currentId === s.id) { currentId = null; showNoSheet(); }
+        });
+        meta.sheets = meta.sheets.filter(s => !subFolderIds.includes(s.folder));
+        // 폴더 (자기 자신 + 하위) 삭제
+        meta.folders = meta.folders.filter(x => !subFolderIds.includes(x.id));
+        if (subFolderIds.includes(selectedFolderId)) selectedFolderId = null;
         saveMeta(); renderTree();
       });
       tree.appendChild(div);
@@ -243,7 +266,7 @@ function renderTree() {
       const div = document.createElement('div');
       div.className = 'node sheet' + (currentId === s.id ? ' selected' : '');
       div.style.paddingLeft = (8 + depth * 16 + 12) + 'px';
-      div.innerHTML = `<span>${s.type === 'gsheet' ? '🟢' : '📄'}</span><span class="nm"></span>${s.dirty ? '<span title="미커밋 변경" style="color:#d97706;font-size:10px;">●</span>' : ''}<button class="ren" title="이름 변경">✎</button><button class="del" title="시트 삭제">✕</button>`;
+      div.innerHTML = `<span>${s.type === 'gsheet' ? '<span style="font-size:50%;vertical-align:middle;">🟢</span>' : '📄'}</span><span class="nm"></span>${s.dirty ? '<span title="미커밋 변경" style="color:#d97706;font-size:10px;">●</span>' : ''}<button class="ren" title="이름 변경">✎</button><button class="del" title="시트 삭제">✕</button>`;
       div.querySelector('.nm').textContent = s.name;
       div.addEventListener('click', (e) => {
         if (e.target.classList.contains('del') || e.target.classList.contains('ren')) return;
