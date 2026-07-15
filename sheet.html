@@ -486,9 +486,11 @@ function renderTree() {
       div.querySelector('.nm').textContent = f.name;
       div.addEventListener('click', (e) => {
         if (e.target.classList.contains('del') || e.target.classList.contains('ren')) return;
-        // 클릭 = 접기/펼치기 토글 + 선택 + 오른쪽에 하위 항목 미리보기
-        if (collapsed.has(f.id)) collapsed.delete(f.id); else collapsed.add(f.id);
-        saveCollapsed();
+        // 첫 클릭 = 선택 + 미리보기만. 이미 선택된 폴더를 다시 클릭 = 접기/펼치기 토글
+        if (selectedFolderId === f.id) {
+          if (collapsed.has(f.id)) collapsed.delete(f.id); else collapsed.add(f.id);
+          saveCollapsed();
+        }
         selectedFolderId = f.id;
         openFolderView(f.id); // 내부에서 renderTree 호출
       });
