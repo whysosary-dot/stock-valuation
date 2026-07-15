@@ -18,13 +18,20 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; height: 100%; overflow: hidden;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif; }
-  .app { display: flex; height: 100vh; }
+  .app { display: flex; height: 100vh; height: 100dvh; }
 
   /* ── 사이드바 ── */
   .sidebar {
     width: 232px; flex: none; background: var(--panel);
     border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    transition: margin-left .18s ease;
   }
+  .app.sb-hidden .sidebar { margin-left: -232px; }
+  .sb-toggle {
+    border: 1px solid var(--border); background: var(--panel); border-radius: 6px;
+    padding: 4px 9px; font-size: 14px; cursor: pointer; color: var(--text-dim); flex: none;
+  }
+  .sb-toggle:hover { background: var(--accent-soft); color: var(--accent); }
   .sb-head {
     padding: 10px 12px; border-bottom: 1px solid var(--border);
     display: flex; align-items: center; gap: 6px;
@@ -44,12 +51,20 @@
   .node:hover { background: var(--panel-2); }
   .node.selected { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
   .node .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .node .del {
+  .node .del, .node .ren {
     display: none; border: none; background: none; color: var(--text-dim);
     cursor: pointer; font-size: 12px; padding: 0 3px;
   }
-  .node:hover .del { display: inline; }
+  .node:hover .del, .node:hover .ren { display: inline; }
   .node .del:hover { color: var(--red); }
+  .node .ren:hover { color: var(--accent); }
+  /* 터치 기기 (아이패드/아이폰): hover 가 없으므로 버튼 상시 노출 + 터치 타깃 확대 */
+  @media (hover: none) {
+    .node { padding: 9px 8px; font-size: 15px; }
+    .node .del, .node .ren { display: inline; font-size: 15px; padding: 2px 7px; }
+    .sb-btn { padding: 7px 12px; font-size: 15px; }
+    .commit-btn { padding: 8px 16px; font-size: 14px; }
+  }
   .node.folder .caret { font-size: 10px; width: 12px; color: var(--text-dim); }
   .empty-tip { padding: 20px 12px; text-align: center; font-size: 12.5px; color: var(--text-dim); line-height: 1.6; }
 
@@ -95,6 +110,7 @@
   </div>
   <div class="main">
     <div class="topbar">
+      <button class="sb-toggle" id="sb-toggle" title="사이드바 접기/펴기">☰</button>
       <span class="cur-name" id="cur-name">시트를 선택하세요</span>
       <span class="cur-path" id="cur-path"></span>
       <span class="spacer"></span>
@@ -180,17 +196,19 @@ function renderTree() {
       const div = document.createElement('div');
       div.className = 'node folder' + (selectedFolderId === f.id ? ' selected' : '');
       div.style.paddingLeft = (8 + depth * 16) + 'px';
-      div.innerHTML = `<span class="caret">▸</span><span>📁</span><span class="nm"></span><button class="del" title="폴더 삭제">✕</button>`;
+      div.innerHTML = `<span class="caret">▸</span><span>📁</span><span class="nm"></span><button class="ren" title="이름 변경">✎</button><button class="del" title="폴더 삭제">✕</button>`;
       div.querySelector('.nm').textContent = f.name;
       div.addEventListener('click', (e) => {
-        if (e.target.classList.contains('del')) return;
+        if (e.target.classList.contains('del') || e.target.classList.contains('ren')) return;
         selectedFolderId = (selectedFolderId === f.id) ? null : f.id;
         renderTree();
       });
-      div.addEventListener('dblclick', () => {
+      const renameFolder = () => {
         const nm = prompt('폴더 이름 변경:', f.name);
         if (nm && nm.trim()) { f.name = nm.trim(); saveMeta(); renderTree(); }
-      });
+      };
+      div.addEventListener('dblclick', renameFolder);
+      div.querySelector('.ren').addEventListener('click', renameFolder);
       div.querySelector('.del').addEventListener('click', () => {
         const hasChild = meta.folders.some(x => x.parent === f.id) || meta.sheets.some(s => s.folder === f.id);
         if (hasChild) { toast('폴더가 비어있지 않습니다. 내부 항목을 먼저 삭제/이동해주세요.', 'err', 3500); return; }
@@ -209,16 +227,18 @@ function renderTree() {
       const div = document.createElement('div');
       div.className = 'node sheet' + (currentId === s.id ? ' selected' : '');
       div.style.paddingLeft = (8 + depth * 16 + 12) + 'px';
-      div.innerHTML = `<span>📄</span><span class="nm"></span>${s.dirty ? '<span title="미커밋 변경" style="color:#d97706;font-size:10px;">●</span>' : ''}<button class="del" title="시트 삭제">✕</button>`;
+      div.innerHTML = `<span>📄</span><span class="nm"></span>${s.dirty ? '<span title="미커밋 변경" style="color:#d97706;font-size:10px;">●</span>' : ''}<button class="ren" title="이름 변경">✎</button><button class="del" title="시트 삭제">✕</button>`;
       div.querySelector('.nm').textContent = s.name;
       div.addEventListener('click', (e) => {
-        if (e.target.classList.contains('del')) return;
+        if (e.target.classList.contains('del') || e.target.classList.contains('ren')) return;
         openSheet(s.id);
       });
-      div.addEventListener('dblclick', () => {
+      const renameSheet = () => {
         const nm = prompt('시트 이름 변경:', s.name);
         if (nm && nm.trim()) { s.name = nm.trim(); s.dirty = true; saveMeta(); renderTree(); updateTopbar(); }
-      });
+      };
+      div.addEventListener('dblclick', renameSheet);
+      div.querySelector('.ren').addEventListener('click', renameSheet);
       div.querySelector('.del').addEventListener('click', () => {
         if (!confirm(`시트 "${s.name}" 를 삭제할까요?\n(커밋하면 GitHub 에서도 삭제됩니다)`)) return;
         meta.sheets = meta.sheets.filter(x => x.id !== s.id);
@@ -305,6 +325,11 @@ function openSheet(id) {
   luckyCreated = true;
   renderTree(); updateTopbar();
   setStatus('', false);
+  // 좁은 화면에선 시트 열 때 사이드바 자동 접기 (시트 영역 확보)
+  if (window.innerWidth < 900) {
+    document.querySelector('.app').classList.add('sb-hidden');
+    setTimeout(() => { try { luckysheet.resize(); } catch(_) {} }, 220);
+  }
 }
 
 function defaultWorkbook() {
@@ -455,8 +480,20 @@ document.getElementById('commit-btn').addEventListener('click', commitAll);
   }
 })();
 
+/* ── 사이드바 토글 (아이패드에서 시트 영역 확보) ── */
+document.getElementById('sb-toggle').addEventListener('click', () => {
+  document.querySelector('.app').classList.toggle('sb-hidden');
+  // luckysheet 캔버스 리사이즈
+  setTimeout(() => { try { luckysheet.resize(); } catch(_) {} }, 220);
+});
+// 좁은 화면(아이패드 세로/아이폰)은 시트 열면 자동으로 사이드바 접기
+const _autoCollapse = () => {
+  if (window.innerWidth < 900) document.querySelector('.app').classList.add('sb-hidden');
+};
+
 /* ── 언로드 시 저장 ── */
 window.addEventListener('pagehide', persistCurrent);
+window.addEventListener('resize', () => { try { luckysheet.resize(); } catch(_) {} });
 
 renderTree();
 showNoSheet();
