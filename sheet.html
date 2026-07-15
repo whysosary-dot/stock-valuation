@@ -125,6 +125,65 @@
   .toast.show { opacity: 1; }
   .toast.err { background: var(--red); }
 
+  /* ── 노트 에디터 ── */
+  .note-toolbar {
+    flex: none; display: flex; gap: 6px; padding: 8px 12px;
+    background: var(--panel); border-bottom: 1px solid var(--border);
+  }
+  .note-toolbar button {
+    border: 1px solid var(--border); background: var(--panel); border-radius: 7px;
+    padding: 6px 12px; font-size: 14px; cursor: pointer; color: var(--text);
+  }
+  .note-toolbar button:hover { background: var(--accent-soft); border-color: var(--accent); }
+  #note-edit {
+    flex: 1; overflow-y: auto; padding: 22px 26px; background: #fff;
+    font-size: 15.5px; line-height: 1.75; color: var(--text); outline: none;
+    -webkit-user-select: text; user-select: text;
+  }
+  #note-edit:empty::before { content: attr(data-placeholder); color: #aab2bd; pointer-events: none; }
+  #note-edit img { max-width: 100%; border-radius: 10px; display: block; margin: 12px 0; }
+  #note-edit h3 { font-size: 18px; margin: 18px 0 6px; }
+
+  /* ── 리서치 카드 뷰 ── */
+  .rc-card {
+    max-width: 760px; margin: 0 auto 16px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 14px; padding: 22px 26px;
+  }
+  .rc-title { font-size: 19px; font-weight: 700; color: var(--text); margin: 0 0 6px; }
+  .rc-meta { font-size: 12.5px; color: var(--text-dim); margin-bottom: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .rc-tag { background: var(--panel-2); border-radius: 4px; padding: 2px 8px; font-size: 11.5px; }
+  .rc-summary { margin: 0 0 14px; padding-left: 20px; }
+  .rc-summary li { font-size: 14.5px; line-height: 1.7; color: var(--text); margin-bottom: 4px; }
+  .rc-chart-wrap { margin-top: 14px; }
+  .rc-chart-title { font-size: 13px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
+  .rc-open-link { font-size: 13px; color: var(--accent); text-decoration: none; }
+
+  /* ── 리서치 선택 모달 ── */
+  .rs-modal {
+    position: fixed; inset: 0; z-index: 500; background: rgba(15,23,42,.45);
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .rs-box {
+    background: var(--panel); border-radius: 14px; width: 100%; max-width: 460px;
+    max-height: 80vh; display: flex; flex-direction: column; padding: 16px; gap: 10px;
+    box-shadow: 0 20px 60px rgba(15,23,42,.25);
+  }
+  .rs-head { display: flex; align-items: center; gap: 8px; }
+  .rs-head strong { flex: 1; font-size: 15px; }
+  #rs-search {
+    padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 14px; outline: none; -webkit-user-select: text; user-select: text;
+  }
+  #rs-search:focus { border-color: var(--accent); }
+  .rs-list { flex: 1; overflow-y: auto; min-height: 200px; }
+  .rs-item {
+    padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 14px;
+    color: var(--text); display: flex; align-items: center; gap: 8px;
+  }
+  .rs-item:hover { background: var(--accent-soft); }
+  .rs-item .cnt { margin-left: auto; font-size: 12px; color: var(--text-dim); }
+  .rs-item .dt { margin-left: auto; font-size: 12px; color: var(--text-dim); flex: none; }
+
   /* ── 좁은 화면 (아이폰/아이패드 세로): 상단바 잘림 방지 ── */
   @media (max-width: 700px) {
     .topbar { gap: 6px; padding: 0 8px; }
@@ -141,7 +200,9 @@
     <div class="sb-head">
       <a class="sb-title" href="https://docs.google.com/spreadsheets/u/0/?pli=1" target="_blank" rel="noopener" title="구글 스프레드시트 홈 새 창으로 열기">📊 Sheets ↗</a>
       <button class="sb-btn" id="new-folder-btn" title="선택한 폴더 아래 새 폴더 (선택 없으면 최상위)">📁+</button>
-      <button class="sb-btn" id="new-gsheet-btn" title="실제 구글 스프레드시트 연결 (미리보기 임베드 + 새 창 편집)">📄+</button>
+      <button class="sb-btn" id="new-gsheet-btn" title="구글 스프레드시트 연결">📄+</button>
+      <button class="sb-btn" id="new-note-btn" title="새 글 (텍스트+사진 노트)">📝+</button>
+      <button class="sb-btn" id="new-research-btn" title="리서치 탭 기업 카드 가져오기">🔬+</button>
     </div>
     <div class="sb-search">
       <input id="tree-search" type="search" placeholder="🔍 폴더·시트 검색" autocomplete="off" />
@@ -160,6 +221,20 @@
     </div>
     <div id="lucky"></div>
     <div id="gview" style="display:none; flex:1;"><iframe id="gview-frame" style="width:100%;height:100%;border:none;"></iframe></div>
+    <!-- 블로그형 노트 에디터 -->
+    <div id="noteview" style="display:none; flex-direction:column; min-height:0; flex:1;">
+      <div class="note-toolbar">
+        <button data-cmd="bold" title="굵게"><b>B</b></button>
+        <button data-cmd="red" title="빨간 강조"><span style="color:var(--red);font-weight:700;">A</span></button>
+        <button data-cmd="h" title="소제목"><b>H</b></button>
+        <button data-cmd="ul" title="글머리 목록">•≡</button>
+        <button data-cmd="photo" title="사진 삽입">📷</button>
+      </div>
+      <div id="note-edit" contenteditable="true" data-placeholder="투자 기록을 남겨보세요. 📷 버튼으로 사진을 넣을 수 있습니다."></div>
+      <input type="file" id="note-photo-input" accept="image/*" multiple hidden />
+    </div>
+    <!-- 리서치 카드 뷰 -->
+    <div id="rcardview" style="display:none; flex:1; overflow-y:auto; padding:20px; background:var(--bg);"></div>
     <div class="no-sheet" id="no-sheet" style="display:none;">
       <div style="font-size:44px;">📄</div>
       <div>왼쪽에서 시트를 선택하거나 새로 만들어주세요</div>
@@ -168,6 +243,20 @@
 </div>
 <div class="toast" id="toast"></div>
 
+<!-- 리서치 카드 선택 모달 -->
+<div id="rs-modal" class="rs-modal" style="display:none;">
+  <div class="rs-box">
+    <div class="rs-head">
+      <button id="rs-back" class="sb-btn" style="display:none;">← 기업</button>
+      <strong id="rs-title">🔬 리서치 카드 가져오기</strong>
+      <button id="rs-close" class="sb-btn">✕</button>
+    </div>
+    <input id="rs-search" type="search" placeholder="기업명 검색…" autocomplete="off" />
+    <div id="rs-list" class="rs-list"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/expendPlugins/chart/chartmix.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js"></script>
@@ -227,6 +316,13 @@ function setStatus(txt, saved) {
 /* ── 트리 렌더 ── */
 let treeSearchQuery = '';
 
+function itemIcon(s) {
+  if (s.type === 'gsheet') return '<span style="font-size:50%;vertical-align:middle;">🟢</span>';
+  if (s.type === 'note')   return '📝';
+  if (s.type === 'rcard')  return '🔬';
+  return '📄';
+}
+
 function renderSearchResults(tree, q) {
   const matchedFolders = meta.folders.filter(f => f.name.toLowerCase().includes(q));
   const matchedSheets  = meta.sheets.filter(s => s.name.toLowerCase().includes(q));
@@ -262,7 +358,7 @@ function renderSearchResults(tree, q) {
   matchedSheets.sort((a,b)=>a.name.localeCompare(b.name,'ko')).forEach(s => {
     const div = document.createElement('div');
     div.className = 'node sheet' + (currentId === s.id ? ' selected' : '');
-    div.innerHTML = `<span>${s.type === 'gsheet' ? '<span style="font-size:50%;vertical-align:middle;">🟢</span>' : '📄'}</span><span class="nm"></span><span class="sub"></span>`;
+    div.innerHTML = `<span>${itemIcon(s)}</span><span class="nm"></span><span class="sub"></span>`;
     div.querySelector('.nm').textContent = s.name;
     const p = s.folder ? folderPath(s.folder) : '';
     div.querySelector('.sub').textContent = p ? `(${p})` : '(최상위)';
@@ -357,7 +453,7 @@ function renderTree() {
       const div = document.createElement('div');
       div.className = 'node sheet' + (currentId === s.id ? ' selected' : '');
       div.style.paddingLeft = (8 + depth * 16 + 12) + 'px';
-      div.innerHTML = `<span>${s.type === 'gsheet' ? '<span style="font-size:50%;vertical-align:middle;">🟢</span>' : '📄'}</span><span class="nm"></span>${s.dirty ? '<span title="미커밋 변경" style="color:#d97706;font-size:10px;">●</span>' : ''}<button class="ren" title="이름 변경">✎</button><button class="del" title="시트 삭제">✕</button>`;
+      div.innerHTML = `<span>${itemIcon(s)}</span><span class="nm"></span>${s.dirty ? '<span title="미커밋 변경" style="color:#d97706;font-size:10px;">●</span>' : ''}<button class="ren" title="이름 변경">✎</button><button class="del" title="시트 삭제">✕</button>`;
       div.querySelector('.nm').textContent = s.name;
       div.addEventListener('click', (e) => {
         if (e.target.classList.contains('del') || e.target.classList.contains('ren')) return;
@@ -614,22 +710,42 @@ function updateTopbar() {
   document.getElementById('cur-path').textContent = s && s.folder ? '(' + folderPath(s.folder) + ')' : '';
 }
 
-function showNoSheet() {
+function hideAllViews() {
   if (luckyCreated) { try { luckysheet.destroy(); } catch(_) {} luckyCreated = false; }
   document.getElementById('lucky').style.display = 'none';
   document.getElementById('gview').style.display = 'none';
+  document.getElementById('noteview').style.display = 'none';
+  document.getElementById('rcardview').style.display = 'none';
   document.getElementById('gedit-link').style.display = 'none';
+  document.getElementById('no-sheet').style.display = 'none';
+}
+function showNoSheet() {
+  hideAllViews();
   document.getElementById('no-sheet').style.display = 'flex';
   updateTopbar();
 }
 
 /* ── 시트 열기/저장 ── */
+let noteChanged = false;
+
 function persistCurrent() {
-  if (!currentId || !luckyCreated) return;
+  if (!currentId) return;
+  const s = meta.sheets.find(x => x.id === currentId);
+  // 노트: 변경 있을 때만 저장
+  if (s && s.type === 'note') {
+    if (!noteChanged) return;
+    const ed = document.getElementById('note-edit');
+    saveSheetData(currentId, { type: 'note', html: ed.innerHTML });
+    s.dirty = true; s.updated = Date.now();
+    saveMeta();
+    noteChanged = false;
+    setStatus('저장됨 ✓ (로컬)', true);
+    return;
+  }
+  if (!luckyCreated) return;
   try {
     const all = luckysheet.getAllSheets();
     saveSheetData(currentId, all);
-    const s = meta.sheets.find(x => x.id === currentId);
     if (s) { s.dirty = true; s.updated = Date.now(); }
     saveMeta();
     setStatus('저장됨 ✓ (로컬)', true);
@@ -645,9 +761,7 @@ function openSheet(id) {
 
   // ── 구글시트 타입: /preview 임베드 (읽기 전용) + 새 창 편집 링크 ──
   if (s.type === 'gsheet') {
-    if (luckyCreated) { try { luckysheet.destroy(); } catch(_) {} luckyCreated = false; }
-    document.getElementById('lucky').style.display = 'none';
-    document.getElementById('no-sheet').style.display = 'none';
+    hideAllViews();
     const gview = document.getElementById('gview');
     const frame = document.getElementById('gview-frame');
     const previewUrl = `https://docs.google.com/spreadsheets/d/${s.gid}/preview` + (s.ggid ? `?gid=${s.ggid}` : '');
@@ -656,22 +770,43 @@ function openSheet(id) {
     gview.style.display = 'flex';
     const editLink = document.getElementById('gedit-link');
     editLink.href = editUrl;
+    editLink.textContent = '✏️ 구글시트에서 편집 ↗';
     editLink.style.display = 'inline-block';
     renderTree(); updateTopbar();
     setStatus('읽기 전용 미리보기 — 편집은 ✏️ 버튼', false);
-    if (window.innerWidth < 900) {
-      document.querySelector('.app').classList.add('sb-hidden');
-    }
+    if (window.innerWidth < 900) document.querySelector('.app').classList.add('sb-hidden');
+    return;
+  }
+
+  // ── 블로그형 노트 ──
+  if (s.type === 'note') {
+    hideAllViews();
+    const data = loadSheetData(id);
+    const ed = document.getElementById('note-edit');
+    ed.innerHTML = (data && data.html) || '';
+    noteChanged = false;
+    document.getElementById('noteview').style.display = 'flex';
+    renderTree(); updateTopbar();
+    setStatus('', false);
+    if (window.innerWidth < 900) document.querySelector('.app').classList.add('sb-hidden');
+    return;
+  }
+
+  // ── 리서치 카드 ──
+  if (s.type === 'rcard') {
+    hideAllViews();
+    document.getElementById('rcardview').style.display = 'block';
+    renderResearchCard(s);
+    renderTree(); updateTopbar();
+    setStatus('', false);
+    if (window.innerWidth < 900) document.querySelector('.app').classList.add('sb-hidden');
     return;
   }
 
   // ── 자체 시트 (Luckysheet) ──
-  document.getElementById('gview').style.display = 'none';
-  document.getElementById('gedit-link').style.display = 'none';
+  hideAllViews();
   const data = loadSheetData(id) || defaultWorkbook();
-  document.getElementById('no-sheet').style.display = 'none';
   document.getElementById('lucky').style.display = 'block';
-  if (luckyCreated) { try { luckysheet.destroy(); } catch(_) {} }
   luckysheet.create({
     container: 'lucky',
     lang: 'en',
@@ -726,6 +861,262 @@ document.getElementById('new-gsheet-btn').addEventListener('click', () => {
   saveMeta(); renderTree();
   openSheet(meta.sheets[meta.sheets.length - 1].id);
 });
+
+/* ═══ 블로그형 노트 (📝) ═══ */
+document.getElementById('new-note-btn').addEventListener('click', () => {
+  const nm = prompt('새 글 제목:');
+  if (!nm || !nm.trim()) return;
+  const id = uid();
+  meta.sheets.push({ id, name: nm.trim(), folder: selectedFolderId || null, type: 'note', dirty: true, updated: Date.now() });
+  saveSheetData(id, { type: 'note', html: '' });
+  saveMeta(); renderTree();
+  openSheet(id);
+});
+
+// 편집 → 디바운스 자동저장
+let noteSaveTimer = null;
+document.getElementById('note-edit').addEventListener('input', () => {
+  noteChanged = true;
+  setStatus('입력 중…', false);
+  clearTimeout(noteSaveTimer);
+  noteSaveTimer = setTimeout(persistCurrent, 800);
+});
+
+// 툴바
+document.querySelector('.note-toolbar').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  const cmd = btn.dataset.cmd;
+  const ed = document.getElementById('note-edit');
+  ed.focus();
+  if (cmd === 'bold') document.execCommand('bold');
+  else if (cmd === 'red') {
+    document.execCommand('styleWithCSS', false, true);
+    document.execCommand('foreColor', false, '#e23a3a');
+  }
+  else if (cmd === 'h') document.execCommand('formatBlock', false, 'h3');
+  else if (cmd === 'ul') document.execCommand('insertUnorderedList');
+  else if (cmd === 'photo') document.getElementById('note-photo-input').click();
+});
+
+// 사진 삽입: 캔버스로 리사이즈(최대 1280px, JPEG 0.8) 후 dataURL 로 삽입
+document.getElementById('note-photo-input').addEventListener('change', async (e) => {
+  const files = [...(e.target.files || [])];
+  e.target.value = '';
+  for (const file of files) {
+    try {
+      const dataUrl = await resizeImage(file, 1280, 0.8);
+      const ed = document.getElementById('note-edit');
+      ed.focus();
+      document.execCommand('insertHTML', false, `<img src="${dataUrl}"><br>`);
+      noteChanged = true;
+      clearTimeout(noteSaveTimer);
+      noteSaveTimer = setTimeout(persistCurrent, 400);
+    } catch(err) { toast('사진 삽입 실패: ' + err.message, 'err', 4000); }
+  }
+});
+
+function resizeImage(file, maxW, quality) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxW / img.width);
+      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(cv.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('이미지 로드 실패')); };
+    img.src = url;
+  });
+}
+
+/* ═══ 리서치 카드 가져오기 (🔬) ═══ */
+const RESEARCH_JSON = 'https://raw.githubusercontent.com/whysosary-dot/investment-notes/main/data/companies.json';
+let _rsData = null;      // {companies:[...]} 캐시
+let _rsCompanyId = null; // 모달에서 선택된 기업
+
+async function loadResearchData() {
+  if (_rsData) return _rsData;
+  const r = await fetch(RESEARCH_JSON + '?t=' + Date.now(), { cache: 'no-store' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  _rsData = await r.json();
+  return _rsData;
+}
+
+document.getElementById('new-research-btn').addEventListener('click', async () => {
+  const modal = document.getElementById('rs-modal');
+  modal.style.display = 'flex';
+  _rsCompanyId = null;
+  document.getElementById('rs-search').value = '';
+  document.getElementById('rs-list').innerHTML = '<div class="empty-tip">불러오는 중…</div>';
+  try {
+    await loadResearchData();
+    renderRsCompanies('');
+  } catch(e) {
+    document.getElementById('rs-list').innerHTML = '<div class="empty-tip">리서치 데이터를 불러오지 못했어요.<br>' + e.message + '</div>';
+  }
+});
+document.getElementById('rs-close').addEventListener('click', () => {
+  document.getElementById('rs-modal').style.display = 'none';
+});
+document.getElementById('rs-modal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('rs-modal')) document.getElementById('rs-modal').style.display = 'none';
+});
+document.getElementById('rs-back').addEventListener('click', () => {
+  _rsCompanyId = null;
+  document.getElementById('rs-back').style.display = 'none';
+  document.getElementById('rs-title').textContent = '🔬 리서치 카드 가져오기';
+  document.getElementById('rs-search').placeholder = '기업명 검색…';
+  document.getElementById('rs-search').value = '';
+  renderRsCompanies('');
+});
+document.getElementById('rs-search').addEventListener('input', (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  if (_rsCompanyId) renderRsCards(_rsCompanyId, q);
+  else renderRsCompanies(q);
+});
+
+function renderRsCompanies(q) {
+  const list = document.getElementById('rs-list');
+  list.innerHTML = '';
+  const comps = (_rsData.companies || [])
+    .filter(c => !q || (c.name || '').toLowerCase().includes(q) || (c.ticker || '').includes(q))
+    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
+  if (!comps.length) { list.innerHTML = '<div class="empty-tip">검색 결과 없음</div>'; return; }
+  comps.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'rs-item';
+    div.innerHTML = `<span>🏢</span><span class="nm"></span><span class="cnt"></span>`;
+    div.querySelector('.nm').textContent = c.name || c.id;
+    div.querySelector('.cnt').textContent = `카드 ${(c.cards || []).length}개`;
+    div.addEventListener('click', () => {
+      _rsCompanyId = c.id;
+      document.getElementById('rs-back').style.display = '';
+      document.getElementById('rs-title').textContent = `🏢 ${c.name}`;
+      document.getElementById('rs-search').placeholder = '카드 제목 검색…';
+      document.getElementById('rs-search').value = '';
+      renderRsCards(c.id, '');
+    });
+    list.appendChild(div);
+  });
+}
+
+function renderRsCards(companyId, q) {
+  const list = document.getElementById('rs-list');
+  list.innerHTML = '';
+  const c = (_rsData.companies || []).find(x => x.id === companyId);
+  if (!c) return;
+  const cards = (c.cards || [])
+    .filter(cd => !q || (cd.title || '').toLowerCase().includes(q))
+    .slice().reverse(); // 최신 카드 먼저
+  if (!cards.length) { list.innerHTML = '<div class="empty-tip">카드가 없어요</div>'; return; }
+  cards.forEach(cd => {
+    const div = document.createElement('div');
+    div.className = 'rs-item';
+    div.innerHTML = `<span>🔬</span><span class="nm"></span><span class="dt"></span>`;
+    div.querySelector('.nm').textContent = cd.title || cd.id;
+    div.querySelector('.dt').textContent = cd.date || '';
+    div.addEventListener('click', () => {
+      const id = uid();
+      meta.sheets.push({
+        id, name: `${c.name} — ${cd.title}`, folder: selectedFolderId || null,
+        type: 'rcard', rid: c.id, cid: cd.id,
+        dirty: true, updated: Date.now(),
+      });
+      saveMeta(); renderTree();
+      document.getElementById('rs-modal').style.display = 'none';
+      openSheet(id);
+      toast(`카드 "${cd.title}" 가져옴`);
+    });
+    list.appendChild(div);
+  });
+}
+
+/* 리서치 카드 렌더 (열람 시) */
+let _rcCharts = []; // Chart.js 인스턴스 정리용
+async function renderResearchCard(s) {
+  const view = document.getElementById('rcardview');
+  view.innerHTML = '<div class="empty-tip">불러오는 중…</div>';
+  _rcCharts.forEach(ch => { try { ch.destroy(); } catch(_) {} });
+  _rcCharts = [];
+  try {
+    const data = await loadResearchData();
+    const c = (data.companies || []).find(x => x.id === s.rid);
+    const cd = c && (c.cards || []).find(x => x.id === s.cid);
+    if (!cd) { view.innerHTML = '<div class="empty-tip">카드를 찾을 수 없어요.<br>리서치 탭에서 삭제되었을 수 있습니다.</div>'; return; }
+
+    const card = document.createElement('div');
+    card.className = 'rc-card';
+
+    const h = document.createElement('h2'); h.className = 'rc-title'; h.textContent = cd.title || '';
+    card.appendChild(h);
+
+    const metaDiv = document.createElement('div'); metaDiv.className = 'rc-meta';
+    const compSpan = document.createElement('span'); compSpan.textContent = `🏢 ${c.name}`; metaDiv.appendChild(compSpan);
+    if (cd.date) { const d = document.createElement('span'); d.textContent = `📅 ${cd.date}`; metaDiv.appendChild(d); }
+    (cd.tags || []).forEach(t => { const tg = document.createElement('span'); tg.className = 'rc-tag'; tg.textContent = t; metaDiv.appendChild(tg); });
+    card.appendChild(metaDiv);
+
+    if (cd.summary && cd.summary.length) {
+      const ul = document.createElement('ul'); ul.className = 'rc-summary';
+      cd.summary.forEach(line => { const li = document.createElement('li'); li.textContent = line; ul.appendChild(li); });
+      card.appendChild(ul);
+    }
+
+    // 차트 (chart 단일 / charts 배열)
+    const chartDefs = cd.charts || (cd.chart ? [cd.chart] : []);
+    chartDefs.forEach(def => {
+      if (!def || !def.labels || !def.data) return;
+      const wrap = document.createElement('div'); wrap.className = 'rc-chart-wrap';
+      if (def.title) {
+        const t = document.createElement('div'); t.className = 'rc-chart-title';
+        t.textContent = def.title + (def.unit ? ` (${def.unit})` : '');
+        wrap.appendChild(t);
+      }
+      const cvBox = document.createElement('div');
+      cvBox.style.cssText = 'position:relative; height:' + (def.type === 'donut' ? '260px' : '220px') + ';';
+      const cv = document.createElement('canvas');
+      cvBox.appendChild(cv); wrap.appendChild(cvBox); card.appendChild(wrap);
+      const type = def.type === 'donut' ? 'doughnut' : def.type === 'line' ? 'line' : 'bar';
+      const cfg = {
+        type,
+        data: {
+          labels: def.labels,
+          datasets: [{
+            data: def.data,
+            backgroundColor: def.colors || ['#378ADD','#85B7EB','#534AB7','#E2A93A','#3AB795','#E23A3A','#8898AA','#D67DC3'],
+            borderWidth: type === 'line' ? 2 : 0,
+            borderColor: '#378ADD',
+            fill: false,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          indexAxis: def.type === 'bar-h' ? 'y' : 'x',
+          plugins: { legend: { display: type === 'doughnut' } },
+        }
+      };
+      try { _rcCharts.push(new Chart(cv, cfg)); } catch(e) { console.warn('chart fail', e); }
+    });
+
+    // 원본 페이지 링크
+    const link = document.createElement('a');
+    link.className = 'rc-open-link';
+    link.href = `https://whysosary-dot.github.io/investment-notes/company.html?id=${encodeURIComponent(s.rid)}`;
+    link.target = '_blank'; link.rel = 'noopener';
+    link.textContent = `↗ ${c.name} 전체 카드 보기 (Research 탭)`;
+    card.appendChild(link);
+
+    view.innerHTML = '';
+    view.appendChild(card);
+  } catch(e) {
+    view.innerHTML = '<div class="empty-tip">불러오기 실패: ' + e.message + '</div>';
+  }
+}
 
 /* ── GitHub API ── */
 async function ghGet(path, pat) {
