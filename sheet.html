@@ -507,10 +507,14 @@ document.getElementById('lucky').addEventListener('touchend', (e) => {
   }
   function cancelPress() { clearTimeout(pressTimer); pressTimer = null; }
 
+  let startTime = 0, movedFar = false;
+
   luckyEl.addEventListener('touchstart', (e) => {
     if (!luckyCreated || e.touches.length !== 1) { cancelPress(); return; }
     const t = e.touches[0];
     startTouch = { x: t.clientX, y: t.clientY };
+    startTime = Date.now();
+    movedFar = false;
     selMode = false;
     cancelPress();
     pressTimer = setTimeout(() => {
@@ -525,6 +529,7 @@ document.getElementById('lucky').addEventListener('touchend', (e) => {
     if (!selMode) {
       // 아직 선택 모드 아님 — 10px 이상 움직이면 스크롤 의도로 판단, 롱프레스 취소
       if (startTouch && (Math.abs(t.clientX - startTouch.x) > 10 || Math.abs(t.clientY - startTouch.y) > 10)) {
+        movedFar = true;
         cancelPress();
       }
       return; // 기본 스크롤 허용
@@ -535,10 +540,19 @@ document.getElementById('lucky').addEventListener('touchend', (e) => {
 
   luckyEl.addEventListener('touchend', (e) => {
     cancelPress();
+    const t = e.changedTouches[0];
     if (selMode) {
-      const t = e.changedTouches[0];
       fireMouse('mouseup', t.clientX, t.clientY);
       selMode = false;
+      return;
+    }
+    // 빠른 탭 (짧고 안 움직임) — 행/열 헤더면 클릭으로 변환 → 전체 행/열 선택
+    if (!movedFar && t && (Date.now() - startTime) < 300) {
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      if (el && el.closest('#luckysheet-rows-h, #luckysheet-cols-h-c, .luckysheet-cols-h-c, .luckysheet-rows-h')) {
+        fireMouse('mousedown', t.clientX, t.clientY);
+        fireMouse('mouseup', t.clientX, t.clientY);
+      }
     }
   }, { passive: true });
 
