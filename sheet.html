@@ -249,6 +249,7 @@
   }
   .fv-toggle:hover { color: var(--text); border-color: var(--accent); }
   .fv-thumb { width: 100%; max-height: 140px; object-fit: cover; border-radius: 8px; }
+  .fv-cardbody img { max-width: 100%; border-radius: 8px; display: block; margin: 8px 0; }
   .fv-more {
     align-self: flex-start; border: none; background: none; color: var(--accent);
     font-size: 12.5px; cursor: pointer; padding: 0;
@@ -1721,18 +1722,31 @@ function buildItemCard(s) {
     }).catch(() => { bodyWrap.innerHTML = '<div class="fv-sub">불러오기 실패</div>'; });
   }
   else if (s.type === 'note') {
+    // 리서치 카드와 동일한 그라데이션 접기 — 본문(사진 포함) 그대로 렌더
     const data = loadSheetData(s.id);
     const html = (data && data.html) || '';
-    const thumb = firstImgSrc(html);
-    if (thumb) {
-      const img = document.createElement('img');
-      img.className = 'fv-thumb'; img.src = thumb; img.loading = 'lazy';
-      card.appendChild(img);
-    }
-    const body = document.createElement('div'); body.className = 'fv-body clamp';
-    body.textContent = stripHtmlToText(html) || '(내용 없음)';
-    card.appendChild(body);
-    addMoreToggle(body);
+    const bodyWrap = document.createElement('div');
+    bodyWrap.className = 'fv-cardbody';
+    const body = document.createElement('div');
+    body.className = 'fv-body';
+    if (html.trim()) body.innerHTML = html;
+    else body.textContent = '(내용 없음)';
+    bodyWrap.appendChild(body);
+    card.appendChild(bodyWrap);
+    requestAnimationFrame(() => {
+      if (bodyWrap.scrollHeight > 800) {
+        card.classList.add('collapsed');
+        const btn = document.createElement('button');
+        btn.className = 'fv-toggle';
+        btn.innerHTML = '<span>⌄</span> 더보기';
+        btn.addEventListener('click', () => {
+          const collapsed = card.classList.toggle('collapsed');
+          btn.innerHTML = collapsed ? '<span>⌄</span> 더보기' : '<span>⌃</span> 접기';
+          if (collapsed) card.scrollIntoView({ block: 'nearest' });
+        });
+        bodyWrap.insertAdjacentElement('afterend', btn);
+      }
+    });
   }
   else if (s.type === 'gsheet') {
     // 미니 미리보기 iframe (클릭 통과 — 카드 클릭으로 전체 보기)
