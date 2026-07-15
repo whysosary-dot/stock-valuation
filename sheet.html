@@ -84,7 +84,8 @@
     border-radius: 7px; padding: 5px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
   }
   .commit-btn:disabled { opacity: .5; cursor: not-allowed; }
-  #lucky { flex: 1; position: relative; touch-action: manipulation; } /* iOS 더블탭 줌 방지 */
+  #lucky { flex: 1; position: relative; touch-action: manipulation;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; } /* iOS 더블탭 줌/롱프레스 콜아웃 방지 */
   .no-sheet {
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 14px; color: var(--text-dim); font-size: 14px; background: var(--bg);
@@ -487,6 +488,62 @@ document.getElementById('lucky').addEventListener('touchend', (e) => {
     _lastTap = { t: now, x: touch.clientX, y: touch.clientY };
   }
 }, { passive: true });
+
+/* ── 아이패드: 길게 누른 뒤 드래그 = 셀 범위 선택 ──
+   한 손가락 드래그는 기본 스크롤로 두고, 300ms 이상 누르고 있으면
+   선택 모드로 전환해 touch 좌표를 synthetic mouse 이벤트로 변환한다.
+   (Luckysheet 는 mousedown/mousemove/mouseup 으로만 범위 선택을 처리) */
+(function() {
+  const luckyEl = document.getElementById('lucky');
+  let pressTimer = null, selMode = false, startTouch = null;
+
+  function fireMouse(type, x, y) {
+    const target = document.elementFromPoint(x, y) || luckyEl;
+    target.dispatchEvent(new MouseEvent(type, {
+      bubbles: true, cancelable: true, view: window,
+      clientX: x, clientY: y, button: 0,
+      buttons: type === 'mouseup' ? 0 : 1,
+    }));
+  }
+  function cancelPress() { clearTimeout(pressTimer); pressTimer = null; }
+
+  luckyEl.addEventListener('touchstart', (e) => {
+    if (!luckyCreated || e.touches.length !== 1) { cancelPress(); return; }
+    const t = e.touches[0];
+    startTouch = { x: t.clientX, y: t.clientY };
+    selMode = false;
+    cancelPress();
+    pressTimer = setTimeout(() => {
+      // 300ms 동안 안 움직임 → 선택 모드 시작
+      selMode = true;
+      fireMouse('mousedown', startTouch.x, startTouch.y);
+    }, 300);
+  }, { passive: true });
+
+  luckyEl.addEventListener('touchmove', (e) => {
+    const t = e.touches[0];
+    if (!selMode) {
+      // 아직 선택 모드 아님 — 10px 이상 움직이면 스크롤 의도로 판단, 롱프레스 취소
+      if (startTouch && (Math.abs(t.clientX - startTouch.x) > 10 || Math.abs(t.clientY - startTouch.y) > 10)) {
+        cancelPress();
+      }
+      return; // 기본 스크롤 허용
+    }
+    e.preventDefault(); // 선택 중엔 스크롤 차단
+    fireMouse('mousemove', t.clientX, t.clientY);
+  }, { passive: false });
+
+  luckyEl.addEventListener('touchend', (e) => {
+    cancelPress();
+    if (selMode) {
+      const t = e.changedTouches[0];
+      fireMouse('mouseup', t.clientX, t.clientY);
+      selMode = false;
+    }
+  }, { passive: true });
+
+  luckyEl.addEventListener('touchcancel', () => { cancelPress(); selMode = false; }, { passive: true });
+})();
 
 /* ── 언로드 시 저장 ── */
 window.addEventListener('pagehide', persistCurrent);
