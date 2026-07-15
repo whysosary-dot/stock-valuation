@@ -498,7 +498,7 @@ function renderTree() {
         const nm = prompt('폴더 이름 변경:', f.name);
         if (nm && nm.trim()) { f.name = nm.trim(); saveMeta(); renderTree(); }
       };
-      div.addEventListener('dblclick', renameFolder);
+      // 더블클릭 이름변경 제거 — 재클릭이 접기/펼치기 토글이라 충돌. 이름변경은 ✎ 버튼으로만
       div.querySelector('.ren').addEventListener('click', renameFolder);
       div.querySelector('.del').addEventListener('click', () => {
         // 하위 폴더/시트 재귀 수집
