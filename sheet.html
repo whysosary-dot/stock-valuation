@@ -25,7 +25,10 @@
     width: 232px; flex: none; background: var(--panel);
     border-right: 1px solid var(--border); display: flex; flex-direction: column;
     transition: margin-left .18s ease;
+    /* 롱프레스 드래그 시 iOS 텍스트 선택/콜아웃 방지 (검색 input 은 아래서 해제) */
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
   }
+  .sidebar input { -webkit-user-select: text; user-select: text; }
   .app.sb-hidden .sidebar { margin-left: -232px; }
   .sb-toggle {
     border: 1px solid var(--border); background: var(--panel); border-radius: 6px;
@@ -67,6 +70,15 @@
   }
   .node.folder .caret { font-size: 10px; width: 12px; color: var(--text-dim); }
   .empty-tip { padding: 20px 12px; text-align: center; font-size: 12.5px; color: var(--text-dim); line-height: 1.6; }
+  /* ── 사이드바 검색 ── */
+  .sb-search { padding: 8px 10px 0; }
+  .sb-search input {
+    width: 100%; box-sizing: border-box; padding: 6px 10px;
+    border: 1px solid var(--border); border-radius: 7px; font-size: 13px;
+    background: var(--panel-2); color: var(--text); outline: none;
+  }
+  .sb-search input:focus { border-color: var(--accent); background: var(--panel); }
+  .node .sub { font-size: 11px; color: var(--text-dim); margin-left: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: none; max-width: 45%; }
   /* ── 드래그 앤 드랍 ── */
   .node.drop-target { background: var(--accent-soft); outline: 2px dashed var(--accent); outline-offset: -2px; }
   .tree.drop-root { outline: 2px dashed var(--accent); outline-offset: -3px; border-radius: 8px; }
@@ -116,6 +128,9 @@
       <button class="sb-btn" id="new-folder-btn" title="선택한 폴더 아래 새 폴더 (선택 없으면 최상위)">📁+</button>
       <button class="sb-btn" id="new-sheet-btn" title="선택한 폴더에 새 시트 (선택 없으면 최상위)">📄+</button>
       <button class="sb-btn" id="new-gsheet-btn" title="실제 구글 스프레드시트 연결 (미리보기 임베드 + 새 창 편집)">🟢+</button>
+    </div>
+    <div class="sb-search">
+      <input id="tree-search" type="search" placeholder="🔍 폴더·시트 검색" autocomplete="off" />
     </div>
     <div class="tree" id="tree"></div>
   </div>
@@ -196,9 +211,61 @@ function setStatus(txt, saved) {
 }
 
 /* ── 트리 렌더 ── */
+let treeSearchQuery = '';
+
+function renderSearchResults(tree, q) {
+  const matchedFolders = meta.folders.filter(f => f.name.toLowerCase().includes(q));
+  const matchedSheets  = meta.sheets.filter(s => s.name.toLowerCase().includes(q));
+
+  if (!matchedFolders.length && !matchedSheets.length) {
+    const tip = document.createElement('div');
+    tip.className = 'empty-tip';
+    tip.textContent = '검색 결과가 없어요.';
+    tree.appendChild(tip);
+    return;
+  }
+
+  matchedFolders.sort((a,b)=>a.name.localeCompare(b.name,'ko')).forEach(f => {
+    const div = document.createElement('div');
+    div.className = 'node folder' + (selectedFolderId === f.id ? ' selected' : '');
+    div.innerHTML = `<span>📁</span><span class="nm"></span><span class="sub"></span>`;
+    div.querySelector('.nm').textContent = f.name;
+    const parentPath = f.parent ? folderPath(f.parent) : '';
+    div.querySelector('.sub').textContent = parentPath ? `(${parentPath})` : '(최상위)';
+    div.addEventListener('click', () => {
+      // 선택 + 검색 종료 + 조상 폴더 모두 펼침
+      selectedFolderId = f.id;
+      let cur = f;
+      while (cur) { collapsed.delete(cur.id); cur = meta.folders.find(x => x.id === cur.parent); }
+      saveCollapsed();
+      treeSearchQuery = '';
+      document.getElementById('tree-search').value = '';
+      renderTree();
+    });
+    tree.appendChild(div);
+  });
+
+  matchedSheets.sort((a,b)=>a.name.localeCompare(b.name,'ko')).forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'node sheet' + (currentId === s.id ? ' selected' : '');
+    div.innerHTML = `<span>${s.type === 'gsheet' ? '<span style="font-size:50%;vertical-align:middle;">🟢</span>' : '📄'}</span><span class="nm"></span><span class="sub"></span>`;
+    div.querySelector('.nm').textContent = s.name;
+    const p = s.folder ? folderPath(s.folder) : '';
+    div.querySelector('.sub').textContent = p ? `(${p})` : '(최상위)';
+    div.addEventListener('click', () => openSheet(s.id));
+    tree.appendChild(div);
+  });
+}
+
 function renderTree() {
   const tree = document.getElementById('tree');
   tree.innerHTML = '';
+
+  // 검색 모드: 플랫 결과 리스트
+  if (treeSearchQuery) {
+    renderSearchResults(tree, treeSearchQuery);
+    return;
+  }
   const foldersByParent = {};
   meta.folders.forEach(f => {
     const p = f.parent || '__root__';
@@ -672,6 +739,12 @@ async function ghDelete(path, sha, message, pat) {
     renderTree();
   }
 })();
+
+/* ── 사이드바 검색 ── */
+document.getElementById('tree-search').addEventListener('input', (e) => {
+  treeSearchQuery = e.target.value.trim().toLowerCase();
+  renderTree();
+});
 
 /* ── 사이드바 토글 (아이패드에서 시트 영역 확보) ── */
 document.getElementById('sb-toggle').addEventListener('click', () => {
