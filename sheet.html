@@ -1301,6 +1301,15 @@ async function renderResearchCard(s) {
     (cd.tags || []).forEach(t => { const tg = document.createElement('span'); tg.className = 'rc-tag'; tg.textContent = t; metaDiv.appendChild(tg); });
     card.appendChild(metaDiv);
 
+    // 이미지
+    (cd.images || []).forEach(rel => {
+      const img = document.createElement('img');
+      img.src = 'https://whysosary-dot.github.io/investment-notes/' + rel;
+      img.loading = 'lazy';
+      img.style.cssText = 'max-width:100%; border-radius:10px; display:block; margin:0 0 14px;';
+      card.appendChild(img);
+    });
+
     if (cd.summary && cd.summary.length) {
       const ul = document.createElement('ul'); ul.className = 'rc-summary';
       cd.summary.forEach(line => { const li = document.createElement('li'); li.textContent = line; ul.appendChild(li); });
@@ -1660,6 +1669,15 @@ function buildItemCard(s) {
       });
       bodyWrap.appendChild(metaDiv);
 
+      // 이미지 (investment-notes 리포 상대경로 → 절대 URL)
+      (cd.images || []).forEach(rel => {
+        const img = document.createElement('img');
+        img.src = 'https://whysosary-dot.github.io/investment-notes/' + rel;
+        img.loading = 'lazy';
+        img.addEventListener('load', () => { /* 접힘 재측정은 아래 tryCollapseR 에서 */ });
+        bodyWrap.appendChild(img);
+      });
+
       // 리서치 탭과 동일 순서: 차트 먼저 → 요약 텍스트
       const chartDefs = cd.charts || (cd.chart ? [cd.chart] : []);
       chartDefs.forEach(def => {
@@ -1703,9 +1721,12 @@ function buildItemCard(s) {
       body.appendChild(ul);
       bodyWrap.appendChild(body);
 
-      // 리서치 탭과 동일: 본문 800px 초과일 때만 접기 + 토글 버튼 (COLLAPSE_AT=800)
-      requestAnimationFrame(() => {
+      // 리서치 탭과 동일: 본문 800px 초과일 때만 접기 (이미지 로드 후 재측정 포함)
+      let rToggleAdded = false;
+      const tryCollapseR = () => {
+        if (rToggleAdded) return;
         if (bodyWrap.scrollHeight > 800) {
+          rToggleAdded = true;
           card.classList.add('collapsed');
           const btn = document.createElement('button');
           btn.className = 'fv-toggle';
@@ -1718,7 +1739,13 @@ function buildItemCard(s) {
           });
           bodyWrap.insertAdjacentElement('afterend', btn);
         }
+      };
+      requestAnimationFrame(tryCollapseR);
+      bodyWrap.querySelectorAll('img').forEach(img => {
+        if (img.complete) return;
+        img.addEventListener('load', tryCollapseR, { once: true });
       });
+      setTimeout(tryCollapseR, 600);
     }).catch(() => { bodyWrap.innerHTML = '<div class="fv-sub">불러오기 실패</div>'; });
   }
   else if (s.type === 'note') {
