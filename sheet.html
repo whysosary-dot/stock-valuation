@@ -115,7 +115,7 @@
       <span class="cur-path" id="cur-path"></span>
       <span class="spacer"></span>
       <span class="status" id="save-status"></span>
-      <button class="commit-btn" id="commit-btn">☁️ 커밋 &amp; 푸시</button>
+      <span class="status" title="커밋은 대시보드 상단의 ☁️ 커밋&푸시 버튼으로 (밸류에이션·다이어리·시트 일괄)">☁️ 대시보드에서 커밋</span>
     </div>
     <div id="lucky"></div>
     <div class="no-sheet" id="no-sheet" style="display:none;">
@@ -391,56 +391,8 @@ async function ghDelete(path, sha, message, pat) {
   return r.ok ? r.json() : null;
 }
 
-/* ── 커밋 & 푸시 ── */
-async function commitAll() {
-  const pat = localStorage.getItem(PAT_KEY) || '';
-  if (!pat) { toast('GitHub 토큰이 없습니다. 대시보드 ⚙️ 에서 토큰을 저장해주세요.', 'err', 4500); return; }
-  const btn = document.getElementById('commit-btn');
-  btn.disabled = true; btn.textContent = '커밋 중…';
-  persistCurrent();
-  try {
-    const today = new Date().toISOString().slice(0, 10);
-
-    // 1) 삭제 예약된 시트 파일 제거
-    const deleted = meta._deleted || [];
-    for (const id of deleted) {
-      const f = await ghGet(`sheets/data/${id}.json`, pat);
-      if (f) await ghDelete(`sheets/data/${id}.json`, f.sha, `sheets: 시트 삭제 ${id}`, pat);
-    }
-    meta._deleted = [];
-
-    // 2) dirty 시트 데이터 커밋
-    const dirtySheets = meta.sheets.filter(s => s.dirty);
-    for (const s of dirtySheets) {
-      const data = loadSheetData(s.id);
-      if (!data) continue;
-      const existing = await ghGet(`sheets/data/${s.id}.json`, pat);
-      await ghPut(`sheets/data/${s.id}.json`, JSON.stringify(data), existing ? existing.sha : null,
-        `sheets: ${s.name} 업데이트 ${today}`, pat);
-      s.dirty = false;
-    }
-
-    // 3) index.json 커밋 (dirty 플래그 제외)
-    const indexData = {
-      folders: meta.folders,
-      sheets: meta.sheets.map(({ id, name, folder, updated }) => ({ id, name, folder, updated })),
-    };
-    const idxFile = await ghGet('sheets/index.json', pat);
-    const putRes = await ghPut('sheets/index.json', JSON.stringify(indexData, null, 2),
-      idxFile ? idxFile.sha : null, `sheets: 인덱스 업데이트 ${today}`, pat);
-    const newSha = putRes && putRes.content && putRes.content.sha;
-    if (newSha) localStorage.setItem(SHA_KEY, String(newSha));
-
-    saveMeta(); renderTree();
-    toast(`✅ 커밋 완료 (시트 ${dirtySheets.length}개${deleted.length ? `, 삭제 ${deleted.length}개` : ''})`);
-    setStatus('커밋됨 ✓', true);
-  } catch (e) {
-    toast('❌ 커밋 실패: ' + e.message, 'err', 5000);
-  } finally {
-    btn.disabled = false; btn.textContent = '☁️ 커밋 & 푸시';
-  }
-}
-document.getElementById('commit-btn').addEventListener('click', commitAll);
+/* 커밋&푸시는 대시보드(index.html)의 ☁️ 버튼이 일괄 처리한다.
+   (ghCommitAll 3단계 — 밸류에이션 + 다이어리 + 시트. same-origin localStorage 공유) */
 
 /* ── 초기 동기화 (SHA 추적, diary 와 동일 정책) ── */
 (async function initialSync() {
@@ -494,6 +446,16 @@ const _autoCollapse = () => {
 /* ── 언로드 시 저장 ── */
 window.addEventListener('pagehide', persistCurrent);
 window.addEventListener('resize', () => { try { luckysheet.resize(); } catch(_) {} });
+
+/* ── 대시보드(부모 창)가 커밋하면 meta 를 다시 읽어 ● 표시 갱신
+   (same-origin: 부모의 localStorage 쓰기가 iframe 에 storage 이벤트로 전달됨) ── */
+window.addEventListener('storage', (e) => {
+  if (e.key === META_KEY) {
+    meta = loadMeta();
+    renderTree();
+    setStatus('커밋됨 ✓', true);
+  }
+});
 
 renderTree();
 showNoSheet();
