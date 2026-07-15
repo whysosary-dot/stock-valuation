@@ -141,6 +141,13 @@
     -webkit-user-select: text; user-select: text;
   }
   #note-edit:empty::before { content: attr(data-placeholder); color: #aab2bd; pointer-events: none; }
+  #note-title {
+    flex: none; border: none; outline: none; background: #fff;
+    padding: 18px 26px 10px; font-size: 22px; font-weight: 700; color: var(--text);
+    border-bottom: 1px solid var(--border);
+    -webkit-user-select: text; user-select: text;
+  }
+  #note-title::placeholder { color: #c3c9d2; }
   #note-edit img { max-width: 100%; border-radius: 10px; display: block; margin: 12px 0; }
   #note-edit h3 { font-size: 18px; margin: 18px 0 6px; }
 
@@ -225,6 +232,7 @@
     <div id="gview" style="display:none; flex:1;"><iframe id="gview-frame" style="width:100%;height:100%;border:none;"></iframe></div>
     <!-- 블로그형 노트 에디터 -->
     <div id="noteview" style="display:none; flex-direction:column; min-height:0; flex:1;">
+      <input id="note-title" type="text" placeholder="제목" autocomplete="off" />
       <div class="note-toolbar">
         <button data-cmd="bold" title="굵게"><b>B</b></button>
         <button data-cmd="red" title="빨강"><span style="color:#e23a3a;font-weight:700;">A</span></button>
@@ -795,6 +803,7 @@ function openSheet(id) {
     const data = loadSheetData(id);
     const ed = document.getElementById('note-edit');
     ed.innerHTML = (data && data.html) || '';
+    document.getElementById('note-title').value = (s.name === '제목 없음') ? '' : s.name;
     noteChanged = false;
     document.getElementById('noteview').style.display = 'flex';
     renderTree(); updateTopbar();
@@ -877,13 +886,34 @@ document.getElementById('new-gsheet-btn').addEventListener('click', () => {
 
 /* ═══ 블로그형 노트 (📝) ═══ */
 document.getElementById('new-note-btn').addEventListener('click', () => {
-  const nm = prompt('새 글 제목:');
-  if (!nm || !nm.trim()) return;
   const id = uid();
-  meta.sheets.push({ id, name: nm.trim(), folder: selectedFolderId || null, type: 'note', dirty: true, updated: Date.now() });
+  meta.sheets.push({ id, name: '제목 없음', folder: selectedFolderId || null, type: 'note', dirty: true, updated: Date.now() });
   saveSheetData(id, { type: 'note', html: '' });
   saveMeta(); renderTree();
   openSheet(id);
+  // 제목 입력란에 바로 포커스
+  setTimeout(() => {
+    const ti = document.getElementById('note-title');
+    ti.value = '';
+    ti.focus();
+  }, 60);
+});
+
+// 제목 입력 → 트리 이름과 실시간 동기화
+let noteTitleTimer = null;
+document.getElementById('note-title').addEventListener('input', (e) => {
+  const s = meta.sheets.find(x => x.id === currentId);
+  if (!s || s.type !== 'note') return;
+  clearTimeout(noteTitleTimer);
+  noteTitleTimer = setTimeout(() => {
+    s.name = e.target.value.trim() || '제목 없음';
+    s.dirty = true; s.updated = Date.now();
+    saveMeta(); renderTree(); updateTopbar();
+  }, 400);
+});
+// 제목에서 Enter 치면 본문으로
+document.getElementById('note-title').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); document.getElementById('note-edit').focus(); }
 });
 
 // 편집 → 디바운스 자동저장
