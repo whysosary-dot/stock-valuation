@@ -82,6 +82,11 @@
   /* ── 드래그 앤 드랍 ── */
   .node.drop-target { background: var(--accent-soft); outline: 2px dashed var(--accent); outline-offset: -2px; }
   .tree.drop-root { outline: 2px dashed var(--accent); outline-offset: -3px; border-radius: 8px; }
+  /* 순서 변경 삽입 위치 (점선) */
+  .node.drop-before { box-shadow: 0 -2px 0 0 var(--accent); position: relative; }
+  .node.drop-before::before { content:''; position:absolute; top:-2px; left:0; right:0; border-top:2px dashed var(--accent); }
+  .node.drop-after { box-shadow: 0 2px 0 0 var(--accent); position: relative; }
+  .node.drop-after::after { content:''; position:absolute; bottom:-2px; left:0; right:0; border-bottom:2px dashed var(--accent); }
   .drag-ghost {
     position: fixed; pointer-events: none; z-index: 9999;
     background: var(--panel); border: 1.5px solid var(--accent); border-radius: 8px;
@@ -126,7 +131,6 @@
     <div class="sb-head">
       <span class="sb-title">📊 Sheets</span>
       <button class="sb-btn" id="new-folder-btn" title="선택한 폴더 아래 새 폴더 (선택 없으면 최상위)">📁+</button>
-      <button class="sb-btn" id="new-sheet-btn" title="선택한 폴더에 새 시트 (선택 없으면 최상위)">📄+</button>
       <button class="sb-btn" id="new-gsheet-btn" title="실제 구글 스프레드시트 연결 (미리보기 임베드 + 새 창 편집)">🟢+</button>
     </div>
     <div class="sb-search">
@@ -278,7 +282,7 @@ function renderTree() {
   });
 
   function addFolderNodes(parentKey, depth) {
-    (foldersByParent[parentKey] || []).sort((a,b)=>a.name.localeCompare(b.name,'ko')).forEach(f => {
+    (foldersByParent[parentKey] || []).sort(cmpOrd).forEach(f => {
       const div = document.createElement('div');
       div.className = 'node folder' + (selectedFolderId === f.id ? ' selected' : '');
       div.style.paddingLeft = (8 + depth * 16) + 'px';
@@ -339,7 +343,7 @@ function renderTree() {
     });
   }
   function addSheetNodes(folderKey, depth) {
-    (sheetsByFolder[folderKey] || []).sort((a,b)=>a.name.localeCompare(b.name,'ko')).forEach(s => {
+    (sheetsByFolder[folderKey] || []).sort(cmpOrd).forEach(s => {
       const div = document.createElement('div');
       div.className = 'node sheet' + (currentId === s.id ? ' selected' : '');
       div.style.paddingLeft = (8 + depth * 16 + 12) + 'px';
@@ -399,10 +403,14 @@ function collectDescFolders(fid) {
 }
 
 function moveItem(kind, id, target) { // target: 폴더 id | null(최상위)
+  const maxOrd = (arr, key) => arr
+    .filter(x => x.id !== id && ((key === 'parent' ? (x.parent || null) : (x.folder || null)) === target))
+    .reduce((m, x) => Math.max(m, x.ord ?? 0), 0);
   if (kind === 'sheet') {
     const s = meta.sheets.find(x => x.id === id);
     if (!s || s.folder === target) return;
     s.folder = target; s.dirty = true;
+    s.ord = maxOrd(meta.sheets, 'folder') + 10; // 대상 폴더 맨 끝에
   } else {
     if (id === target) return;
     if (target && collectDescFolders(id).includes(target)) {
@@ -411,6 +419,7 @@ function moveItem(kind, id, target) { // target: 폴더 id | null(최상위)
     const f = meta.folders.find(x => x.id === id);
     if (!f || f.parent === target) return;
     f.parent = target;
+    f.ord = maxOrd(meta.folders, 'parent') + 10;
   }
   saveMeta(); renderTree();
   const item = kind === 'sheet' ? meta.sheets.find(x => x.id === id) : meta.folders.find(x => x.id === id);
@@ -419,29 +428,98 @@ function moveItem(kind, id, target) { // target: 폴더 id | null(최상위)
 
 function clearDropHighlights() {
   const treeEl = document.getElementById('tree');
-  treeEl.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+  treeEl.querySelectorAll('.drop-target, .drop-before, .drop-after').forEach(el =>
+    el.classList.remove('drop-target', 'drop-before', 'drop-after'));
   treeEl.classList.remove('drop-root');
 }
 function positionGhost(x, y) {
   if (dragGhost) { dragGhost.style.left = (x + 12) + 'px'; dragGhost.style.top = (y - 14) + 'px'; }
 }
-function dropTargetAt(x, y) {
+
+/* 순서 정렬용 비교자: ord 우선, 없으면 이름순 */
+function cmpOrd(a, b) {
+  return ((a.ord ?? 1e9) - (b.ord ?? 1e9)) || a.name.localeCompare(b.name, 'ko');
+}
+
+/* 드랍 판정:
+   { type:'into',   folderId }                  → 폴더 안으로 이동 (또는 최상위)
+   { type:'insert', kind, refId, pos }          → refId 앞/뒤 삽입 (같은 카테고리 순서 변경)
+   undefined                                    → 취소 */
+function dropInfoAt(x, y) {
+  if (!dragItem) return undefined;
   const el = document.elementFromPoint(x, y);
   if (!el) return undefined;
-  const fnode = el.closest('.node.folder');
-  if (fnode && fnode.dataset.fid) return fnode.dataset.fid;
-  if (el.closest('#tree')) return null;   // 트리 빈 영역 = 최상위
-  return undefined;                        // 트리 밖 = 취소
-}
-function highlightDropAt(x, y) {
-  clearDropHighlights();
-  const tgt = dropTargetAt(x, y);
-  if (tgt === null) document.getElementById('tree').classList.add('drop-root');
-  else if (tgt) {
-    const el = document.elementFromPoint(x, y);
-    const fnode = el && el.closest('.node.folder');
-    if (fnode) fnode.classList.add('drop-target');
+  const node = el.closest('.node');
+  if (node) {
+    const r = node.getBoundingClientRect();
+    const rel = (y - r.top) / Math.max(r.height, 1);
+    const isFolder = node.classList.contains('folder');
+    if (isFolder && node.dataset.fid) {
+      if (dragItem.kind === 'folder') {
+        // 폴더 드래그: 위/아래 가장자리 = 순서 삽입, 가운데 = 폴더 안으로
+        if (rel < 0.25) return { type: 'insert', kind: 'folder', refId: node.dataset.fid, pos: 'before' };
+        if (rel > 0.75) return { type: 'insert', kind: 'folder', refId: node.dataset.fid, pos: 'after' };
+        return { type: 'into', folderId: node.dataset.fid };
+      }
+      // 시트 드래그 → 폴더 안으로
+      return { type: 'into', folderId: node.dataset.fid };
+    }
+    if (!isFolder && node.dataset.sid && dragItem.kind === 'sheet') {
+      // 시트 위 = 위/아래 절반으로 앞/뒤 삽입
+      return { type: 'insert', kind: 'sheet', refId: node.dataset.sid, pos: rel < 0.5 ? 'before' : 'after' };
+    }
   }
+  if (el.closest('#tree')) return { type: 'into', folderId: null }; // 빈 영역 = 최상위
+  return undefined;
+}
+
+function applyDropHighlight(info) {
+  clearDropHighlights();
+  if (!info) return;
+  const treeEl = document.getElementById('tree');
+  if (info.type === 'into') {
+    if (info.folderId === null) { treeEl.classList.add('drop-root'); return; }
+    const el = treeEl.querySelector(`.node.folder[data-fid="${info.folderId}"]`);
+    if (el) el.classList.add('drop-target');
+  } else if (info.type === 'insert') {
+    const sel = info.kind === 'folder'
+      ? `.node.folder[data-fid="${info.refId}"]`
+      : `.node.sheet[data-sid="${info.refId}"]`;
+    const el = treeEl.querySelector(sel);
+    if (el) el.classList.add(info.pos === 'before' ? 'drop-before' : 'drop-after');
+  }
+}
+
+/* 순서 변경: refId 항목 앞/뒤로 삽입 (필요 시 카테고리도 함께 이동) */
+function reorderItem(kind, id, refId, pos) {
+  const list = kind === 'folder' ? meta.folders : meta.sheets;
+  const item = list.find(x => x.id === id);
+  const ref  = list.find(x => x.id === refId);
+  if (!item || !ref || id === refId) return;
+  const parentKey = kind === 'folder' ? (ref.parent || null) : (ref.folder || null);
+  if (kind === 'folder') {
+    if (parentKey && collectDescFolders(id).includes(parentKey)) {
+      toast('자기 하위 폴더로는 이동할 수 없습니다.', 'err', 3000); return;
+    }
+    item.parent = parentKey;
+  } else {
+    item.folder = parentKey;
+  }
+  const sibs = list
+    .filter(x => x !== item && ((kind === 'folder' ? (x.parent || null) : (x.folder || null)) === parentKey))
+    .sort(cmpOrd);
+  let idx = sibs.indexOf(ref);
+  if (idx === -1) idx = sibs.length; else if (pos === 'after') idx++;
+  sibs.splice(idx, 0, item);
+  sibs.forEach((x, i) => { x.ord = (i + 1) * 10; });
+  saveMeta(); renderTree();
+  toast(`"${item.name}" 순서 변경됨`);
+}
+
+function performDrop(info) {
+  if (!info || !dragItem) return;
+  if (info.type === 'into') moveItem(dragItem.kind, dragItem.id, info.folderId);
+  else if (info.type === 'insert') reorderItem(dragItem.kind, dragItem.id, info.refId, info.pos);
 }
 function endTouchDrag() {
   touchDragging = false; dragItem = null;
@@ -451,8 +529,9 @@ function endTouchDrag() {
 
 function attachDnD(div, kind, id, name) {
   if (kind === 'folder') div.dataset.fid = id;
+  else div.dataset.sid = id;
 
-  // ── 데스크톱 HTML5 DnD ──
+  // ── 데스크톱 HTML5 DnD (드랍 판정은 트리 레벨 위임 리스너가 처리) ──
   div.draggable = true;
   div.addEventListener('dragstart', (e) => {
     dragItem = { kind, id };
@@ -460,18 +539,6 @@ function attachDnD(div, kind, id, name) {
     try { e.dataTransfer.setData('text/plain', id); } catch(_) {}
   });
   div.addEventListener('dragend', () => { dragItem = null; clearDropHighlights(); });
-  if (kind === 'folder') {
-    div.addEventListener('dragover', (e) => {
-      if (!dragItem) return;
-      e.preventDefault(); e.stopPropagation();
-      clearDropHighlights(); div.classList.add('drop-target');
-    });
-    div.addEventListener('drop', (e) => {
-      e.preventDefault(); e.stopPropagation();
-      if (dragItem) moveItem(dragItem.kind, dragItem.id, id);
-      dragItem = null; clearDropHighlights();
-    });
-  }
 
   // ── 터치: 0.4초 롱프레스 → 드래그 ──
   div.addEventListener('touchstart', (e) => {
@@ -501,15 +568,14 @@ function attachDnD(div, kind, id, name) {
     }
     e.preventDefault();
     positionGhost(t.clientX, t.clientY);
-    highlightDropAt(t.clientX, t.clientY);
+    applyDropHighlight(dropInfoAt(t.clientX, t.clientY));
   }, { passive: false });
 
   div.addEventListener('touchend', (e) => {
     clearTimeout(dragPressTimer);
     if (!touchDragging) return;
     const t = e.changedTouches[0];
-    const target = dropTargetAt(t.clientX, t.clientY);
-    if (target !== undefined && dragItem) moveItem(dragItem.kind, dragItem.id, target);
+    performDrop(dropInfoAt(t.clientX, t.clientY));
     endTouchDrag();
     e.preventDefault(); // 드랍 후 클릭 합성 방지
   }, { passive: false });
@@ -517,17 +583,17 @@ function attachDnD(div, kind, id, name) {
   div.addEventListener('touchcancel', () => { clearTimeout(dragPressTimer); endTouchDrag(); }, { passive: true });
 }
 
-/* 트리 빈 영역에 드랍 = 최상위로 이동 (데스크톱) */
+/* 트리 레벨 위임 리스너 (데스크톱 DnD) — 폴더 into / 순서 insert / 빈 영역 root 전부 처리 */
 (function() {
   const treeEl = document.getElementById('tree');
   treeEl.addEventListener('dragover', (e) => {
     if (!dragItem) return;
     e.preventDefault();
-    if (!e.target.closest('.node.folder')) { clearDropHighlights(); treeEl.classList.add('drop-root'); }
+    applyDropHighlight(dropInfoAt(e.clientX, e.clientY));
   });
   treeEl.addEventListener('drop', (e) => {
     e.preventDefault();
-    if (dragItem && !e.target.closest('.node.folder')) moveItem(dragItem.kind, dragItem.id, null);
+    performDrop(dropInfoAt(e.clientX, e.clientY));
     dragItem = null; clearDropHighlights();
   });
 })();
@@ -633,16 +699,6 @@ document.getElementById('new-folder-btn').addEventListener('click', () => {
   meta.folders.push({ id: uid(), name: nm.trim(), parent: selectedFolderId || null });
   saveMeta(); renderTree();
 });
-document.getElementById('new-sheet-btn').addEventListener('click', () => {
-  const nm = prompt('새 시트 이름:');
-  if (!nm || !nm.trim()) return;
-  const id = uid();
-  meta.sheets.push({ id, name: nm.trim(), folder: selectedFolderId || null, dirty: true, updated: Date.now() });
-  saveSheetData(id, defaultWorkbook());
-  saveMeta(); renderTree();
-  openSheet(id);
-});
-
 /* 실제 구글 스프레드시트 연결 */
 document.getElementById('new-gsheet-btn').addEventListener('click', () => {
   const url = prompt('구글 스프레드시트 URL 을 붙여넣으세요:\n(https://docs.google.com/spreadsheets/d/... 형식)');
