@@ -509,6 +509,18 @@ document.getElementById('lucky').addEventListener('touchend', (e) => {
 
   let startTime = 0, movedFar = false;
 
+  // 현재 선택 박스(셀/범위) 위에서 터치가 시작됐는지 — 여백 8px 확장해서 손가락 오차 허용
+  function touchOnSelection(x, y) {
+    const els = document.querySelectorAll('#luckysheet-cell-selected, .luckysheet-cell-selected');
+    for (const el of els) {
+      if (!el.offsetParent) continue; // 숨겨진 요소 스킵
+      const r = el.getBoundingClientRect();
+      if (r.width < 2 || r.height < 2) continue;
+      if (x >= r.left - 8 && x <= r.right + 8 && y >= r.top - 8 && y <= r.bottom + 8) return true;
+    }
+    return false;
+  }
+
   luckyEl.addEventListener('touchstart', (e) => {
     if (!luckyCreated || e.touches.length !== 1) { cancelPress(); return; }
     const t = e.touches[0];
@@ -517,12 +529,22 @@ document.getElementById('lucky').addEventListener('touchend', (e) => {
     movedFar = false;
     selMode = false;
     cancelPress();
+
+    // 이미 선택된 셀/범위 위에서 시작한 터치 → 롱프레스 없이 즉시 선택 모드
+    // (구글시트처럼 선택된 셀에서 드래그하면 범위가 늘어남)
+    if (touchOnSelection(t.clientX, t.clientY)) {
+      e.preventDefault(); // 스크롤로 새지 않게
+      selMode = true;
+      fireMouse('mousedown', t.clientX, t.clientY);
+      return;
+    }
+
     pressTimer = setTimeout(() => {
       // 300ms 동안 안 움직임 → 선택 모드 시작
       selMode = true;
       fireMouse('mousedown', startTouch.x, startTouch.y);
     }, 300);
-  }, { passive: true });
+  }, { passive: false });
 
   luckyEl.addEventListener('touchmove', (e) => {
     const t = e.touches[0];
