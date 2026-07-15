@@ -84,7 +84,7 @@
     border-radius: 7px; padding: 5px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
   }
   .commit-btn:disabled { opacity: .5; cursor: not-allowed; }
-  #lucky { flex: 1; position: relative; }
+  #lucky { flex: 1; position: relative; touch-action: manipulation; } /* iOS 더블탭 줌 방지 */
   .no-sheet {
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 14px; color: var(--text-dim); font-size: 14px; background: var(--bg);
@@ -454,6 +454,39 @@ document.getElementById('sb-toggle').addEventListener('click', () => {
 const _autoCollapse = () => {
   if (window.innerWidth < 900) document.querySelector('.app').classList.add('sb-hidden');
 };
+
+/* ── 아이패드: 셀 더블탭 → 편집 모드 + 가상 키보드 ──
+   Luckysheet 는 데스크톱 dblclick 로만 편집 모드에 들어가서 터치에선 키보드가 안 뜬다.
+   더블탭을 직접 감지해 enterEditMode + 내부 에디터 focus (user gesture 안에서 해야 iOS 키보드가 열림) */
+let _lastTap = { t: 0, x: 0, y: 0 };
+document.getElementById('lucky').addEventListener('touchend', (e) => {
+  if (!luckyCreated) return;
+  const touch = e.changedTouches && e.changedTouches[0];
+  if (!touch) return;
+  const now = Date.now();
+  const dx = Math.abs(touch.clientX - _lastTap.x);
+  const dy = Math.abs(touch.clientY - _lastTap.y);
+  if (now - _lastTap.t < 350 && dx < 30 && dy < 30) {
+    // 더블탭 — 편집 모드 진입 + 키보드 호출
+    try {
+      luckysheet.enterEditMode();
+      const ed = document.getElementById('luckysheet-rich-text-editor');
+      if (ed) {
+        ed.focus();
+        // caret 을 끝으로
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(ed);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    } catch(err) { console.warn('[sheet] enterEditMode fail', err); }
+    _lastTap = { t: 0, x: 0, y: 0 };
+  } else {
+    _lastTap = { t: now, x: touch.clientX, y: touch.clientY };
+  }
+}, { passive: true });
 
 /* ── 언로드 시 저장 ── */
 window.addEventListener('pagehide', persistCurrent);
