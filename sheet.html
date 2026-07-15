@@ -198,6 +198,37 @@
   }
   .rs-import-btn:disabled { opacity: .45; cursor: not-allowed; }
 
+  /* ── 폴더 미리보기 뷰 ── */
+  .folder-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px; max-width: 1200px; margin: 0 auto;
+  }
+  .fv-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; display: flex; flex-direction: column; gap: 8px;
+    transition: box-shadow .12s, border-color .12s;
+  }
+  .fv-card:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgba(37,99,235,.08); }
+  .fv-head { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
+  .fv-head .ttl { flex: 1; font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.45; }
+  .fv-head:hover .ttl { color: var(--accent); }
+  .fv-meta { display: flex; gap: 6px; flex-wrap: wrap; font-size: 11.5px; color: var(--text-dim); }
+  .fv-meta .rc-tag { font-size: 11px; }
+  .fv-body { font-size: 13.5px; line-height: 1.65; color: var(--text); }
+  .fv-body ul { margin: 0; padding-left: 18px; }
+  .fv-body li { margin-bottom: 3px; }
+  .fv-body.clamp {
+    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .fv-thumb { width: 100%; max-height: 140px; object-fit: cover; border-radius: 8px; }
+  .fv-more {
+    align-self: flex-start; border: none; background: none; color: var(--accent);
+    font-size: 12.5px; cursor: pointer; padding: 0;
+  }
+  .fv-sub { font-size: 12px; color: var(--text-dim); }
+  .fv-card.folder-card { background: var(--accent-soft); border-color: #bfcffe; }
+
   /* ── 좁은 화면 (아이폰/아이패드 세로): 상단바 잘림 방지 ── */
   @media (max-width: 700px) {
     .topbar { gap: 6px; padding: 0 8px; }
@@ -259,6 +290,8 @@
     </div>
     <!-- 리서치 카드 뷰 -->
     <div id="rcardview" style="display:none; flex:1; overflow-y:auto; padding:20px; background:var(--bg);"></div>
+    <!-- 폴더 미리보기 뷰 (하위 항목 카드 그리드) -->
+    <div id="folderview" style="display:none; flex:1; overflow-y:auto; padding:20px; background:var(--bg);"></div>
     <div class="no-sheet" id="no-sheet" style="display:none;">
       <div style="font-size:44px;">📄</div>
       <div>왼쪽에서 시트를 선택하거나 새로 만들어주세요</div>
@@ -371,14 +404,14 @@ function renderSearchResults(tree, q) {
     const parentPath = f.parent ? folderPath(f.parent) : '';
     div.querySelector('.sub').textContent = parentPath ? `(${parentPath})` : '(최상위)';
     div.addEventListener('click', () => {
-      // 선택 + 검색 종료 + 조상 폴더 모두 펼침
+      // 선택 + 검색 종료 + 조상 폴더 모두 펼침 + 미리보기
       selectedFolderId = f.id;
       let cur = f;
       while (cur) { collapsed.delete(cur.id); cur = meta.folders.find(x => x.id === cur.parent); }
       saveCollapsed();
       treeSearchQuery = '';
       document.getElementById('tree-search').value = '';
-      renderTree();
+      openFolderView(f.id);
     });
     tree.appendChild(div);
   });
@@ -425,11 +458,11 @@ function renderTree() {
       div.querySelector('.nm').textContent = f.name;
       div.addEventListener('click', (e) => {
         if (e.target.classList.contains('del') || e.target.classList.contains('ren')) return;
-        // 클릭 = 접기/펼치기 토글 + 이 폴더를 선택 상태로
+        // 클릭 = 접기/펼치기 토글 + 선택 + 오른쪽에 하위 항목 미리보기
         if (collapsed.has(f.id)) collapsed.delete(f.id); else collapsed.add(f.id);
         saveCollapsed();
         selectedFolderId = f.id;
-        renderTree();
+        openFolderView(f.id); // 내부에서 renderTree 호출
       });
       const renameFolder = () => {
         const nm = prompt('폴더 이름 변경:', f.name);
@@ -744,6 +777,7 @@ function hideAllViews() {
   document.getElementById('gview').style.display = 'none';
   document.getElementById('noteview').style.display = 'none';
   document.getElementById('rcardview').style.display = 'none';
+  document.getElementById('folderview').style.display = 'none';
   document.getElementById('gedit-link').style.display = 'none';
   document.getElementById('no-sheet').style.display = 'none';
 }
@@ -1430,6 +1464,155 @@ async function renderIndexCard(s) {
   } catch(e) {
     view.innerHTML = '<div class="empty-tip">불러오기 실패: ' + e.message + '</div>';
   }
+}
+
+/* ═══ 폴더 미리보기 뷰 ═══
+   폴더 클릭 → 하위 폴더/항목을 카드 그리드로. 카드 제목 클릭 = 전체 화면.
+   더보기/접기 로 카드 안에서 내용 확장 가능. */
+function stripHtmlToText(html) {
+  const div = document.createElement('div');
+  div.innerHTML = html || '';
+  return (div.innerText || '').trim();
+}
+function firstImgSrc(html) {
+  const div = document.createElement('div');
+  div.innerHTML = html || '';
+  const img = div.querySelector('img');
+  return img ? img.src : null;
+}
+
+function openFolderView(folderId) {
+  persistCurrent();
+  currentId = null;
+  hideAllViews();
+  const fv = document.getElementById('folderview');
+  fv.style.display = 'block';
+
+  const f = meta.folders.find(x => x.id === folderId);
+  document.getElementById('cur-name').textContent = f ? `📂 ${f.name}` : '';
+  document.getElementById('cur-path').textContent = f && f.parent ? `(${folderPath(f.parent)})` : '';
+
+  fv.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'folder-grid';
+
+  const subFolders = meta.folders.filter(x => (x.parent || null) === folderId).sort(cmpOrd);
+  const sheets = meta.sheets.filter(s => (s.folder || null) === folderId).sort(cmpOrd);
+
+  if (!subFolders.length && !sheets.length) {
+    fv.innerHTML = '<div class="empty-tip" style="padding:60px 20px;">이 폴더는 비어있어요.<br>사이드바 버튼으로 항목을 추가해보세요.</div>';
+    renderTree();
+    return;
+  }
+
+  subFolders.forEach(sf => {
+    const card = document.createElement('div');
+    card.className = 'fv-card folder-card';
+    const head = document.createElement('div'); head.className = 'fv-head';
+    const cnt = meta.folders.filter(x => x.parent === sf.id).length
+              + meta.sheets.filter(s => s.folder === sf.id).length;
+    head.innerHTML = `<span>📂</span><span class="ttl"></span>`;
+    head.querySelector('.ttl').textContent = sf.name;
+    head.addEventListener('click', () => {
+      selectedFolderId = sf.id;
+      collapsed.delete(sf.id); saveCollapsed();
+      renderTree();
+      openFolderView(sf.id);
+    });
+    card.appendChild(head);
+    const sub = document.createElement('div'); sub.className = 'fv-sub';
+    sub.textContent = `${cnt}개 항목`;
+    card.appendChild(sub);
+    grid.appendChild(card);
+  });
+
+  sheets.forEach(s => grid.appendChild(buildItemCard(s)));
+  fv.appendChild(grid);
+  renderTree();
+}
+
+function buildItemCard(s) {
+  const card = document.createElement('div');
+  card.className = 'fv-card';
+
+  const head = document.createElement('div'); head.className = 'fv-head';
+  head.innerHTML = `<span>${itemIcon(s)}</span><span class="ttl"></span>`;
+  head.querySelector('.ttl').textContent = s.name;
+  head.addEventListener('click', () => openSheet(s.id));
+  card.appendChild(head);
+
+  const addMoreToggle = (body) => {
+    const btn = document.createElement('button');
+    btn.className = 'fv-more';
+    btn.textContent = '더보기 ▾';
+    btn.addEventListener('click', () => {
+      const clamped = body.classList.toggle('clamp');
+      btn.textContent = clamped ? '더보기 ▾' : '접기 ▴';
+    });
+    card.appendChild(btn);
+  };
+
+  if (s.type === 'rcard') {
+    const metaDiv = document.createElement('div'); metaDiv.className = 'fv-meta';
+    card.appendChild(metaDiv);
+    const body = document.createElement('div'); body.className = 'fv-body clamp';
+    body.textContent = '불러오는 중…';
+    card.appendChild(body);
+    addMoreToggle(body);
+    loadResearchData().then(data => {
+      const c = (data.companies || []).find(x => x.id === s.rid);
+      const cd = c && (c.cards || []).find(x => x.id === s.cid);
+      if (!cd) { body.textContent = '카드를 찾을 수 없어요'; return; }
+      metaDiv.innerHTML = '';
+      if (cd.date) { const d = document.createElement('span'); d.textContent = `📅 ${cd.date}`; metaDiv.appendChild(d); }
+      (cd.tags || []).slice(0, 4).forEach(t => {
+        const tg = document.createElement('span'); tg.className = 'rc-tag'; tg.textContent = t; metaDiv.appendChild(tg);
+      });
+      body.innerHTML = '';
+      const ul = document.createElement('ul');
+      (cd.summary || []).forEach(line => { const li = document.createElement('li'); li.textContent = line; ul.appendChild(li); });
+      body.appendChild(ul);
+    }).catch(() => { body.textContent = '불러오기 실패'; });
+  }
+  else if (s.type === 'note') {
+    const data = loadSheetData(s.id);
+    const html = (data && data.html) || '';
+    const thumb = firstImgSrc(html);
+    if (thumb) {
+      const img = document.createElement('img');
+      img.className = 'fv-thumb'; img.src = thumb; img.loading = 'lazy';
+      card.appendChild(img);
+    }
+    const body = document.createElement('div'); body.className = 'fv-body clamp';
+    body.textContent = stripHtmlToText(html) || '(내용 없음)';
+    card.appendChild(body);
+    addMoreToggle(body);
+  }
+  else if (s.type === 'gsheet') {
+    const sub = document.createElement('div'); sub.className = 'fv-sub';
+    sub.textContent = '📄 구글 스프레드시트 — 제목을 누르면 미리보기';
+    card.appendChild(sub);
+  }
+  else if (s.type === 'index') {
+    const sub = document.createElement('div'); sub.className = 'fv-sub';
+    sub.textContent = '📈 지표 — 제목을 누르면 차트 보기';
+    card.appendChild(sub);
+    loadIndexData().then(inds => {
+      const ind = inds.find(x => x.id === s.iid);
+      if (ind) sub.textContent = `📈 ${ind.category || '지표'}${ind.unit ? ' · ' + ind.unit : ''} — 제목을 누르면 차트`;
+    }).catch(() => {});
+  }
+  else if (s.type === 'awake') {
+    const sub = document.createElement('div'); sub.className = 'fv-sub';
+    sub.textContent = `⭐ Awake 공시 · ${s.adate || ''}`;
+    card.appendChild(sub);
+  }
+  else {
+    const sub = document.createElement('div'); sub.className = 'fv-sub';
+    sub.textContent = '📄 자체 시트';
+    card.appendChild(sub);
+  }
+  return card;
 }
 
 /* ── GitHub API ── */
