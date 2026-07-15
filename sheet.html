@@ -820,6 +820,8 @@ function openSheet(id) {
   currentId = id;
   const s = meta.sheets.find(x => x.id === id);
   if (!s) return;
+  // 뒤로가기(스와이프) 제스처로 폴더 뷰에 돌아올 수 있게 히스토리 엔트리 추가
+  try { history.pushState({ svOpen: id }, ''); } catch(_) {}
 
   // ── 구글시트 타입: /preview 임베드 (읽기 전용) + 새 창 편집 링크 ──
   if (s.type === 'gsheet') {
@@ -1481,15 +1483,19 @@ function firstImgSrc(html) {
   return img ? img.src : null;
 }
 
+let _fvCharts = []; // 폴더뷰 Chart.js 인스턴스 정리용
+
 function openFolderView(folderId) {
   persistCurrent();
   currentId = null;
   hideAllViews();
+  _fvCharts.forEach(ch => { try { ch.destroy(); } catch(_) {} });
+  _fvCharts = [];
   const fv = document.getElementById('folderview');
   fv.style.display = 'block';
 
   const f = meta.folders.find(x => x.id === folderId);
-  document.getElementById('cur-name').textContent = f ? `📂 ${f.name}` : '';
+  document.getElementById('cur-name').textContent = f ? `📂 ${f.name}` : '📂 전체';
   document.getElementById('cur-path').textContent = f && f.parent ? `(${folderPath(f.parent)})` : '';
 
   fv.innerHTML = '';
@@ -1559,6 +1565,8 @@ function buildItemCard(s) {
     body.textContent = '불러오는 중…';
     card.appendChild(body);
     addMoreToggle(body);
+    const chartsBox = document.createElement('div'); // 차트는 클램프 밖 — 항상 표시
+    card.appendChild(chartsBox);
     loadResearchData().then(data => {
       const c = (data.companies || []).find(x => x.id === s.rid);
       const cd = c && (c.cards || []).find(x => x.id === s.cid);
@@ -1572,6 +1580,41 @@ function buildItemCard(s) {
       const ul = document.createElement('ul');
       (cd.summary || []).forEach(line => { const li = document.createElement('li'); li.textContent = line; ul.appendChild(li); });
       body.appendChild(ul);
+      // 차트 렌더 (전체 화면과 동일 데이터, 축소 높이)
+      const chartDefs = cd.charts || (cd.chart ? [cd.chart] : []);
+      chartDefs.forEach(def => {
+        if (!def || !def.labels || !def.data) return;
+        if (def.title) {
+          const t = document.createElement('div'); t.className = 'rc-chart-title';
+          t.style.marginTop = '8px';
+          t.textContent = def.title + (def.unit ? ` (${def.unit})` : '');
+          chartsBox.appendChild(t);
+        }
+        const cvBox = document.createElement('div');
+        cvBox.style.cssText = 'position:relative; height:160px;';
+        const cv = document.createElement('canvas');
+        cvBox.appendChild(cv); chartsBox.appendChild(cvBox);
+        const type = def.type === 'donut' ? 'doughnut' : def.type === 'line' ? 'line' : 'bar';
+        try {
+          _fvCharts.push(new Chart(cv, {
+            type,
+            data: {
+              labels: def.labels,
+              datasets: [{
+                data: def.data,
+                backgroundColor: def.colors || ['#378ADD','#85B7EB','#534AB7','#E2A93A','#3AB795','#E23A3A','#8898AA','#D67DC3'],
+                borderWidth: type === 'line' ? 2 : 0,
+                borderColor: '#378ADD', fill: false,
+              }]
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              indexAxis: def.type === 'bar-h' ? 'y' : 'x',
+              plugins: { legend: { display: type === 'doughnut', labels: { boxWidth: 10, font: { size: 10 } } } },
+            }
+          }));
+        } catch(e) { console.warn('fv chart fail', e); }
+      });
     }).catch(() => { body.textContent = '불러오기 실패'; });
   }
   else if (s.type === 'note') {
@@ -1589,8 +1632,22 @@ function buildItemCard(s) {
     addMoreToggle(body);
   }
   else if (s.type === 'gsheet') {
+    // 미니 미리보기 iframe (클릭 통과 — 카드 클릭으로 전체 보기)
+    const frameWrap = document.createElement('div');
+    frameWrap.style.cssText = 'position:relative; height:200px; border:1px solid var(--border); border-radius:8px; overflow:hidden; cursor:pointer;';
+    const frame = document.createElement('iframe');
+    frame.src = `https://docs.google.com/spreadsheets/d/${s.gid}/preview` + (s.ggid ? `?gid=${s.ggid}` : '');
+    frame.loading = 'lazy';
+    frame.style.cssText = 'width:133%; height:133%; border:none; pointer-events:none; transform:scale(0.75); transform-origin:0 0;';
+    frameWrap.appendChild(frame);
+    // 투명 오버레이 — 탭하면 전체 보기
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:absolute; inset:0;';
+    overlay.addEventListener('click', () => openSheet(s.id));
+    frameWrap.appendChild(overlay);
+    card.appendChild(frameWrap);
     const sub = document.createElement('div'); sub.className = 'fv-sub';
-    sub.textContent = '📄 구글 스프레드시트 — 제목을 누르면 미리보기';
+    sub.textContent = '📄 구글 스프레드시트 — 누르면 전체 보기';
     card.appendChild(sub);
   }
   else if (s.type === 'index') {
@@ -1838,6 +1895,15 @@ const _autoCollapse = () => {
 
   luckyEl.addEventListener('touchcancel', () => { cancelPress(); selMode = false; }, { passive: true });
 })();
+
+/* ── 뒤로가기 (아이패드 스와이프 제스처 포함): 열린 시트 → 그 폴더 뷰로 ── */
+window.addEventListener('popstate', () => {
+  if (!currentId) return; // 폴더 뷰/빈 화면이면 무시
+  const s = meta.sheets.find(x => x.id === currentId);
+  const fid = s ? (s.folder || null) : null;
+  selectedFolderId = fid;
+  openFolderView(fid); // fid=null 이면 최상위 전체 보기
+});
 
 /* ── 언로드 시 저장 ── */
 window.addEventListener('pagehide', persistCurrent);
