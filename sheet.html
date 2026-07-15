@@ -1659,12 +1659,7 @@ function buildItemCard(s) {
       });
       bodyWrap.appendChild(metaDiv);
 
-      const body = document.createElement('div'); body.className = 'fv-body';
-      const ul = document.createElement('ul');
-      (cd.summary || []).forEach(line => { const li = document.createElement('li'); li.textContent = line; ul.appendChild(li); });
-      body.appendChild(ul);
-      bodyWrap.appendChild(body);
-
+      // 리서치 탭과 동일 순서: 차트 먼저 → 요약 텍스트
       const chartDefs = cd.charts || (cd.chart ? [cd.chart] : []);
       chartDefs.forEach(def => {
         if (!def || !def.labels || !def.data) return;
@@ -1699,6 +1694,13 @@ function buildItemCard(s) {
           }));
         } catch(e) { console.warn('fv chart fail', e); }
       });
+
+      // 요약 텍스트 (차트 아래)
+      const body = document.createElement('div'); body.className = 'fv-body';
+      const ul = document.createElement('ul');
+      (cd.summary || []).forEach(line => { const li = document.createElement('li'); li.textContent = line; ul.appendChild(li); });
+      body.appendChild(ul);
+      bodyWrap.appendChild(body);
 
       // 리서치 탭과 동일: 넘칠 때만 접기 + 토글 버튼
       requestAnimationFrame(() => {
