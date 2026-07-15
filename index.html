@@ -3481,10 +3481,10 @@ async function ghCommitAll() {
           }
         }
         sheetsMeta._deleted = [];
-        // dirty 시트 데이터 커밋 (gsheet/rcard 는 데이터 파일 없음 — 인덱스만)
+        // dirty 시트 데이터 커밋 (gsheet/rcard/awake/index 는 데이터 파일 없음 — 인덱스만)
         const dirtySheets = (sheetsMeta.sheets || []).filter(s => s.dirty);
         for (const s of dirtySheets) {
-          if (s.type === 'gsheet' || s.type === 'rcard') { s.dirty = false; continue; }
+          if (['gsheet', 'rcard', 'awake', 'index'].includes(s.type)) { s.dirty = false; continue; }
           const dataStr = localStorage.getItem('sv_sheet_data_' + s.id);
           if (!dataStr) continue;
           const existing = await ghApiGet(pat, `sheets/data/${s.id}.json`);
@@ -3495,10 +3495,10 @@ async function ghCommitAll() {
         if (dirtySheets.length || (sheetsMeta._deleted||[]).length === 0) {
           const idxData = {
             folders: sheetsMeta.folders || [],
-            sheets: (sheetsMeta.sheets || []).map(({ id, name, folder, updated, ord, type, gid, ggid, rid, cid }) =>
+            sheets: (sheetsMeta.sheets || []).map(({ id, name, folder, updated, ord, type, gid, ggid, rid, cid, adate, code, iid }) =>
               ({ id, name, folder, updated,
                  ...(ord !== undefined ? { ord } : {}),
-                 ...(type ? { type, gid, ggid, rid, cid } : {}) })),
+                 ...(type ? { type, gid, ggid, rid, cid, adate, code, iid } : {}) })),
           };
           const idxFile = await ghApiGet(pat, 'sheets/index.json');
           const idxPut = await ghApiPut(pat, 'sheets/index.json', JSON.stringify(idxData, null, 2),
