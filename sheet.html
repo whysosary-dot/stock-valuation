@@ -228,8 +228,10 @@ function renderTree() {
         saveMeta(); renderTree();
       });
       tree.appendChild(div);
-      addFolderNodes(f.id, depth + 1);
-      addSheetNodes(f.id, depth + 1);
+      if (!isCollapsed) {
+        addFolderNodes(f.id, depth + 1);
+        addSheetNodes(f.id, depth + 1);
+      }
     });
   }
   function addSheetNodes(folderKey, depth) {
