@@ -106,6 +106,7 @@
       <span class="sb-title">📊 Sheets</span>
       <button class="sb-btn" id="new-folder-btn" title="선택한 폴더 아래 새 폴더 (선택 없으면 최상위)">📁+</button>
       <button class="sb-btn" id="new-sheet-btn" title="선택한 폴더에 새 시트 (선택 없으면 최상위)">📄+</button>
+      <button class="sb-btn" id="new-gsheet-btn" title="실제 구글 스프레드시트 연결 (미리보기 임베드 + 새 창 편집)">🟢+</button>
     </div>
     <div class="tree" id="tree"></div>
   </div>
@@ -115,10 +116,12 @@
       <span class="cur-name" id="cur-name">시트를 선택하세요</span>
       <span class="cur-path" id="cur-path"></span>
       <span class="spacer"></span>
+      <a id="gedit-link" href="#" target="_blank" rel="noopener" style="display:none; font-size:13px; font-weight:600; color:var(--accent); text-decoration:none; border:1px solid var(--accent); border-radius:7px; padding:5px 12px;">✏️ 구글시트에서 편집 ↗</a>
       <span class="status" id="save-status"></span>
       <span class="status" title="커밋은 대시보드 상단의 ☁️ 커밋&푸시 버튼으로 (밸류에이션·다이어리·시트 일괄)">☁️ 대시보드에서 커밋</span>
     </div>
     <div id="lucky"></div>
+    <div id="gview" style="display:none; flex:1;"><iframe id="gview-frame" style="width:100%;height:100%;border:none;"></iframe></div>
     <div class="no-sheet" id="no-sheet" style="display:none;">
       <div style="font-size:44px;">📄</div>
       <div>왼쪽에서 시트를 선택하거나 새로 만들어주세요</div>
@@ -240,7 +243,7 @@ function renderTree() {
       const div = document.createElement('div');
       div.className = 'node sheet' + (currentId === s.id ? ' selected' : '');
       div.style.paddingLeft = (8 + depth * 16 + 12) + 'px';
-      div.innerHTML = `<span>📄</span><span class="nm"></span>${s.dirty ? '<span title="미커밋 변경" style="color:#d97706;font-size:10px;">●</span>' : ''}<button class="ren" title="이름 변경">✎</button><button class="del" title="시트 삭제">✕</button>`;
+      div.innerHTML = `<span>${s.type === 'gsheet' ? '🟢' : '📄'}</span><span class="nm"></span>${s.dirty ? '<span title="미커밋 변경" style="color:#d97706;font-size:10px;">●</span>' : ''}<button class="ren" title="이름 변경">✎</button><button class="del" title="시트 삭제">✕</button>`;
       div.querySelector('.nm').textContent = s.name;
       div.addEventListener('click', (e) => {
         if (e.target.classList.contains('del') || e.target.classList.contains('ren')) return;
@@ -292,6 +295,8 @@ function updateTopbar() {
 function showNoSheet() {
   if (luckyCreated) { try { luckysheet.destroy(); } catch(_) {} luckyCreated = false; }
   document.getElementById('lucky').style.display = 'none';
+  document.getElementById('gview').style.display = 'none';
+  document.getElementById('gedit-link').style.display = 'none';
   document.getElementById('no-sheet').style.display = 'flex';
   updateTopbar();
 }
@@ -315,6 +320,32 @@ function openSheet(id) {
   currentId = id;
   const s = meta.sheets.find(x => x.id === id);
   if (!s) return;
+
+  // ── 구글시트 타입: /preview 임베드 (읽기 전용) + 새 창 편집 링크 ──
+  if (s.type === 'gsheet') {
+    if (luckyCreated) { try { luckysheet.destroy(); } catch(_) {} luckyCreated = false; }
+    document.getElementById('lucky').style.display = 'none';
+    document.getElementById('no-sheet').style.display = 'none';
+    const gview = document.getElementById('gview');
+    const frame = document.getElementById('gview-frame');
+    const previewUrl = `https://docs.google.com/spreadsheets/d/${s.gid}/preview` + (s.ggid ? `?gid=${s.ggid}` : '');
+    const editUrl    = `https://docs.google.com/spreadsheets/d/${s.gid}/edit`    + (s.ggid ? `#gid=${s.ggid}` : '');
+    if (frame.src !== previewUrl) frame.src = previewUrl;
+    gview.style.display = 'flex';
+    const editLink = document.getElementById('gedit-link');
+    editLink.href = editUrl;
+    editLink.style.display = 'inline-block';
+    renderTree(); updateTopbar();
+    setStatus('읽기 전용 미리보기 — 편집은 ✏️ 버튼', false);
+    if (window.innerWidth < 900) {
+      document.querySelector('.app').classList.add('sb-hidden');
+    }
+    return;
+  }
+
+  // ── 자체 시트 (Luckysheet) ──
+  document.getElementById('gview').style.display = 'none';
+  document.getElementById('gedit-link').style.display = 'none';
   const data = loadSheetData(id) || defaultWorkbook();
   document.getElementById('no-sheet').style.display = 'none';
   document.getElementById('lucky').style.display = 'block';
@@ -364,6 +395,24 @@ document.getElementById('new-sheet-btn').addEventListener('click', () => {
   saveSheetData(id, defaultWorkbook());
   saveMeta(); renderTree();
   openSheet(id);
+});
+
+/* 실제 구글 스프레드시트 연결 */
+document.getElementById('new-gsheet-btn').addEventListener('click', () => {
+  const url = prompt('구글 스프레드시트 URL 을 붙여넣으세요:\n(https://docs.google.com/spreadsheets/d/... 형식)');
+  if (!url || !url.trim()) return;
+  const m = url.match(/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  if (!m) { toast('올바른 구글시트 URL 이 아닙니다.', 'err', 3500); return; }
+  const nm = prompt('표시할 이름:');
+  if (!nm || !nm.trim()) return;
+  const gidM = url.match(/[#&?]gid=(\d+)/);
+  meta.sheets.push({
+    id: uid(), name: nm.trim(), folder: selectedFolderId || null,
+    type: 'gsheet', gid: m[1], ggid: gidM ? gidM[1] : null,
+    dirty: true, updated: Date.now(),
+  });
+  saveMeta(); renderTree();
+  openSheet(meta.sheets[meta.sheets.length - 1].id);
 });
 
 /* ── GitHub API ── */
