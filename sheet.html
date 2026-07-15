@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sheets — 리송 대시보드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/pluginsCss.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/plugins.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/css/luckysheet.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/assets/iconfont/iconfont.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/expendPlugins/chart/chartmix.css" />
+<style>
+  :root {
+    --bg: #f7f8fa; --panel: #ffffff; --panel-2: #eef0f4;
+    --border: #e3e7ee; --text: #1f2933; --text-dim: #6b7480;
+    --accent: #2563eb; --accent-soft: #eff4ff; --red: #e23a3a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif; }
+  .app { display: flex; height: 100vh; }
+
+  /* ── 사이드바 ── */
+  .sidebar {
+    width: 232px; flex: none; background: var(--panel);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+  }
+  .sb-head {
+    padding: 10px 12px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .sb-title { font-size: 14px; font-weight: 700; color: var(--text); flex: 1; }
+  .sb-btn {
+    border: 1px solid var(--border); background: var(--panel); border-radius: 6px;
+    padding: 3px 8px; font-size: 13px; cursor: pointer; color: var(--text-dim);
+  }
+  .sb-btn:hover { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+  .tree { flex: 1; overflow-y: auto; padding: 8px 6px; }
+  .node {
+    display: flex; align-items: center; gap: 6px; padding: 5px 8px;
+    border-radius: 6px; cursor: pointer; font-size: 13.5px; color: var(--text);
+    user-select: none;
+  }
+  .node:hover { background: var(--panel-2); }
+  .node.selected { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .node .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .node .del {
+    display: none; border: none; background: none; color: var(--text-dim);
+    cursor: pointer; font-size: 12px; padding: 0 3px;
+  }
+  .node:hover .del { display: inline; }
+  .node .del:hover { color: var(--red); }
+  .node.folder .caret { font-size: 10px; width: 12px; color: var(--text-dim); }
+  .empty-tip { padding: 20px 12px; text-align: center; font-size: 12.5px; color: var(--text-dim); line-height: 1.6; }
+
+  /* ── 메인 ── */
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .topbar {
+    height: 40px; flex: none; display: flex; align-items: center; gap: 10px;
+    padding: 0 12px; background: var(--panel); border-bottom: 1px solid var(--border);
+  }
+  .cur-name { font-size: 14px; font-weight: 700; color: var(--text); }
+  .cur-path { font-size: 12px; color: var(--text-dim); }
+  .spacer { flex: 1; }
+  .status { font-size: 12px; color: var(--text-dim); }
+  .status.saved { color: #16a34a; }
+  .commit-btn {
+    border: 1px solid var(--accent); background: var(--accent); color: #fff;
+    border-radius: 7px; padding: 5px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .commit-btn:disabled { opacity: .5; cursor: not-allowed; }
+  #lucky { flex: 1; position: relative; }
+  .no-sheet {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; color: var(--text-dim); font-size: 14px; background: var(--bg);
+  }
+  .toast {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    background: #1f2933; color: #fff; padding: 9px 18px; border-radius: 8px;
+    font-size: 13.5px; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 9999;
+  }
+  .toast.show { opacity: 1; }
+  .toast.err { background: var(--red); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="sb-head">
+      <span class="sb-title">📊 Sheets</span>
+      <button class="sb-btn" id="new-folder-btn" title="선택한 폴더 아래 새 폴더 (선택 없으면 최상위)">📁+</button>
+      <button class="sb-btn" id="new-sheet-btn" title="선택한 폴더에 새 시트 (선택 없으면 최상위)">📄+</button>
+    </div>
+    <div class="tree" id="tree"></div>
+  </div>
+  <div class="main">
+    <div class="topbar">
+      <span class="cur-name" id="cur-name">시트를 선택하세요</span>
+      <span class="cur-path" id="cur-path"></span>
+      <span class="spacer"></span>
+      <span class="status" id="save-status"></span>
+      <button class="commit-btn" id="commit-btn">☁️ 커밋 &amp; 푸시</button>
+    </div>
+    <div id="lucky"></div>
+    <div class="no-sheet" id="no-sheet" style="display:none;">
+      <div style="font-size:44px;">📄</div>
+      <div>왼쪽에서 시트를 선택하거나 새로 만들어주세요</div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/expendPlugins/chart/chartmix.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js"></script>
+<script>
+/* ═══════════════════════════════════════════
+   구성
+   - meta  : localStorage sv_sheets_meta_v1  { folders:[{id,name,parent}], sheets:[{id,name,folder,dirty,updated}] }
+   - data  : localStorage sv_sheet_data_<id> (luckysheet workbook JSON)
+   - sha   : localStorage sv_sheets_gh_sha_v1 (sheets/index.json blob SHA — 마지막 동기화 시점)
+   - GitHub: sheets/index.json + sheets/data/<id>.json
+   - PAT   : localStorage sv_github_pat (index.html 과 공유 — same origin)
+═══════════════════════════════════════════ */
+const GH = { OWNER: 'whysosary-dot', REPO: 'stock-valuation', BRANCH: 'main' };
+const META_KEY  = 'sv_sheets_meta_v1';
+const SHA_KEY   = 'sv_sheets_gh_sha_v1';
+const PAT_KEY   = 'sv_github_pat';
+const DATA_PREF = 'sv_sheet_data_';
+
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+function loadMeta() {
+  try { return JSON.parse(localStorage.getItem(META_KEY) || '{"folders":[],"sheets":[]}'); }
+  catch { return { folders: [], sheets: [] }; }
+}
+function saveMeta() { localStorage.setItem(META_KEY, JSON.stringify(meta)); }
+function loadSheetData(id) {
+  try { return JSON.parse(localStorage.getItem(DATA_PREF + id) || 'null'); }
+  catch { return null; }
+}
+function saveSheetData(id, data) { localStorage.setItem(DATA_PREF + id, JSON.stringify(data)); }
+
+let meta = loadMeta();
+let currentId = null;       // 열려있는 시트 문서 id
+let luckyCreated = false;
+let dirtySaveTimer = null;
+let selectedFolderId = null;
+
+function toast(msg, type = 'ok', ms = 2600) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type === 'err' ? ' err' : '');
+  clearTimeout(t._tm);
+  t._tm = setTimeout(() => t.classList.remove('show'), ms);
+}
+function setStatus(txt, saved) {
+  const el = document.getElementById('save-status');
+  el.textContent = txt;
+  el.className = 'status' + (saved ? ' saved' : '');
+}
+
+/* ── 트리 렌더 ── */
+function renderTree() {
+  const tree = document.getElementById('tree');
+  tree.innerHTML = '';
+  const foldersByParent = {};
+  meta.folders.forEach(f => {
+    const p = f.parent || '__root__';
+    (foldersByParent[p] = foldersByParent[p] || []).push(f);
+  });
+  const sheetsByFolder = {};
+  meta.sheets.forEach(s => {
+    const p = s.folder || '__root__';
+    (sheetsByFolder[p] = sheetsByFolder[p] || []).push(s);
+  });
+
+  function addFolderNodes(parentKey, depth) {
+    (foldersByParent[parentKey] || []).sort((a,b)=>a.name.localeCompare(b.name,'ko')).forEach(f => {
+      const div = document.createElement('div');
+      div.className = 'node folder' + (selectedFolderId === f.id ? ' selected' : '');
+      div.style.paddingLeft = (8 + depth * 16) + 'px';
+      div.innerHTML = `<span class="caret">▸</span><span>📁</span><span class="nm"></span><button class="del" title="폴더 삭제">✕</button>`;
+      div.querySelector('.nm').textContent = f.name;
+      div.addEventListener('click', (e) => {
+        if (e.target.classList.contains('del')) return;
+        selectedFolderId = (selectedFolderId === f.id) ? null : f.id;
+        renderTree();
+      });
+      div.addEventListener('dblclick', () => {
+        const nm = prompt('폴더 이름 변경:', f.name);
+        if (nm && nm.trim()) { f.name = nm.trim(); saveMeta(); renderTree(); }
+      });
+      div.querySelector('.del').addEventListener('click', () => {
+        const hasChild = meta.folders.some(x => x.parent === f.id) || meta.sheets.some(s => s.folder === f.id);
+        if (hasChild) { toast('폴더가 비어있지 않습니다. 내부 항목을 먼저 삭제/이동해주세요.', 'err', 3500); return; }
+        if (!confirm(`폴더 "${f.name}" 를 삭제할까요?`)) return;
+        meta.folders = meta.folders.filter(x => x.id !== f.id);
+        if (selectedFolderId === f.id) selectedFolderId = null;
+        saveMeta(); renderTree();
+      });
+      tree.appendChild(div);
+      addFolderNodes(f.id, depth + 1);
+      addSheetNodes(f.id, depth + 1);
+    });
+  }
+  function addSheetNodes(folderKey, depth) {
+    (sheetsByFolder[folderKey] || []).sort((a,b)=>a.name.localeCompare(b.name,'ko')).forEach(s => {
+      const div = document.createElement('div');
+      div.className = 'node sheet' + (currentId === s.id ? ' selected' : '');
+      div.style.paddingLeft = (8 + depth * 16 + 12) + 'px';
+      div.innerHTML = `<span>📄</span><span class="nm"></span>${s.dirty ? '<span title="미커밋 변경" style="color:#d97706;font-size:10px;">●</span>' : ''}<button class="del" title="시트 삭제">✕</button>`;
+      div.querySelector('.nm').textContent = s.name;
+      div.addEventListener('click', (e) => {
+        if (e.target.classList.contains('del')) return;
+        openSheet(s.id);
+      });
+      div.addEventListener('dblclick', () => {
+        const nm = prompt('시트 이름 변경:', s.name);
+        if (nm && nm.trim()) { s.name = nm.trim(); s.dirty = true; saveMeta(); renderTree(); updateTopbar(); }
+      });
+      div.querySelector('.del').addEventListener('click', () => {
+        if (!confirm(`시트 "${s.name}" 를 삭제할까요?\n(커밋하면 GitHub 에서도 삭제됩니다)`)) return;
+        meta.sheets = meta.sheets.filter(x => x.id !== s.id);
+        localStorage.removeItem(DATA_PREF + s.id);
+        // 삭제 예약 목록에 넣어 커밋 시 GitHub 파일도 제거
+        meta._deleted = meta._deleted || [];
+        meta._deleted.push(s.id);
+        if (currentId === s.id) { currentId = null; showNoSheet(); }
+        saveMeta(); renderTree();
+      });
+      tree.appendChild(div);
+    });
+  }
+  addFolderNodes('__root__', 0);
+  addSheetNodes('__root__', 0);
+
+  if (!meta.folders.length && !meta.sheets.length) {
+    const tip = document.createElement('div');
+    tip.className = 'empty-tip';
+    tip.innerHTML = '아직 시트가 없어요.<br>위의 📁+ / 📄+ 버튼으로<br>폴더와 시트를 만들어보세요.';
+    tree.appendChild(tip);
+  }
+}
+
+function folderPath(folderId) {
+  const parts = [];
+  let cur = meta.folders.find(f => f.id === folderId);
+  while (cur) { parts.unshift(cur.name); cur = meta.folders.find(f => f.id === cur.parent); }
+  return parts.join(' / ');
+}
+
+function updateTopbar() {
+  const s = meta.sheets.find(x => x.id === currentId);
+  document.getElementById('cur-name').textContent = s ? s.name : '시트를 선택하세요';
+  document.getElementById('cur-path').textContent = s && s.folder ? '(' + folderPath(s.folder) + ')' : '';
+}
+
+function showNoSheet() {
+  if (luckyCreated) { try { luckysheet.destroy(); } catch(_) {} luckyCreated = false; }
+  document.getElementById('lucky').style.display = 'none';
+  document.getElementById('no-sheet').style.display = 'flex';
+  updateTopbar();
+}
+
+/* ── 시트 열기/저장 ── */
+function persistCurrent() {
+  if (!currentId || !luckyCreated) return;
+  try {
+    const all = luckysheet.getAllSheets();
+    saveSheetData(currentId, all);
+    const s = meta.sheets.find(x => x.id === currentId);
+    if (s) { s.dirty = true; s.updated = Date.now(); }
+    saveMeta();
+    setStatus('저장됨 ✓ (로컬)', true);
+  } catch(e) { console.warn('persist fail', e); }
+}
+
+function openSheet(id) {
+  if (currentId === id) return;
+  persistCurrent();
+  currentId = id;
+  const s = meta.sheets.find(x => x.id === id);
+  if (!s) return;
+  const data = loadSheetData(id) || defaultWorkbook();
+  document.getElementById('no-sheet').style.display = 'none';
+  document.getElementById('lucky').style.display = 'block';
+  if (luckyCreated) { try { luckysheet.destroy(); } catch(_) {} }
+  luckysheet.create({
+    container: 'lucky',
+    lang: 'en',
+    data: data,
+    plugins: ['chart'],
+    showinfobar: false,
+    enableAddRow: true,
+    enableAddBackTop: true,
+    hook: {
+      updated: function() {
+        clearTimeout(dirtySaveTimer);
+        setStatus('입력 중…', false);
+        dirtySaveTimer = setTimeout(persistCurrent, 800);
+      }
+    }
+  });
+  luckyCreated = true;
+  renderTree(); updateTopbar();
+  setStatus('', false);
+}
+
+function defaultWorkbook() {
+  return [{ name: 'Sheet1', index: 0, order: 0, status: 1, row: 84, column: 26, celldata: [] }];
+}
+
+/* ── 새 폴더/시트 ── */
+document.getElementById('new-folder-btn').addEventListener('click', () => {
+  const nm = prompt('새 폴더 이름:');
+  if (!nm || !nm.trim()) return;
+  meta.folders.push({ id: uid(), name: nm.trim(), parent: selectedFolderId || null });
+  saveMeta(); renderTree();
+});
+document.getElementById('new-sheet-btn').addEventListener('click', () => {
+  const nm = prompt('새 시트 이름:');
+  if (!nm || !nm.trim()) return;
+  const id = uid();
+  meta.sheets.push({ id, name: nm.trim(), folder: selectedFolderId || null, dirty: true, updated: Date.now() });
+  saveSheetData(id, defaultWorkbook());
+  saveMeta(); renderTree();
+  openSheet(id);
+});
+
+/* ── GitHub API ── */
+async function ghGet(path, pat) {
+  const headers = { Accept: 'application/vnd.github+json' };
+  if (pat) headers.Authorization = 'token ' + pat;
+  const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/${path}?ref=${GH.BRANCH}&t=${Date.now()}`, { cache: 'no-store', headers });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(`GET ${path}: ${r.status}`);
+  return r.json();
+}
+function b64encodeUtf8(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = ''; bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin);
+}
+function b64decodeUtf8(b64) {
+  return new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\n/g,'')), c => c.charCodeAt(0)));
+}
+async function ghPut(path, contentStr, sha, message, pat) {
+  const body = { message, content: b64encodeUtf8(contentStr), branch: GH.BRANCH };
+  if (sha) body.sha = sha;
+  const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/${path}`, {
+    method: 'PUT', cache: 'no-store',
+    headers: { Authorization: 'token ' + pat, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(`PUT ${path}: ${r.status} ${e.message||''}`); }
+  return r.json();
+}
+async function ghDelete(path, sha, message, pat) {
+  const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/${path}`, {
+    method: 'DELETE', cache: 'no-store',
+    headers: { Authorization: 'token ' + pat, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, sha, branch: GH.BRANCH })
+  });
+  if (!r.ok && r.status !== 404) { const e = await r.json().catch(()=>({})); throw new Error(`DEL ${path}: ${r.status} ${e.message||''}`); }
+  return r.ok ? r.json() : null;
+}
+
+/* ── 커밋 & 푸시 ── */
+async function commitAll() {
+  const pat = localStorage.getItem(PAT_KEY) || '';
+  if (!pat) { toast('GitHub 토큰이 없습니다. 대시보드 ⚙️ 에서 토큰을 저장해주세요.', 'err', 4500); return; }
+  const btn = document.getElementById('commit-btn');
+  btn.disabled = true; btn.textContent = '커밋 중…';
+  persistCurrent();
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+
+    // 1) 삭제 예약된 시트 파일 제거
+    const deleted = meta._deleted || [];
+    for (const id of deleted) {
+      const f = await ghGet(`sheets/data/${id}.json`, pat);
+      if (f) await ghDelete(`sheets/data/${id}.json`, f.sha, `sheets: 시트 삭제 ${id}`, pat);
+    }
+    meta._deleted = [];
+
+    // 2) dirty 시트 데이터 커밋
+    const dirtySheets = meta.sheets.filter(s => s.dirty);
+    for (const s of dirtySheets) {
+      const data = loadSheetData(s.id);
+      if (!data) continue;
+      const existing = await ghGet(`sheets/data/${s.id}.json`, pat);
+      await ghPut(`sheets/data/${s.id}.json`, JSON.stringify(data), existing ? existing.sha : null,
+        `sheets: ${s.name} 업데이트 ${today}`, pat);
+      s.dirty = false;
+    }
+
+    // 3) index.json 커밋 (dirty 플래그 제외)
+    const indexData = {
+      folders: meta.folders,
+      sheets: meta.sheets.map(({ id, name, folder, updated }) => ({ id, name, folder, updated })),
+    };
+    const idxFile = await ghGet('sheets/index.json', pat);
+    const putRes = await ghPut('sheets/index.json', JSON.stringify(indexData, null, 2),
+      idxFile ? idxFile.sha : null, `sheets: 인덱스 업데이트 ${today}`, pat);
+    const newSha = putRes && putRes.content && putRes.content.sha;
+    if (newSha) localStorage.setItem(SHA_KEY, String(newSha));
+
+    saveMeta(); renderTree();
+    toast(`✅ 커밋 완료 (시트 ${dirtySheets.length}개${deleted.length ? `, 삭제 ${deleted.length}개` : ''})`);
+    setStatus('커밋됨 ✓', true);
+  } catch (e) {
+    toast('❌ 커밋 실패: ' + e.message, 'err', 5000);
+  } finally {
+    btn.disabled = false; btn.textContent = '☁️ 커밋 & 푸시';
+  }
+}
+document.getElementById('commit-btn').addEventListener('click', commitAll);
+
+/* ── 초기 동기화 (SHA 추적, diary 와 동일 정책) ── */
+(async function initialSync() {
+  try {
+    const lastSha = localStorage.getItem(SHA_KEY) || '';
+    const idxFile = await ghGet('sheets/index.json', null);
+    if (!idxFile) { renderTree(); return; }              // GitHub 에 아직 없음 → 로컬만
+    const ghSha = String(idxFile.sha || '');
+    if (ghSha && lastSha === ghSha) { renderTree(); return; }  // 새 커밋 없음 → 로컬 보존
+
+    const ghIndex = JSON.parse(b64decodeUtf8(idxFile.content));
+    // GitHub 우선 머지: 같은 id 는 GitHub, 로컬 전용(미커밋) 시트는 보존
+    const localOnly = meta.sheets.filter(ls => !(ghIndex.sheets || []).some(gs => gs.id === ls.id));
+    const ghSheets = (ghIndex.sheets || []).map(s => ({ ...s, dirty: false }));
+    meta = {
+      folders: ghIndex.folders || [],
+      sheets: [...ghSheets, ...localOnly],
+      _deleted: meta._deleted || [],
+    };
+    // 로컬 전용 시트의 폴더가 사라졌으면 루트로
+    meta.sheets.forEach(s => { if (s.folder && !meta.folders.some(f => f.id === s.folder)) s.folder = null; });
+    saveMeta();
+
+    // GitHub 시트 데이터 다운로드 (dirty 아닌 것만 덮어씀)
+    for (const s of ghSheets) {
+      try {
+        const f = await ghGet(`sheets/data/${s.id}.json`, null);
+        if (f && f.content) saveSheetData(s.id, JSON.parse(b64decodeUtf8(f.content)));
+      } catch(_) {}
+    }
+    localStorage.setItem(SHA_KEY, ghSha);
+    renderTree();
+    toast('☁️ GitHub 시트 동기화 완료');
+  } catch (e) {
+    console.warn('sheet sync fail', e);
+    renderTree();
+  }
+})();
+
+/* ── 언로드 시 저장 ── */
+window.addEventListener('pagehide', persistCurrent);
+
+renderTree();
+showNoSheet();
+</script>
+</body>
+</html>
