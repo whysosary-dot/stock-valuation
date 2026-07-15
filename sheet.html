@@ -317,10 +317,9 @@ function setStatus(txt, saved) {
 let treeSearchQuery = '';
 
 function itemIcon(s) {
-  if (s.type === 'gsheet') return '<span style="font-size:50%;vertical-align:middle;">🟢</span>';
   if (s.type === 'note')   return '📝';
   if (s.type === 'rcard')  return '🔬';
-  return '📄';
+  return '📄'; // 구글시트 포함 — 📄+ 버튼과 동일 아이콘
 }
 
 function renderSearchResults(tree, q) {
