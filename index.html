@@ -3481,9 +3481,10 @@ async function ghCommitAll() {
           }
         }
         sheetsMeta._deleted = [];
-        // dirty 시트 데이터 커밋
+        // dirty 시트 데이터 커밋 (구글시트 타입은 데이터 파일 없음 — 인덱스만)
         const dirtySheets = (sheetsMeta.sheets || []).filter(s => s.dirty);
         for (const s of dirtySheets) {
+          if (s.type === 'gsheet') { s.dirty = false; continue; }
           const dataStr = localStorage.getItem('sv_sheet_data_' + s.id);
           if (!dataStr) continue;
           const existing = await ghApiGet(pat, `sheets/data/${s.id}.json`);
@@ -3494,7 +3495,8 @@ async function ghCommitAll() {
         if (dirtySheets.length || (sheetsMeta._deleted||[]).length === 0) {
           const idxData = {
             folders: sheetsMeta.folders || [],
-            sheets: (sheetsMeta.sheets || []).map(({ id, name, folder, updated }) => ({ id, name, folder, updated })),
+            sheets: (sheetsMeta.sheets || []).map(({ id, name, folder, updated, type, gid, ggid }) =>
+              ({ id, name, folder, updated, ...(type ? { type, gid, ggid } : {}) })),
           };
           const idxFile = await ghApiGet(pat, 'sheets/index.json');
           const idxPut = await ghApiPut(pat, 'sheets/index.json', JSON.stringify(idxData, null, 2),
