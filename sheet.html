@@ -39,7 +39,8 @@
     padding: 10px 12px; border-bottom: 1px solid var(--border);
     display: flex; align-items: center; gap: 6px;
   }
-  .sb-title { font-size: 14px; font-weight: 700; color: var(--text); flex: 1; }
+  .sb-title { font-size: 14px; font-weight: 700; color: var(--text); flex: 1; text-decoration: none; cursor: pointer; }
+  .sb-title:hover { color: var(--accent); }
   .sb-btn {
     border: 1px solid var(--border); background: var(--panel); border-radius: 6px;
     padding: 3px 8px; font-size: 13px; cursor: pointer; color: var(--text-dim);
@@ -123,13 +124,22 @@
   }
   .toast.show { opacity: 1; }
   .toast.err { background: var(--red); }
+
+  /* ── 좁은 화면 (아이폰/아이패드 세로): 상단바 잘림 방지 ── */
+  @media (max-width: 700px) {
+    .topbar { gap: 6px; padding: 0 8px; }
+    .topbar .hint, .topbar .cur-path, .topbar #save-status { display: none; }
+    .topbar .spacer { display: none; }
+    .cur-name { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #gedit-link { font-size: 12px !important; padding: 4px 9px !important; white-space: nowrap; flex: none; }
+  }
 </style>
 </head>
 <body>
 <div class="app">
   <div class="sidebar">
     <div class="sb-head">
-      <span class="sb-title">📊 Sheets</span>
+      <a class="sb-title" href="https://docs.google.com/spreadsheets/u/0/?pli=1" target="_blank" rel="noopener" title="구글 스프레드시트 홈 새 창으로 열기">📊 Sheets ↗</a>
       <button class="sb-btn" id="new-folder-btn" title="선택한 폴더 아래 새 폴더 (선택 없으면 최상위)">📁+</button>
       <button class="sb-btn" id="new-gsheet-btn" title="실제 구글 스프레드시트 연결 (미리보기 임베드 + 새 창 편집)">📄+</button>
     </div>
@@ -146,7 +156,7 @@
       <span class="spacer"></span>
       <a id="gedit-link" href="#" target="_blank" rel="noopener" style="display:none; font-size:13px; font-weight:600; color:var(--accent); text-decoration:none; border:1px solid var(--accent); border-radius:7px; padding:5px 12px;">✏️ 구글시트에서 편집 ↗</a>
       <span class="status" id="save-status"></span>
-      <span class="status" title="커밋은 대시보드 상단의 ☁️ 커밋&푸시 버튼으로 (밸류에이션·다이어리·시트 일괄)">☁️ 대시보드에서 커밋</span>
+      <span class="status hint" title="커밋은 대시보드 상단의 ☁️ 커밋&푸시 버튼으로 (밸류에이션·다이어리·시트 일괄)">☁️ 대시보드에서 커밋</span>
     </div>
     <div id="lucky"></div>
     <div id="gview" style="display:none; flex:1;"><iframe id="gview-frame" style="width:100%;height:100%;border:none;"></iframe></div>
