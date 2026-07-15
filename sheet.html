@@ -230,6 +230,24 @@
     display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
     overflow: hidden;
   }
+  /* ── 리서치 탭 방식 카드 접기: body 전체(요약+차트) max-height + 하단 페이드 ── */
+  .fv-cardbody { position: relative; }
+  .fv-card.collapsed .fv-cardbody { max-height: 260px; overflow: hidden; }
+  .fv-card.collapsed .fv-cardbody::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 56px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0), var(--panel));
+    pointer-events: none;
+  }
+  .fv-toggle {
+    margin-top: 6px; width: 100%;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 7px 10px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--panel-2); color: var(--text-dim);
+    font-size: 12.5px; cursor: pointer;
+    transition: border-color .15s, color .15s;
+  }
+  .fv-toggle:hover { color: var(--text); border-color: var(--accent); }
   .fv-thumb { width: 100%; max-height: 140px; object-fit: cover; border-radius: 8px; }
   .fv-more {
     align-self: flex-start; border: none; background: none; color: var(--accent);
@@ -273,7 +291,6 @@
       <span class="spacer"></span>
       <a id="gedit-link" href="#" target="_blank" rel="noopener" style="display:none; font-size:13px; font-weight:600; color:var(--accent); text-decoration:none; border:1px solid var(--accent); border-radius:7px; padding:5px 12px;">✏️ 구글시트에서 편집 ↗</a>
       <span class="status" id="save-status"></span>
-      <span class="status hint" title="커밋은 대시보드 상단의 ☁️ 커밋&푸시 버튼으로 (밸류에이션·다이어리·시트 일괄)">☁️ 대시보드에서 커밋</span>
     </div>
     <div id="lucky"></div>
     <div id="gview" style="display:none; flex:1;"><iframe id="gview-frame" style="width:100%;height:100%;border:none;"></iframe></div>
@@ -1621,28 +1638,31 @@ function buildItemCard(s) {
   };
 
   if (s.type === 'rcard') {
-    const metaDiv = document.createElement('div'); metaDiv.className = 'fv-meta';
-    card.appendChild(metaDiv);
-    const body = document.createElement('div'); body.className = 'fv-body clamp';
-    body.textContent = '불러오는 중…';
-    card.appendChild(body);
-    const chartsBox = document.createElement('div'); // 차트 — 항상 표시
-    card.appendChild(chartsBox);
-    addMoreToggle(body);
+    // 리서치 탭과 동일: body(메타+요약+차트) 를 260px 로 자르고 하단 페이드,
+    // 넘칠 때만 '⌄ 더보기' 버튼 추가
+    const bodyWrap = document.createElement('div');
+    bodyWrap.className = 'fv-cardbody';
+    bodyWrap.innerHTML = '<div class="fv-sub">불러오는 중…</div>';
+    card.appendChild(bodyWrap);
     loadResearchData().then(data => {
       const c = (data.companies || []).find(x => x.id === s.rid);
       const cd = c && (c.cards || []).find(x => x.id === s.cid);
-      if (!cd) { body.textContent = '카드를 찾을 수 없어요'; return; }
-      metaDiv.innerHTML = '';
+      if (!cd) { bodyWrap.innerHTML = '<div class="fv-sub">카드를 찾을 수 없어요</div>'; return; }
+      bodyWrap.innerHTML = '';
+
+      const metaDiv = document.createElement('div'); metaDiv.className = 'fv-meta';
       if (cd.date) { const d = document.createElement('span'); d.textContent = `📅 ${cd.date}`; metaDiv.appendChild(d); }
       (cd.tags || []).slice(0, 4).forEach(t => {
         const tg = document.createElement('span'); tg.className = 'rc-tag'; tg.textContent = t; metaDiv.appendChild(tg);
       });
-      body.innerHTML = '';
+      bodyWrap.appendChild(metaDiv);
+
+      const body = document.createElement('div'); body.className = 'fv-body';
       const ul = document.createElement('ul');
       (cd.summary || []).forEach(line => { const li = document.createElement('li'); li.textContent = line; ul.appendChild(li); });
       body.appendChild(ul);
-      // 차트 렌더 (전체 화면과 동일 데이터, 축소 높이)
+      bodyWrap.appendChild(body);
+
       const chartDefs = cd.charts || (cd.chart ? [cd.chart] : []);
       chartDefs.forEach(def => {
         if (!def || !def.labels || !def.data) return;
@@ -1650,12 +1670,12 @@ function buildItemCard(s) {
           const t = document.createElement('div'); t.className = 'rc-chart-title';
           t.style.marginTop = '8px';
           t.textContent = def.title + (def.unit ? ` (${def.unit})` : '');
-          chartsBox.appendChild(t);
+          bodyWrap.appendChild(t);
         }
         const cvBox = document.createElement('div');
         cvBox.style.cssText = 'position:relative; height:160px;';
         const cv = document.createElement('canvas');
-        cvBox.appendChild(cv); chartsBox.appendChild(cvBox);
+        cvBox.appendChild(cv); bodyWrap.appendChild(cvBox);
         const type = def.type === 'donut' ? 'doughnut' : def.type === 'line' ? 'line' : 'bar';
         try {
           _fvCharts.push(new Chart(cv, {
@@ -1677,7 +1697,24 @@ function buildItemCard(s) {
           }));
         } catch(e) { console.warn('fv chart fail', e); }
       });
-    }).catch(() => { body.textContent = '불러오기 실패'; });
+
+      // 리서치 탭과 동일: 넘칠 때만 접기 + 토글 버튼
+      requestAnimationFrame(() => {
+        if (bodyWrap.scrollHeight > 280) {
+          card.classList.add('collapsed');
+          const btn = document.createElement('button');
+          btn.className = 'fv-toggle';
+          btn.innerHTML = '<span>⌄</span> 더보기';
+          btn.addEventListener('click', () => {
+            const collapsed = card.classList.toggle('collapsed');
+            btn.innerHTML = collapsed ? '<span>⌄</span> 더보기' : '<span>⌃</span> 접기';
+            if (!collapsed) requestAnimationFrame(() => _fvCharts.forEach(ch => { try { ch.resize(); } catch(_) {} }));
+            else card.scrollIntoView({ block: 'nearest' });
+          });
+          bodyWrap.insertAdjacentElement('afterend', btn);
+        }
+      });
+    }).catch(() => { bodyWrap.innerHTML = '<div class="fv-sub">불러오기 실패</div>'; });
   }
   else if (s.type === 'note') {
     const data = loadSheetData(s.id);
