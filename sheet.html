@@ -51,22 +51,31 @@
   .node:hover { background: var(--panel-2); }
   .node.selected { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
   .node .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .node .del, .node .ren {
+  .node .del, .node .ren, .node .mv {
     display: none; border: none; background: none; color: var(--text-dim);
     cursor: pointer; font-size: 12px; padding: 0 3px;
   }
-  .node:hover .del, .node:hover .ren { display: inline; }
+  .node:hover .del, .node:hover .ren, .node:hover .mv { display: inline; }
   .node .del:hover { color: var(--red); }
-  .node .ren:hover { color: var(--accent); }
+  .node .ren:hover, .node .mv:hover { color: var(--accent); }
   /* 터치 기기 (아이패드/아이폰): hover 가 없으므로 버튼 상시 노출 + 터치 타깃 확대 */
   @media (hover: none) {
     .node { padding: 9px 8px; font-size: 15px; }
-    .node .del, .node .ren { display: inline; font-size: 15px; padding: 2px 7px; }
+    .node .del, .node .ren, .node .mv { display: inline; font-size: 15px; padding: 2px 7px; }
     .sb-btn { padding: 7px 12px; font-size: 15px; }
     .commit-btn { padding: 8px 16px; font-size: 14px; }
   }
   .node.folder .caret { font-size: 10px; width: 12px; color: var(--text-dim); }
   .empty-tip { padding: 20px 12px; text-align: center; font-size: 12.5px; color: var(--text-dim); line-height: 1.6; }
+  /* ── 드래그 앤 드랍 ── */
+  .node.drop-target { background: var(--accent-soft); outline: 2px dashed var(--accent); outline-offset: -2px; }
+  .tree.drop-root { outline: 2px dashed var(--accent); outline-offset: -3px; border-radius: 8px; }
+  .drag-ghost {
+    position: fixed; pointer-events: none; z-index: 9999;
+    background: var(--panel); border: 1.5px solid var(--accent); border-radius: 8px;
+    padding: 5px 12px; font-size: 13.5px; color: var(--text);
+    box-shadow: 0 4px 16px rgba(0,0,0,.18); opacity: .92; white-space: nowrap;
+  }
 
   /* ── 메인 ── */
   .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
@@ -254,6 +263,7 @@ function renderTree() {
         if (subFolderIds.includes(selectedFolderId)) selectedFolderId = null;
         saveMeta(); renderTree();
       });
+      attachDnD(div, 'folder', f.id, f.name);
       tree.appendChild(div);
       if (!isCollapsed) {
         addFolderNodes(f.id, depth + 1);
@@ -288,6 +298,7 @@ function renderTree() {
         if (currentId === s.id) { currentId = null; showNoSheet(); }
         saveMeta(); renderTree();
       });
+      attachDnD(div, 'sheet', s.id, s.name);
       tree.appendChild(div);
     });
   }
@@ -308,6 +319,151 @@ function folderPath(folderId) {
   while (cur) { parts.unshift(cur.name); cur = meta.folders.find(f => f.id === cur.parent); }
   return parts.join(' / ');
 }
+
+/* ═══ 드래그 앤 드랍 이동 ═══
+   - 데스크톱: HTML5 DnD (노드를 폴더 위에 끌어다 놓기, 빈 영역 = 최상위)
+   - 아이패드: 노드를 0.4초 길게 누르면 드래그 시작 → 폴더 위에 놓기 */
+let dragItem = null, dragGhost = null, dragPressTimer = null, dragStartPos = null, touchDragging = false;
+
+function collectDescFolders(fid) {
+  const out = [fid];
+  meta.folders.filter(x => x.parent === fid).forEach(c => out.push(...collectDescFolders(c.id)));
+  return out;
+}
+
+function moveItem(kind, id, target) { // target: 폴더 id | null(최상위)
+  if (kind === 'sheet') {
+    const s = meta.sheets.find(x => x.id === id);
+    if (!s || s.folder === target) return;
+    s.folder = target; s.dirty = true;
+  } else {
+    if (id === target) return;
+    if (target && collectDescFolders(id).includes(target)) {
+      toast('자기 하위 폴더로는 이동할 수 없습니다.', 'err', 3000); return;
+    }
+    const f = meta.folders.find(x => x.id === id);
+    if (!f || f.parent === target) return;
+    f.parent = target;
+  }
+  saveMeta(); renderTree();
+  const item = kind === 'sheet' ? meta.sheets.find(x => x.id === id) : meta.folders.find(x => x.id === id);
+  toast(`"${item ? item.name : ''}" → ${target ? folderPath(target) : '최상위'}`);
+}
+
+function clearDropHighlights() {
+  const treeEl = document.getElementById('tree');
+  treeEl.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+  treeEl.classList.remove('drop-root');
+}
+function positionGhost(x, y) {
+  if (dragGhost) { dragGhost.style.left = (x + 12) + 'px'; dragGhost.style.top = (y - 14) + 'px'; }
+}
+function dropTargetAt(x, y) {
+  const el = document.elementFromPoint(x, y);
+  if (!el) return undefined;
+  const fnode = el.closest('.node.folder');
+  if (fnode && fnode.dataset.fid) return fnode.dataset.fid;
+  if (el.closest('#tree')) return null;   // 트리 빈 영역 = 최상위
+  return undefined;                        // 트리 밖 = 취소
+}
+function highlightDropAt(x, y) {
+  clearDropHighlights();
+  const tgt = dropTargetAt(x, y);
+  if (tgt === null) document.getElementById('tree').classList.add('drop-root');
+  else if (tgt) {
+    const el = document.elementFromPoint(x, y);
+    const fnode = el && el.closest('.node.folder');
+    if (fnode) fnode.classList.add('drop-target');
+  }
+}
+function endTouchDrag() {
+  touchDragging = false; dragItem = null;
+  if (dragGhost) { dragGhost.remove(); dragGhost = null; }
+  clearDropHighlights();
+}
+
+function attachDnD(div, kind, id, name) {
+  if (kind === 'folder') div.dataset.fid = id;
+
+  // ── 데스크톱 HTML5 DnD ──
+  div.draggable = true;
+  div.addEventListener('dragstart', (e) => {
+    dragItem = { kind, id };
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', id); } catch(_) {}
+  });
+  div.addEventListener('dragend', () => { dragItem = null; clearDropHighlights(); });
+  if (kind === 'folder') {
+    div.addEventListener('dragover', (e) => {
+      if (!dragItem) return;
+      e.preventDefault(); e.stopPropagation();
+      clearDropHighlights(); div.classList.add('drop-target');
+    });
+    div.addEventListener('drop', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (dragItem) moveItem(dragItem.kind, dragItem.id, id);
+      dragItem = null; clearDropHighlights();
+    });
+  }
+
+  // ── 터치: 0.4초 롱프레스 → 드래그 ──
+  div.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    dragStartPos = { x: t.clientX, y: t.clientY };
+    clearTimeout(dragPressTimer);
+    dragPressTimer = setTimeout(() => {
+      touchDragging = true;
+      dragItem = { kind, id };
+      dragGhost = document.createElement('div');
+      dragGhost.className = 'drag-ghost';
+      dragGhost.textContent = (kind === 'folder' ? '📁 ' : '📄 ') + name;
+      document.body.appendChild(dragGhost);
+      positionGhost(t.clientX, t.clientY);
+    }, 400);
+  }, { passive: true });
+
+  div.addEventListener('touchmove', (e) => {
+    const t = e.touches[0];
+    if (!touchDragging) {
+      // 롱프레스 전에 움직임 → 스크롤 의도, 드래그 취소
+      if (dragStartPos && (Math.abs(t.clientX - dragStartPos.x) > 10 || Math.abs(t.clientY - dragStartPos.y) > 10)) {
+        clearTimeout(dragPressTimer);
+      }
+      return;
+    }
+    e.preventDefault();
+    positionGhost(t.clientX, t.clientY);
+    highlightDropAt(t.clientX, t.clientY);
+  }, { passive: false });
+
+  div.addEventListener('touchend', (e) => {
+    clearTimeout(dragPressTimer);
+    if (!touchDragging) return;
+    const t = e.changedTouches[0];
+    const target = dropTargetAt(t.clientX, t.clientY);
+    if (target !== undefined && dragItem) moveItem(dragItem.kind, dragItem.id, target);
+    endTouchDrag();
+    e.preventDefault(); // 드랍 후 클릭 합성 방지
+  }, { passive: false });
+
+  div.addEventListener('touchcancel', () => { clearTimeout(dragPressTimer); endTouchDrag(); }, { passive: true });
+}
+
+/* 트리 빈 영역에 드랍 = 최상위로 이동 (데스크톱) */
+(function() {
+  const treeEl = document.getElementById('tree');
+  treeEl.addEventListener('dragover', (e) => {
+    if (!dragItem) return;
+    e.preventDefault();
+    if (!e.target.closest('.node.folder')) { clearDropHighlights(); treeEl.classList.add('drop-root'); }
+  });
+  treeEl.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (dragItem && !e.target.closest('.node.folder')) moveItem(dragItem.kind, dragItem.id, null);
+    dragItem = null; clearDropHighlights();
+  });
+})();
 
 function updateTopbar() {
   const s = meta.sheets.find(x => x.id === currentId);
