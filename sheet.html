@@ -163,6 +163,12 @@ let luckyCreated = false;
 let dirtySaveTimer = null;
 let selectedFolderId = null;
 
+/* 접힌 폴더 상태 (localStorage 유지) */
+const COLLAPSED_KEY = 'sv_sheets_collapsed_v1';
+let collapsed = new Set();
+try { collapsed = new Set(JSON.parse(localStorage.getItem(COLLAPSED_KEY) || '[]')); } catch(_) {}
+function saveCollapsed() { localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...collapsed])); }
+
 function toast(msg, type = 'ok', ms = 2600) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -196,11 +202,15 @@ function renderTree() {
       const div = document.createElement('div');
       div.className = 'node folder' + (selectedFolderId === f.id ? ' selected' : '');
       div.style.paddingLeft = (8 + depth * 16) + 'px';
-      div.innerHTML = `<span class="caret">▸</span><span>📁</span><span class="nm"></span><button class="ren" title="이름 변경">✎</button><button class="del" title="폴더 삭제">✕</button>`;
+      const isCollapsed = collapsed.has(f.id);
+      div.innerHTML = `<span class="caret">${isCollapsed ? '▸' : '▾'}</span><span>${isCollapsed ? '📁' : '📂'}</span><span class="nm"></span><button class="ren" title="이름 변경">✎</button><button class="del" title="폴더 삭제">✕</button>`;
       div.querySelector('.nm').textContent = f.name;
       div.addEventListener('click', (e) => {
         if (e.target.classList.contains('del') || e.target.classList.contains('ren')) return;
-        selectedFolderId = (selectedFolderId === f.id) ? null : f.id;
+        // 클릭 = 접기/펼치기 토글 + 이 폴더를 선택 상태로
+        if (collapsed.has(f.id)) collapsed.delete(f.id); else collapsed.add(f.id);
+        saveCollapsed();
+        selectedFolderId = f.id;
         renderTree();
       });
       const renameFolder = () => {
