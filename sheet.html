@@ -210,7 +210,6 @@
       <button class="sb-btn" id="new-gsheet-btn" title="구글 스프레드시트 연결">📄+</button>
       <button class="sb-btn" id="new-note-btn" title="새 글 (텍스트+사진 노트)">📝+</button>
       <button class="sb-btn" id="new-research-btn" title="리서치 탭 기업 카드 가져오기">🔬+</button>
-      <button class="sb-btn" id="new-awake-btn" title="Awake 즐겨찾기 가져오기">⭐+</button>
       <button class="sb-btn" id="new-index-btn" title="Index 지표 가져오기">📈+</button>
     </div>
     <div class="sb-search">
@@ -1003,7 +1002,7 @@ async function loadResearchData() {
 
 function openPickerModal(mode, title, placeholder) {
   _pickerMode = mode;
-  _rsCompanyId = null; _awDate = null;
+  _rsCompanyId = null;
   const modal = document.getElementById('rs-modal');
   modal.style.display = 'flex';
   document.getElementById('rs-back').style.display = 'none';
@@ -1023,16 +1022,6 @@ document.getElementById('new-research-btn').addEventListener('click', async () =
   }
 });
 
-document.getElementById('new-awake-btn').addEventListener('click', async () => {
-  openPickerModal('awake', '⭐ Awake 즐겨찾기 가져오기', '종목명·코드 검색…');
-  try {
-    await loadAwakeData();
-    renderAwDates('');
-  } catch(e) {
-    document.getElementById('rs-list').innerHTML = '<div class="empty-tip">Awake 데이터를 불러오지 못했어요.<br>' + e.message + '</div>';
-  }
-});
-
 document.getElementById('new-index-btn').addEventListener('click', async () => {
   openPickerModal('index', '📈 Index 지표 가져오기', '지표명·카테고리 검색…');
   try {
@@ -1048,8 +1037,7 @@ document.getElementById('rs-close').addEventListener('click', () => {
 document.getElementById('rs-modal').addEventListener('click', (e) => {
   if (e.target === document.getElementById('rs-modal')) document.getElementById('rs-modal').style.display = 'none';
 });
-let _pickerMode = 'research'; // 'research' | 'awake' | 'index'
-let _awDate = null;           // awake 모드에서 선택된 날짜
+let _pickerMode = 'research'; // 'research' | 'index'
 
 document.getElementById('rs-back').addEventListener('click', () => {
   document.getElementById('rs-back').style.display = 'none';
@@ -1059,11 +1047,6 @@ document.getElementById('rs-back').addEventListener('click', () => {
     document.getElementById('rs-title').textContent = '🔬 리서치 카드 가져오기';
     document.getElementById('rs-search').placeholder = '기업명 검색…';
     renderRsCompanies('');
-  } else if (_pickerMode === 'awake') {
-    _awDate = null;
-    document.getElementById('rs-title').textContent = '⭐ Awake 즐겨찾기 가져오기';
-    document.getElementById('rs-search').placeholder = '종목명·코드 검색…';
-    renderAwDates('');
   }
 });
 document.getElementById('rs-search').addEventListener('input', (e) => {
@@ -1071,9 +1054,6 @@ document.getElementById('rs-search').addEventListener('input', (e) => {
   if (_pickerMode === 'research') {
     if (_rsCompanyId) renderRsCards(_rsCompanyId, q);
     else renderRsCompanies(q);
-  } else if (_pickerMode === 'awake') {
-    if (_awDate) renderAwStocks(_awDate, q);
-    else renderAwDates(q);
   } else if (_pickerMode === 'index') {
     renderIdxList(q);
   }
@@ -1227,74 +1207,6 @@ async function loadAwakeData() {
   if (!r.ok) throw new Error('HTTP ' + r.status);
   _awData = await r.json();
   return _awData;
-}
-
-function renderAwDates(q) {
-  const list = document.getElementById('rs-list');
-  list.innerHTML = '';
-  const mbd = _awData.meta_by_date || {};
-  if (q) {
-    // 전체 날짜에서 종목명/코드 검색 (플랫)
-    const hits = [];
-    Object.entries(mbd).forEach(([date, stocks]) => {
-      Object.entries(stocks).forEach(([code, m]) => {
-        if ((m.name || '').toLowerCase().includes(q) || code.includes(q)) hits.push({ date, code, m });
-      });
-    });
-    hits.sort((a, b) => b.date.localeCompare(a.date));
-    if (!hits.length) { list.innerHTML = '<div class="empty-tip">검색 결과 없음</div>'; return; }
-    hits.forEach(({ date, code, m }) => list.appendChild(awStockItem(date, code, m, true)));
-    return;
-  }
-  const dates = Object.keys(mbd).sort().reverse();
-  if (!dates.length) { list.innerHTML = '<div class="empty-tip">즐겨찾기가 없어요</div>'; return; }
-  dates.forEach(date => {
-    const div = document.createElement('div');
-    div.className = 'rs-item';
-    div.innerHTML = `<span>📅</span><span class="nm"></span><span class="cnt"></span>`;
-    div.querySelector('.nm').textContent = date;
-    div.querySelector('.cnt').textContent = `${Object.keys(mbd[date]).length}종목`;
-    div.addEventListener('click', () => {
-      _awDate = date;
-      document.getElementById('rs-back').style.display = '';
-      document.getElementById('rs-title').textContent = `📅 ${date}`;
-      document.getElementById('rs-search').value = '';
-      renderAwStocks(date, '');
-    });
-    list.appendChild(div);
-  });
-}
-
-function awStockItem(date, code, m, showDate) {
-  const div = document.createElement('div');
-  div.className = 'rs-item';
-  const sig = m.signal === 'up' ? '📈' : m.signal === 'down' ? '📉' : '➖';
-  div.innerHTML = `<span>${sig}</span><span class="nm"></span><span class="dt"></span>`;
-  div.querySelector('.nm').textContent = `${m.name || code} (${code})`;
-  div.querySelector('.dt').textContent = showDate ? date : (m.report || '').slice(0, 18);
-  div.addEventListener('click', () => {
-    const id = uid();
-    meta.sheets.push({
-      id, name: `${m.name || code} ${date}`, folder: selectedFolderId || null,
-      type: 'awake', adate: date, code,
-      dirty: true, updated: Date.now(),
-    });
-    saveMeta(); renderTree();
-    document.getElementById('rs-modal').style.display = 'none';
-    openSheet(id);
-    toast(`⭐ "${m.name}" 가져옴`);
-  });
-  return div;
-}
-
-function renderAwStocks(date, q) {
-  const list = document.getElementById('rs-list');
-  list.innerHTML = '';
-  const stocks = (_awData.meta_by_date || {})[date] || {};
-  const entries = Object.entries(stocks)
-    .filter(([code, m]) => !q || (m.name || '').toLowerCase().includes(q) || code.includes(q));
-  if (!entries.length) { list.innerHTML = '<div class="empty-tip">검색 결과 없음</div>'; return; }
-  entries.forEach(([code, m]) => list.appendChild(awStockItem(date, code, m, false)));
 }
 
 function linkifyEsc(text) {
