@@ -981,6 +981,7 @@ td input, td textarea{border-radius:8px}
   <button class="page-tab-btn" data-page="interest">👀 Interest</button>
   <button class="page-tab-btn" data-page="fnguide">📑 FNguide</button>
   <button class="page-tab-btn" data-page="research">🔬 Research</button>
+  <button class="page-tab-btn" data-page="sheet">📊 Sheet</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
   <div class="tabs-spacer"></div>
   <button id="gh-settings-btn" class="gh-settings-btn" title="GitHub 토큰 설정">⚙️</button>
@@ -1140,6 +1141,24 @@ td input, td textarea{border-radius:8px}
     title="Research Notes"
   ></iframe>
 </div><!-- /page-research -->
+
+<div id="page-sheet" class="page">
+  <!-- Google Sheets 는 X-Frame-Options: SAMEORIGIN 으로 iframe 로드가 차단되어 안내 페이지로 대체. -->
+  <div style="height:calc(100vh - 48px); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:24px; padding:20px; background:var(--bg); text-align:center;">
+    <div style="font-size:56px;">📊</div>
+    <h2 style="margin:0; font-size:22px; color:var(--text);">Google Sheets</h2>
+    <p style="margin:0; font-size:14px; color:var(--text-dim); max-width:420px; line-height:1.6;">
+      Google Sheets 는 보안 정책으로 대시보드 안에 임베드되지 않습니다.<br>
+      아래 버튼으로 새 창에서 열어주세요.
+    </p>
+    <a href="https://docs.google.com/spreadsheets/u/0/?pli=1" target="_blank" rel="noopener"
+       style="display:inline-block; padding:12px 28px; background:var(--accent); color:#fff;
+              border-radius:10px; text-decoration:none; font-weight:600; font-size:15px;
+              box-shadow:0 2px 8px rgba(0,0,0,.08);">
+      새 창으로 Sheets 열기 ↗
+    </a>
+  </div>
+</div><!-- /page-sheet -->
 
 <div id="page-etfmonitor" class="page">
   <iframe
@@ -2127,6 +2146,7 @@ const IFRAME_TAB_SRC = {
   interest:  'https://whysosary-dot.github.io/watchlist-briefing/',
   fnguide:   'https://comp.fnguide.com/SVO2/ASP/SVD_Report_Summary.asp?pGB=1&gicode=A005930&cID=&MenuYn=Y&ReportGB=&NewMenuID=901&stkGb=701',
   research:  'https://whysosary-dot.github.io/investment-notes/',
+  // sheet 은 X-Frame-Options 로 iframe 차단되어 안내 페이지로 대체 (IFRAME_TAB_SRC 등록 X)
 };
 
 function activatePage(page, opts = {}) {
