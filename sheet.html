@@ -456,46 +456,20 @@ const _autoCollapse = () => {
   if (window.innerWidth < 900) document.querySelector('.app').classList.add('sb-hidden');
 };
 
-/* ── 아이패드: 셀 더블탭 → 편집 모드 + 가상 키보드 ──
-   Luckysheet 는 데스크톱 dblclick 로만 편집 모드에 들어가서 터치에선 키보드가 안 뜬다.
-   더블탭을 직접 감지해 enterEditMode + 내부 에디터 focus (user gesture 안에서 해야 iOS 키보드가 열림) */
-let _lastTap = { t: 0, x: 0, y: 0 };
-document.getElementById('lucky').addEventListener('touchend', (e) => {
-  if (!luckyCreated) return;
-  const touch = e.changedTouches && e.changedTouches[0];
-  if (!touch) return;
-  const now = Date.now();
-  const dx = Math.abs(touch.clientX - _lastTap.x);
-  const dy = Math.abs(touch.clientY - _lastTap.y);
-  if (now - _lastTap.t < 350 && dx < 30 && dy < 30) {
-    // 더블탭 — 편집 모드 진입 + 키보드 호출
-    try {
-      luckysheet.enterEditMode();
-      const ed = document.getElementById('luckysheet-rich-text-editor');
-      if (ed) {
-        ed.focus();
-        // caret 을 끝으로
-        const sel = window.getSelection();
-        const range = document.createRange();
-        range.selectNodeContents(ed);
-        range.collapse(false);
-        sel.removeAllRanges();
-        sel.addRange(range);
-      }
-    } catch(err) { console.warn('[sheet] enterEditMode fail', err); }
-    _lastTap = { t: 0, x: 0, y: 0 };
-  } else {
-    _lastTap = { t: now, x: touch.clientX, y: touch.clientY };
-  }
-}, { passive: true });
-
-/* ── 아이패드: 길게 누른 뒤 드래그 = 셀 범위 선택 ──
-   한 손가락 드래그는 기본 스크롤로 두고, 300ms 이상 누르고 있으면
-   선택 모드로 전환해 touch 좌표를 synthetic mouse 이벤트로 변환한다.
-   (Luckysheet 는 mousedown/mousemove/mouseup 으로만 범위 선택을 처리) */
+/* ═══ 아이패드 터치 레이어 (통합) ═══
+   규칙:
+   1. 탭 (짧게, 안 움직임)
+      - 선택된 셀 위 → 시간 무관 즉시 편집 모드 + 키보드
+      - 행/열 헤더 위 → 전체 행/열 선택
+      - 그 외 → Luckysheet 기본 (셀 선택)
+   2. 드래그 (움직임 시작)
+      - 어디서 시작하든 기본은 스크롤
+      - 200ms(선택 위)/300ms(그 외) 이상 누르고 있다가 드래그 → 범위 선택
+   → 스크롤 제스처(바로 슥 미는 것)는 선택 영역 위에서도 항상 스크롤 됨 */
 (function() {
   const luckyEl = document.getElementById('lucky');
   let pressTimer = null, selMode = false, startTouch = null;
+  let startTime = 0, movedFar = false, startedOnSel = false;
 
   function fireMouse(type, x, y) {
     const target = document.elementFromPoint(x, y) || luckyEl;
@@ -507,18 +481,42 @@ document.getElementById('lucky').addEventListener('touchend', (e) => {
   }
   function cancelPress() { clearTimeout(pressTimer); pressTimer = null; }
 
-  let startTime = 0, movedFar = false;
-
-  // 현재 선택 박스(셀/범위) 위에서 터치가 시작됐는지 — 여백 8px 확장해서 손가락 오차 허용
+  // 현재 선택 박스(셀/범위) 위인지 — 여백 8px 확장해서 손가락 오차 허용
   function touchOnSelection(x, y) {
     const els = document.querySelectorAll('#luckysheet-cell-selected, .luckysheet-cell-selected');
     for (const el of els) {
-      if (!el.offsetParent) continue; // 숨겨진 요소 스킵
+      if (!el.offsetParent) continue;
       const r = el.getBoundingClientRect();
       if (r.width < 2 || r.height < 2) continue;
       if (x >= r.left - 8 && x <= r.right + 8 && y >= r.top - 8 && y <= r.bottom + 8) return true;
     }
     return false;
+  }
+
+  // 선택이 단일 셀인지 (범위면 탭 시 편집 대신 그 셀 선택이 자연스러움)
+  function isSingleCellSelection() {
+    try {
+      const rs = luckysheet.getRange();
+      if (!rs || !rs.length) return false;
+      const g = rs[rs.length - 1];
+      return g.row[0] === g.row[1] && g.column[0] === g.column[1];
+    } catch(_) { return false; }
+  }
+
+  function enterEdit() {
+    try {
+      luckysheet.enterEditMode();
+      const ed = document.getElementById('luckysheet-rich-text-editor');
+      if (ed) {
+        ed.focus();
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(ed);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    } catch(err) { console.warn('[sheet] enterEditMode fail', err); }
   }
 
   luckyEl.addEventListener('touchstart', (e) => {
@@ -528,35 +526,27 @@ document.getElementById('lucky').addEventListener('touchend', (e) => {
     startTime = Date.now();
     movedFar = false;
     selMode = false;
+    startedOnSel = touchOnSelection(t.clientX, t.clientY);
     cancelPress();
-
-    // 이미 선택된 셀/범위 위에서 시작한 터치 → 롱프레스 없이 즉시 선택 모드
-    // (구글시트처럼 선택된 셀에서 드래그하면 범위가 늘어남)
-    if (touchOnSelection(t.clientX, t.clientY)) {
-      e.preventDefault(); // 스크롤로 새지 않게
-      selMode = true;
-      fireMouse('mousedown', t.clientX, t.clientY);
-      return;
-    }
-
+    // preventDefault 하지 않음 → 스크롤 제스처는 자연스럽게 통과
+    // 잠깐 누르고 있으면 선택 모드 (선택 위에선 더 짧게)
     pressTimer = setTimeout(() => {
-      // 300ms 동안 안 움직임 → 선택 모드 시작
       selMode = true;
       fireMouse('mousedown', startTouch.x, startTouch.y);
-    }, 300);
-  }, { passive: false });
+    }, startedOnSel ? 200 : 300);
+  }, { passive: true });
 
   luckyEl.addEventListener('touchmove', (e) => {
     const t = e.touches[0];
     if (!selMode) {
-      // 아직 선택 모드 아님 — 10px 이상 움직이면 스크롤 의도로 판단, 롱프레스 취소
+      // 10px 이상 움직이면 스크롤 의도 — 선택 모드 진입 취소, 기본 스크롤에 맡김
       if (startTouch && (Math.abs(t.clientX - startTouch.x) > 10 || Math.abs(t.clientY - startTouch.y) > 10)) {
         movedFar = true;
         cancelPress();
       }
-      return; // 기본 스크롤 허용
+      return;
     }
-    e.preventDefault(); // 선택 중엔 스크롤 차단
+    e.preventDefault(); // 선택 확장 중엔 스크롤 차단
     fireMouse('mousemove', t.clientX, t.clientY);
   }, { passive: false });
 
@@ -568,14 +558,27 @@ document.getElementById('lucky').addEventListener('touchend', (e) => {
       selMode = false;
       return;
     }
-    // 빠른 탭 (짧고 안 움직임) — 행/열 헤더면 클릭으로 변환 → 전체 행/열 선택
-    if (!movedFar && t && (Date.now() - startTime) < 300) {
-      const el = document.elementFromPoint(t.clientX, t.clientY);
-      if (el && el.closest('#luckysheet-rows-h, #luckysheet-cols-h-c, .luckysheet-cols-h-c, .luckysheet-rows-h')) {
-        fireMouse('mousedown', t.clientX, t.clientY);
-        fireMouse('mouseup', t.clientX, t.clientY);
-      }
+    if (!t || movedFar) return; // 스크롤이었음 — 아무것도 안 함
+
+    // ── 탭 처리 ──
+    const el = document.elementFromPoint(t.clientX, t.clientY);
+    // 1) 행/열 헤더 탭 → 전체 행/열 선택
+    if (el && el.closest('#luckysheet-rows-h, #luckysheet-cols-h-c, .luckysheet-cols-h-c, .luckysheet-rows-h')) {
+      fireMouse('mousedown', t.clientX, t.clientY);
+      fireMouse('mouseup', t.clientX, t.clientY);
+      return;
     }
+    // 2) 선택된 단일 셀 위 탭 → 시간 무관 즉시 편집 모드 + 키보드
+    if (startedOnSel && touchOnSelection(t.clientX, t.clientY) && isSingleCellSelection()) {
+      enterEdit();
+      return;
+    }
+    // 3) 범위 선택 안쪽 탭 → 그 셀을 단일 선택으로 (구글시트와 동일)
+    if (startedOnSel) {
+      fireMouse('mousedown', t.clientX, t.clientY);
+      fireMouse('mouseup', t.clientX, t.clientY);
+    }
+    // 4) 그 외 탭은 Luckysheet 기본 처리 (셀 선택)
   }, { passive: true });
 
   luckyEl.addEventListener('touchcancel', () => { cancelPress(); selMode = false; }, { passive: true });
