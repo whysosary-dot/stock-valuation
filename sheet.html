@@ -190,6 +190,13 @@
   .rs-item:hover { background: var(--accent-soft); }
   .rs-item .cnt { margin-left: auto; font-size: 12px; color: var(--text-dim); }
   .rs-item .dt { margin-left: auto; font-size: 12px; color: var(--text-dim); flex: none; }
+  .rs-item.sel { background: var(--accent-soft); outline: 1.5px solid var(--accent); }
+  .rs-item .chk { flex: none; width: 18px; color: var(--accent); font-weight: 700; }
+  .rs-import-btn {
+    width: 100%; padding: 11px; border: none; border-radius: 9px;
+    background: var(--accent); color: #fff; font-size: 14.5px; font-weight: 600; cursor: pointer;
+  }
+  .rs-import-btn:disabled { opacity: .45; cursor: not-allowed; }
 
   /* ── 좁은 화면 (아이폰/아이패드 세로): 상단바 잘림 방지 ── */
   @media (max-width: 700px) {
@@ -270,6 +277,9 @@
     </div>
     <input id="rs-search" type="search" placeholder="기업명 검색…" autocomplete="off" />
     <div id="rs-list" class="rs-list"></div>
+    <div id="rs-foot" style="display:none;">
+      <button id="rs-import-btn" class="rs-import-btn">선택 0개 가져오기</button>
+    </div>
   </div>
 </div>
 
@@ -1003,6 +1013,8 @@ async function loadResearchData() {
 function openPickerModal(mode, title, placeholder) {
   _pickerMode = mode;
   _rsCompanyId = null;
+  _rsSelected = new Set();
+  document.getElementById('rs-foot').style.display = 'none';
   const modal = document.getElementById('rs-modal');
   modal.style.display = 'flex';
   document.getElementById('rs-back').style.display = 'none';
@@ -1044,6 +1056,8 @@ document.getElementById('rs-back').addEventListener('click', () => {
   document.getElementById('rs-search').value = '';
   if (_pickerMode === 'research') {
     _rsCompanyId = null;
+    _rsSelected = new Set();
+    document.getElementById('rs-foot').style.display = 'none';
     document.getElementById('rs-title').textContent = '🔬 리서치 카드 가져오기';
     document.getElementById('rs-search').placeholder = '기업명 검색…';
     renderRsCompanies('');
@@ -1074,14 +1088,29 @@ function renderRsCompanies(q) {
     div.querySelector('.cnt').textContent = `카드 ${(c.cards || []).length}개`;
     div.addEventListener('click', () => {
       _rsCompanyId = c.id;
+      _rsSelected = new Set();
       document.getElementById('rs-back').style.display = '';
-      document.getElementById('rs-title').textContent = `🏢 ${c.name}`;
+      document.getElementById('rs-title').textContent = `🏢 ${c.name} — 카드를 탭해서 선택`;
       document.getElementById('rs-search').placeholder = '카드 제목 검색…';
       document.getElementById('rs-search').value = '';
       renderRsCards(c.id, '');
     });
     list.appendChild(div);
   });
+}
+
+let _rsSelected = new Set(); // 다중 선택된 카드 id
+
+function updateRsFoot() {
+  const foot = document.getElementById('rs-foot');
+  const btn = document.getElementById('rs-import-btn');
+  if (_rsCompanyId && _rsSelected.size > 0) {
+    foot.style.display = 'block';
+    btn.textContent = `선택 ${_rsSelected.size}개 가져오기`;
+    btn.disabled = false;
+  } else {
+    foot.style.display = 'none';
+  }
 }
 
 function renderRsCards(companyId, q) {
@@ -1092,28 +1121,47 @@ function renderRsCards(companyId, q) {
   const cards = (c.cards || [])
     .filter(cd => !q || (cd.title || '').toLowerCase().includes(q))
     .slice().reverse(); // 최신 카드 먼저
-  if (!cards.length) { list.innerHTML = '<div class="empty-tip">카드가 없어요</div>'; return; }
+  if (!cards.length) { list.innerHTML = '<div class="empty-tip">카드가 없어요</div>'; updateRsFoot(); return; }
   cards.forEach(cd => {
     const div = document.createElement('div');
-    div.className = 'rs-item';
-    div.innerHTML = `<span>🔬</span><span class="nm"></span><span class="dt"></span>`;
+    div.className = 'rs-item' + (_rsSelected.has(cd.id) ? ' sel' : '');
+    div.innerHTML = `<span class="chk">${_rsSelected.has(cd.id) ? '✓' : ''}</span><span>🔬</span><span class="nm"></span><span class="dt"></span>`;
     div.querySelector('.nm').textContent = cd.title || cd.id;
     div.querySelector('.dt').textContent = cd.date || '';
     div.addEventListener('click', () => {
-      const id = uid();
-      meta.sheets.push({
-        id, name: `${c.name} — ${cd.title}`, folder: selectedFolderId || null,
-        type: 'rcard', rid: c.id, cid: cd.id,
-        dirty: true, updated: Date.now(),
-      });
-      saveMeta(); renderTree();
-      document.getElementById('rs-modal').style.display = 'none';
-      openSheet(id);
-      toast(`카드 "${cd.title}" 가져옴`);
+      // 탭 = 선택 토글 (여러 개 선택 후 하단 버튼으로 일괄 가져오기)
+      if (_rsSelected.has(cd.id)) _rsSelected.delete(cd.id);
+      else _rsSelected.add(cd.id);
+      div.classList.toggle('sel', _rsSelected.has(cd.id));
+      div.querySelector('.chk').textContent = _rsSelected.has(cd.id) ? '✓' : '';
+      updateRsFoot();
     });
     list.appendChild(div);
   });
+  updateRsFoot();
 }
+
+document.getElementById('rs-import-btn').addEventListener('click', () => {
+  if (!_rsCompanyId || !_rsSelected.size) return;
+  const c = (_rsData.companies || []).find(x => x.id === _rsCompanyId);
+  if (!c) return;
+  let lastId = null, count = 0;
+  (c.cards || []).forEach(cd => {
+    if (!_rsSelected.has(cd.id)) return;
+    const id = uid();
+    meta.sheets.push({
+      id, name: `${c.name} — ${cd.title}`, folder: selectedFolderId || null,
+      type: 'rcard', rid: c.id, cid: cd.id,
+      dirty: true, updated: Date.now(),
+    });
+    lastId = id; count++;
+  });
+  _rsSelected = new Set();
+  saveMeta(); renderTree();
+  document.getElementById('rs-modal').style.display = 'none';
+  if (lastId) openSheet(lastId);
+  toast(`🔬 카드 ${count}개 가져옴`);
+});
 
 /* 리서치 카드 렌더 (열람 시) */
 let _rcCharts = []; // Chart.js 인스턴스 정리용
