@@ -37,7 +37,7 @@
   .sb-toggle:hover { background: var(--accent-soft); color: var(--accent); }
   .sb-head {
     padding: 10px 12px; border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; gap: 6px;
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   }
   .sb-title { font-size: 14px; font-weight: 700; color: var(--text); flex: 1; text-decoration: none; cursor: pointer; }
   .sb-title:hover { color: var(--accent); }
@@ -127,7 +127,7 @@
 
   /* ── 노트 에디터 ── */
   .note-toolbar {
-    flex: none; display: flex; gap: 6px; padding: 8px 12px;
+    flex: none; display: flex; gap: 6px; padding: 8px 12px; flex-wrap: wrap;
     background: var(--panel); border-bottom: 1px solid var(--border);
   }
   .note-toolbar button {
@@ -203,6 +203,8 @@
       <button class="sb-btn" id="new-gsheet-btn" title="구글 스프레드시트 연결">📄+</button>
       <button class="sb-btn" id="new-note-btn" title="새 글 (텍스트+사진 노트)">📝+</button>
       <button class="sb-btn" id="new-research-btn" title="리서치 탭 기업 카드 가져오기">🔬+</button>
+      <button class="sb-btn" id="new-awake-btn" title="Awake 즐겨찾기 가져오기">⭐+</button>
+      <button class="sb-btn" id="new-index-btn" title="Index 지표 가져오기">📈+</button>
     </div>
     <div class="sb-search">
       <input id="tree-search" type="search" placeholder="🔍 폴더·시트 검색" autocomplete="off" />
@@ -225,9 +227,17 @@
     <div id="noteview" style="display:none; flex-direction:column; min-height:0; flex:1;">
       <div class="note-toolbar">
         <button data-cmd="bold" title="굵게"><b>B</b></button>
-        <button data-cmd="red" title="빨간 강조"><span style="color:var(--red);font-weight:700;">A</span></button>
+        <button data-cmd="red" title="빨강"><span style="color:#e23a3a;font-weight:700;">A</span></button>
+        <button data-cmd="blue" title="파랑"><span style="color:#2563eb;font-weight:700;">A</span></button>
+        <button data-cmd="green" title="초록"><span style="color:#16a34a;font-weight:700;">A</span></button>
+        <button data-cmd="black" title="색 원복"><span style="font-weight:700;">A</span></button>
+        <button data-cmd="hl" title="형광펜 (노랑)"><span style="background:#fff176;padding:0 4px;border-radius:3px;">가</span></button>
+        <button data-cmd="hl-off" title="형광펜 제거"><span style="text-decoration:line-through;">가</span></button>
         <button data-cmd="h" title="소제목"><b>H</b></button>
         <button data-cmd="ul" title="글머리 목록">•≡</button>
+        <button data-cmd="ol" title="숫자 목록">1.≡</button>
+        <button data-cmd="outdent" title="내어쓰기">⇤</button>
+        <button data-cmd="indent" title="들여쓰기">⇥</button>
         <button data-cmd="photo" title="사진 삽입">📷</button>
       </div>
       <div id="note-edit" contenteditable="true" data-placeholder="투자 기록을 남겨보세요. 📷 버튼으로 사진을 넣을 수 있습니다."></div>
@@ -319,6 +329,8 @@ let treeSearchQuery = '';
 function itemIcon(s) {
   if (s.type === 'note')   return '📝';
   if (s.type === 'rcard')  return '🔬';
+  if (s.type === 'awake')  return '⭐';
+  if (s.type === 'index')  return '📈';
   return '📄'; // 구글시트 포함 — 📄+ 버튼과 동일 아이콘
 }
 
@@ -791,11 +803,13 @@ function openSheet(id) {
     return;
   }
 
-  // ── 리서치 카드 ──
-  if (s.type === 'rcard') {
+  // ── 카드 뷰 (리서치 / Awake / Index) ──
+  if (s.type === 'rcard' || s.type === 'awake' || s.type === 'index') {
     hideAllViews();
     document.getElementById('rcardview').style.display = 'block';
-    renderResearchCard(s);
+    if (s.type === 'rcard')      renderResearchCard(s);
+    else if (s.type === 'awake') renderAwakeCard(s);
+    else                         renderIndexCard(s);
     renderTree(); updateTopbar();
     setStatus('', false);
     if (window.innerWidth < 900) document.querySelector('.app').classList.add('sb-hidden');
@@ -888,14 +902,25 @@ document.querySelector('.note-toolbar').addEventListener('click', (e) => {
   const cmd = btn.dataset.cmd;
   const ed = document.getElementById('note-edit');
   ed.focus();
+  const color = (c) => { document.execCommand('styleWithCSS', false, true); document.execCommand('foreColor', false, c); };
   if (cmd === 'bold') document.execCommand('bold');
-  else if (cmd === 'red') {
-    document.execCommand('styleWithCSS', false, true);
-    document.execCommand('foreColor', false, '#e23a3a');
-  }
+  else if (cmd === 'red')    color('#e23a3a');
+  else if (cmd === 'blue')   color('#2563eb');
+  else if (cmd === 'green')  color('#16a34a');
+  else if (cmd === 'black')  color('#1f2933');
+  else if (cmd === 'hl')     { document.execCommand('styleWithCSS', false, true); document.execCommand('hiliteColor', false, '#fff176'); }
+  else if (cmd === 'hl-off') { document.execCommand('styleWithCSS', false, true); document.execCommand('hiliteColor', false, 'transparent'); }
   else if (cmd === 'h') document.execCommand('formatBlock', false, 'h3');
   else if (cmd === 'ul') document.execCommand('insertUnorderedList');
+  else if (cmd === 'ol') document.execCommand('insertOrderedList');
+  else if (cmd === 'indent')  document.execCommand('indent');
+  else if (cmd === 'outdent') document.execCommand('outdent');
   else if (cmd === 'photo') document.getElementById('note-photo-input').click();
+  if (cmd !== 'photo') {
+    noteChanged = true;
+    clearTimeout(noteSaveTimer);
+    noteSaveTimer = setTimeout(persistCurrent, 800);
+  }
 });
 
 // 사진 삽입: 캔버스로 리사이즈(최대 1280px, JPEG 0.8) 후 dataURL 로 삽입
@@ -946,17 +971,45 @@ async function loadResearchData() {
   return _rsData;
 }
 
-document.getElementById('new-research-btn').addEventListener('click', async () => {
+function openPickerModal(mode, title, placeholder) {
+  _pickerMode = mode;
+  _rsCompanyId = null; _awDate = null;
   const modal = document.getElementById('rs-modal');
   modal.style.display = 'flex';
-  _rsCompanyId = null;
+  document.getElementById('rs-back').style.display = 'none';
+  document.getElementById('rs-title').textContent = title;
+  document.getElementById('rs-search').placeholder = placeholder;
   document.getElementById('rs-search').value = '';
   document.getElementById('rs-list').innerHTML = '<div class="empty-tip">불러오는 중…</div>';
+}
+
+document.getElementById('new-research-btn').addEventListener('click', async () => {
+  openPickerModal('research', '🔬 리서치 카드 가져오기', '기업명 검색…');
   try {
     await loadResearchData();
     renderRsCompanies('');
   } catch(e) {
     document.getElementById('rs-list').innerHTML = '<div class="empty-tip">리서치 데이터를 불러오지 못했어요.<br>' + e.message + '</div>';
+  }
+});
+
+document.getElementById('new-awake-btn').addEventListener('click', async () => {
+  openPickerModal('awake', '⭐ Awake 즐겨찾기 가져오기', '종목명·코드 검색…');
+  try {
+    await loadAwakeData();
+    renderAwDates('');
+  } catch(e) {
+    document.getElementById('rs-list').innerHTML = '<div class="empty-tip">Awake 데이터를 불러오지 못했어요.<br>' + e.message + '</div>';
+  }
+});
+
+document.getElementById('new-index-btn').addEventListener('click', async () => {
+  openPickerModal('index', '📈 Index 지표 가져오기', '지표명·카테고리 검색…');
+  try {
+    await loadIndexData();
+    renderIdxList('');
+  } catch(e) {
+    document.getElementById('rs-list').innerHTML = '<div class="empty-tip">Index 데이터를 불러오지 못했어요.<br>' + e.message + '</div>';
   }
 });
 document.getElementById('rs-close').addEventListener('click', () => {
@@ -965,18 +1018,35 @@ document.getElementById('rs-close').addEventListener('click', () => {
 document.getElementById('rs-modal').addEventListener('click', (e) => {
   if (e.target === document.getElementById('rs-modal')) document.getElementById('rs-modal').style.display = 'none';
 });
+let _pickerMode = 'research'; // 'research' | 'awake' | 'index'
+let _awDate = null;           // awake 모드에서 선택된 날짜
+
 document.getElementById('rs-back').addEventListener('click', () => {
-  _rsCompanyId = null;
   document.getElementById('rs-back').style.display = 'none';
-  document.getElementById('rs-title').textContent = '🔬 리서치 카드 가져오기';
-  document.getElementById('rs-search').placeholder = '기업명 검색…';
   document.getElementById('rs-search').value = '';
-  renderRsCompanies('');
+  if (_pickerMode === 'research') {
+    _rsCompanyId = null;
+    document.getElementById('rs-title').textContent = '🔬 리서치 카드 가져오기';
+    document.getElementById('rs-search').placeholder = '기업명 검색…';
+    renderRsCompanies('');
+  } else if (_pickerMode === 'awake') {
+    _awDate = null;
+    document.getElementById('rs-title').textContent = '⭐ Awake 즐겨찾기 가져오기';
+    document.getElementById('rs-search').placeholder = '종목명·코드 검색…';
+    renderAwDates('');
+  }
 });
 document.getElementById('rs-search').addEventListener('input', (e) => {
   const q = e.target.value.trim().toLowerCase();
-  if (_rsCompanyId) renderRsCards(_rsCompanyId, q);
-  else renderRsCompanies(q);
+  if (_pickerMode === 'research') {
+    if (_rsCompanyId) renderRsCards(_rsCompanyId, q);
+    else renderRsCompanies(q);
+  } else if (_pickerMode === 'awake') {
+    if (_awDate) renderAwStocks(_awDate, q);
+    else renderAwDates(q);
+  } else if (_pickerMode === 'index') {
+    renderIdxList(q);
+  }
 });
 
 function renderRsCompanies(q) {
@@ -1108,6 +1178,261 @@ async function renderResearchCard(s) {
     link.href = `https://whysosary-dot.github.io/investment-notes/company.html?id=${encodeURIComponent(s.rid)}`;
     link.target = '_blank'; link.rel = 'noopener';
     link.textContent = `↗ ${c.name} 전체 카드 보기 (Research 탭)`;
+    card.appendChild(link);
+
+    view.innerHTML = '';
+    view.appendChild(card);
+  } catch(e) {
+    view.innerHTML = '<div class="empty-tip">불러오기 실패: ' + e.message + '</div>';
+  }
+}
+
+/* ═══ Awake 즐겨찾기 가져오기 (⭐) ═══ */
+const AWAKE_FAVS_URL = 'https://raw.githubusercontent.com/whysosary-dot/awake-disclosure/main/awake_favs.json';
+let _awData = null;
+
+async function loadAwakeData() {
+  if (_awData) return _awData;
+  const r = await fetch(AWAKE_FAVS_URL + '?t=' + Date.now(), { cache: 'no-store' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  _awData = await r.json();
+  return _awData;
+}
+
+function renderAwDates(q) {
+  const list = document.getElementById('rs-list');
+  list.innerHTML = '';
+  const mbd = _awData.meta_by_date || {};
+  if (q) {
+    // 전체 날짜에서 종목명/코드 검색 (플랫)
+    const hits = [];
+    Object.entries(mbd).forEach(([date, stocks]) => {
+      Object.entries(stocks).forEach(([code, m]) => {
+        if ((m.name || '').toLowerCase().includes(q) || code.includes(q)) hits.push({ date, code, m });
+      });
+    });
+    hits.sort((a, b) => b.date.localeCompare(a.date));
+    if (!hits.length) { list.innerHTML = '<div class="empty-tip">검색 결과 없음</div>'; return; }
+    hits.forEach(({ date, code, m }) => list.appendChild(awStockItem(date, code, m, true)));
+    return;
+  }
+  const dates = Object.keys(mbd).sort().reverse();
+  if (!dates.length) { list.innerHTML = '<div class="empty-tip">즐겨찾기가 없어요</div>'; return; }
+  dates.forEach(date => {
+    const div = document.createElement('div');
+    div.className = 'rs-item';
+    div.innerHTML = `<span>📅</span><span class="nm"></span><span class="cnt"></span>`;
+    div.querySelector('.nm').textContent = date;
+    div.querySelector('.cnt').textContent = `${Object.keys(mbd[date]).length}종목`;
+    div.addEventListener('click', () => {
+      _awDate = date;
+      document.getElementById('rs-back').style.display = '';
+      document.getElementById('rs-title').textContent = `📅 ${date}`;
+      document.getElementById('rs-search').value = '';
+      renderAwStocks(date, '');
+    });
+    list.appendChild(div);
+  });
+}
+
+function awStockItem(date, code, m, showDate) {
+  const div = document.createElement('div');
+  div.className = 'rs-item';
+  const sig = m.signal === 'up' ? '📈' : m.signal === 'down' ? '📉' : '➖';
+  div.innerHTML = `<span>${sig}</span><span class="nm"></span><span class="dt"></span>`;
+  div.querySelector('.nm').textContent = `${m.name || code} (${code})`;
+  div.querySelector('.dt').textContent = showDate ? date : (m.report || '').slice(0, 18);
+  div.addEventListener('click', () => {
+    const id = uid();
+    meta.sheets.push({
+      id, name: `${m.name || code} ${date}`, folder: selectedFolderId || null,
+      type: 'awake', adate: date, code,
+      dirty: true, updated: Date.now(),
+    });
+    saveMeta(); renderTree();
+    document.getElementById('rs-modal').style.display = 'none';
+    openSheet(id);
+    toast(`⭐ "${m.name}" 가져옴`);
+  });
+  return div;
+}
+
+function renderAwStocks(date, q) {
+  const list = document.getElementById('rs-list');
+  list.innerHTML = '';
+  const stocks = (_awData.meta_by_date || {})[date] || {};
+  const entries = Object.entries(stocks)
+    .filter(([code, m]) => !q || (m.name || '').toLowerCase().includes(q) || code.includes(q));
+  if (!entries.length) { list.innerHTML = '<div class="empty-tip">검색 결과 없음</div>'; return; }
+  entries.forEach(([code, m]) => list.appendChild(awStockItem(date, code, m, false)));
+}
+
+function linkifyEsc(text) {
+  const esc = (text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return esc.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:var(--accent);">$1</a>').replace(/\n/g, '<br>');
+}
+
+async function renderAwakeCard(s) {
+  const view = document.getElementById('rcardview');
+  view.innerHTML = '<div class="empty-tip">불러오는 중…</div>';
+  try {
+    const data = await loadAwakeData();
+    const m = ((data.meta_by_date || {})[s.adate] || {})[s.code];
+    if (!m) { view.innerHTML = '<div class="empty-tip">즐겨찾기 항목을 찾을 수 없어요.<br>Awake 탭에서 해제되었을 수 있습니다.</div>'; return; }
+    const memo = ((data.memos_v2 || {})[s.adate] || {})[s.code] || '';
+    const sig = m.signal === 'up' ? '📈 상승 시그널' : m.signal === 'down' ? '📉 하락 시그널' : '➖ 중립';
+
+    const card = document.createElement('div');
+    card.className = 'rc-card';
+    const h = document.createElement('h2'); h.className = 'rc-title';
+    h.textContent = `${m.name || s.code} (${s.code})`;
+    card.appendChild(h);
+
+    const metaDiv = document.createElement('div'); metaDiv.className = 'rc-meta';
+    [`📅 ${s.adate}`, sig].forEach(t => { const sp = document.createElement('span'); sp.textContent = t; metaDiv.appendChild(sp); });
+    card.appendChild(metaDiv);
+
+    if (m.report) {
+      const rep = document.createElement('div');
+      rep.style.cssText = 'font-size:14.5px; font-weight:600; color:var(--text); margin-bottom:12px;';
+      rep.textContent = `📋 ${m.report}`;
+      card.appendChild(rep);
+    }
+    if (memo) {
+      const md = document.createElement('div');
+      md.style.cssText = 'font-size:14px; line-height:1.75; color:var(--text); background:var(--panel-2); border-radius:10px; padding:14px 16px; margin-bottom:14px; word-break:break-word;';
+      md.innerHTML = linkifyEsc(memo);
+      card.appendChild(md);
+    }
+    const link = document.createElement('a');
+    link.className = 'rc-open-link';
+    link.href = `https://whysosary-dot.github.io/awake-disclosure/reports/AWAKE_${s.adate}.html` + (m.anchor ? `#${m.anchor}` : '');
+    link.target = '_blank'; link.rel = 'noopener';
+    link.textContent = `↗ ${s.adate} Awake 리포트에서 보기`;
+    card.appendChild(link);
+
+    view.innerHTML = '';
+    view.appendChild(card);
+  } catch(e) {
+    view.innerHTML = '<div class="empty-tip">불러오기 실패: ' + e.message + '</div>';
+  }
+}
+
+/* ═══ Index 지표 가져오기 (📈) ═══ */
+const INDEX_HTML_URL = 'https://raw.githubusercontent.com/whysosary-dot/invest-index/main/index.html';
+let _idxData = null; // INDICATORS 배열
+
+async function loadIndexData() {
+  if (_idxData) return _idxData;
+  const r = await fetch(INDEX_HTML_URL + '?t=' + Date.now(), { cache: 'no-store' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const src = await r.text();
+  const startMark = 'const INDICATORS = [';
+  const si = src.indexOf(startMark);
+  if (si < 0) throw new Error('INDICATORS 배열을 찾을 수 없음');
+  const arrStart = si + startMark.length - 1; // '[' 위치
+  const ei = src.indexOf('\n];', arrStart);
+  if (ei < 0) throw new Error('배열 끝을 찾을 수 없음');
+  const arrText = src.slice(arrStart, ei + 2); // "...]" 포함
+  _idxData = new Function('return ' + arrText)();
+  if (!Array.isArray(_idxData)) throw new Error('파싱 결과가 배열이 아님');
+  return _idxData;
+}
+
+function renderIdxList(q) {
+  const list = document.getElementById('rs-list');
+  list.innerHTML = '';
+  const items = (_idxData || []).filter(ind =>
+    !q || (ind.name || '').toLowerCase().includes(q) || (ind.category || '').toLowerCase().includes(q));
+  if (!items.length) { list.innerHTML = '<div class="empty-tip">검색 결과 없음</div>'; return; }
+  items.forEach(ind => {
+    const div = document.createElement('div');
+    div.className = 'rs-item';
+    div.innerHTML = `<span>📈</span><span class="nm"></span><span class="dt"></span>`;
+    div.querySelector('.nm').textContent = ind.name || ind.id;
+    div.querySelector('.dt').textContent = ind.category || '';
+    div.addEventListener('click', () => {
+      const id = uid();
+      meta.sheets.push({
+        id, name: ind.name || ind.id, folder: selectedFolderId || null,
+        type: 'index', iid: ind.id,
+        dirty: true, updated: Date.now(),
+      });
+      saveMeta(); renderTree();
+      document.getElementById('rs-modal').style.display = 'none';
+      openSheet(id);
+      toast(`📈 "${ind.name}" 가져옴`);
+    });
+    list.appendChild(div);
+  });
+}
+
+async function renderIndexCard(s) {
+  const view = document.getElementById('rcardview');
+  view.innerHTML = '<div class="empty-tip">불러오는 중…</div>';
+  _rcCharts.forEach(ch => { try { ch.destroy(); } catch(_) {} });
+  _rcCharts = [];
+  try {
+    const inds = await loadIndexData();
+    const ind = inds.find(x => x.id === s.iid);
+    if (!ind) { view.innerHTML = '<div class="empty-tip">지표를 찾을 수 없어요.<br>Index 탭에서 삭제되었을 수 있습니다.</div>'; return; }
+
+    const card = document.createElement('div');
+    card.className = 'rc-card';
+    const h = document.createElement('h2'); h.className = 'rc-title'; h.textContent = ind.name || ind.id;
+    card.appendChild(h);
+
+    const metaDiv = document.createElement('div'); metaDiv.className = 'rc-meta';
+    [ind.category && `📂 ${ind.category}`, ind.unit && `단위: ${ind.unit}`, ind.source && `출처: ${ind.source}`]
+      .filter(Boolean).forEach(t => { const sp = document.createElement('span'); sp.textContent = t; metaDiv.appendChild(sp); });
+    card.appendChild(metaDiv);
+
+    const rows = (ind.data || []).filter(d => d && d.value !== null && d.value !== undefined);
+    if (rows.length) {
+      const wrap = document.createElement('div'); wrap.className = 'rc-chart-wrap';
+      const cvBox = document.createElement('div');
+      cvBox.style.cssText = 'position:relative; height:300px;';
+      const cv = document.createElement('canvas');
+      cvBox.appendChild(cv); wrap.appendChild(cvBox); card.appendChild(wrap);
+      try {
+        _rcCharts.push(new Chart(cv, {
+          type: 'line',
+          data: {
+            labels: rows.map(d => d.label),
+            datasets: [{
+              data: rows.map(d => d.value),
+              borderColor: ind.color || '#378ADD',
+              backgroundColor: (ind.color || '#378ADD') + '33',
+              borderWidth: 2, pointRadius: 2, fill: true, tension: 0.2,
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+          }
+        }));
+      } catch(e) { console.warn('index chart fail', e); }
+
+      // 최근 값 요약
+      const last = rows[rows.length - 1];
+      const prev = rows.length > 1 ? rows[rows.length - 2] : null;
+      const sumDiv = document.createElement('div');
+      sumDiv.style.cssText = 'margin-top:12px; font-size:14px; color:var(--text);';
+      let txt = `최근 ${last.label}: <b>${Number(last.value).toLocaleString('ko-KR')}${ind.unit ? ' ' + ind.unit : ''}</b>`;
+      if (prev && prev.value) {
+        const pct = ((last.value - prev.value) / Math.abs(prev.value) * 100);
+        const cls = pct >= 0 ? '#16a34a' : 'var(--red)';
+        txt += ` <span style="color:${cls};">(${pct >= 0 ? '+' : ''}${pct.toFixed(1)}% vs ${prev.label})</span>`;
+      }
+      sumDiv.innerHTML = txt;
+      card.appendChild(sumDiv);
+    }
+
+    const link = document.createElement('a');
+    link.className = 'rc-open-link';
+    link.href = 'https://whysosary-dot.github.io/invest-index/';
+    link.target = '_blank'; link.rel = 'noopener';
+    link.textContent = '↗ Index 탭에서 전체 보기';
     card.appendChild(link);
 
     view.innerHTML = '';
