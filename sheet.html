@@ -1702,9 +1702,9 @@ function buildItemCard(s) {
       body.appendChild(ul);
       bodyWrap.appendChild(body);
 
-      // 리서치 탭과 동일: 넘칠 때만 접기 + 토글 버튼
+      // 리서치 탭과 동일: 본문 800px 초과일 때만 접기 + 토글 버튼 (COLLAPSE_AT=800)
       requestAnimationFrame(() => {
-        if (bodyWrap.scrollHeight > 280) {
+        if (bodyWrap.scrollHeight > 800) {
           card.classList.add('collapsed');
           const btn = document.createElement('button');
           btn.className = 'fv-toggle';
