@@ -258,6 +258,7 @@
   <div class="main">
     <div class="topbar">
       <button class="sb-toggle" id="sb-toggle" title="사이드바 접기/펴기">☰</button>
+      <button class="sb-toggle" id="back-to-folder" title="폴더로 돌아가기" style="display:none;">←</button>
       <span class="cur-name" id="cur-name">시트를 선택하세요</span>
       <span class="cur-path" id="cur-path"></span>
       <span class="spacer"></span>
@@ -780,6 +781,8 @@ function hideAllViews() {
   document.getElementById('folderview').style.display = 'none';
   document.getElementById('gedit-link').style.display = 'none';
   document.getElementById('no-sheet').style.display = 'none';
+  // ← 버튼: 항목이 열려있을 때만 (openSheet 가 다시 켬)
+  document.getElementById('back-to-folder').style.display = 'none';
 }
 function showNoSheet() {
   hideAllViews();
@@ -822,6 +825,8 @@ function openSheet(id) {
   if (!s) return;
   // 뒤로가기(스와이프) 제스처로 폴더 뷰에 돌아올 수 있게 히스토리 엔트리 추가
   try { history.pushState({ svOpen: id }, ''); } catch(_) {}
+  // 상단바 ← 버튼 활성화
+  setTimeout(() => { document.getElementById('back-to-folder').style.display = ''; }, 0);
 
   // ── 구글시트 타입: /preview 임베드 (읽기 전용) + 새 창 편집 링크 ──
   if (s.type === 'gsheet') {
@@ -1547,13 +1552,18 @@ function buildItemCard(s) {
   head.addEventListener('click', () => openSheet(s.id));
   card.appendChild(head);
 
-  const addMoreToggle = (body) => {
+  const addMoreToggle = (body, extraEl) => {
     const btn = document.createElement('button');
     btn.className = 'fv-more';
     btn.textContent = '더보기 ▾';
     btn.addEventListener('click', () => {
       const clamped = body.classList.toggle('clamp');
       btn.textContent = clamped ? '더보기 ▾' : '접기 ▴';
+      if (extraEl) {
+        extraEl.style.display = clamped ? 'none' : '';
+        // display:none 상태에서 생성된 차트는 크기 0 — 펼칠 때 리사이즈
+        if (!clamped) requestAnimationFrame(() => _fvCharts.forEach(ch => { try { ch.resize(); } catch(_) {} }));
+      }
     });
     card.appendChild(btn);
   };
@@ -1564,9 +1574,10 @@ function buildItemCard(s) {
     const body = document.createElement('div'); body.className = 'fv-body clamp';
     body.textContent = '불러오는 중…';
     card.appendChild(body);
-    addMoreToggle(body);
-    const chartsBox = document.createElement('div'); // 차트는 클램프 밖 — 항상 표시
+    const chartsBox = document.createElement('div'); // 차트 — 접기 상태에선 숨김, 더보기 시 표시
+    chartsBox.style.display = 'none';
     card.appendChild(chartsBox);
+    addMoreToggle(body, chartsBox);
     loadResearchData().then(data => {
       const c = (data.companies || []).find(x => x.id === s.rid);
       const cd = c && (c.cards || []).find(x => x.id === s.cid);
@@ -1896,14 +1907,18 @@ const _autoCollapse = () => {
   luckyEl.addEventListener('touchcancel', () => { cancelPress(); selMode = false; }, { passive: true });
 })();
 
-/* ── 뒤로가기 (아이패드 스와이프 제스처 포함): 열린 시트 → 그 폴더 뷰로 ── */
-window.addEventListener('popstate', () => {
-  if (!currentId) return; // 폴더 뷰/빈 화면이면 무시
+/* ── 뒤로가기: 열린 시트 → 그 폴더 뷰로 ──
+   아이패드 Safari 는 iframe 내부 히스토리를 스와이프 제스처에서 무시하는 경우가 있어
+   상단바 ← 버튼을 주 수단으로, popstate 는 보조로 둔다. */
+function goBackToFolder() {
+  if (!currentId) return;
   const s = meta.sheets.find(x => x.id === currentId);
   const fid = s ? (s.folder || null) : null;
   selectedFolderId = fid;
   openFolderView(fid); // fid=null 이면 최상위 전체 보기
-});
+}
+document.getElementById('back-to-folder').addEventListener('click', goBackToFolder);
+window.addEventListener('popstate', goBackToFolder);
 
 /* ── 언로드 시 저장 ── */
 window.addEventListener('pagehide', persistCurrent);
