@@ -366,6 +366,7 @@
         <button data-cmd="indent" title="들여쓰기">⇥</button>
         <button data-cmd="photo" title="사진 삽입">📷</button>
         <button data-cmd="pdf" title="PDF 삽입 (페이지를 이미지로 변환)">📎</button>
+        <button id="note-done-btn" title="작성 완료 — 미리보기 카드로" style="margin-left:auto; background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600;">완료 ✓</button>
       </div>
       <div id="note-edit" contenteditable="true" data-placeholder="투자 기록을 남겨보세요. 📷 사진 · 📎 PDF 를 넣을 수 있습니다."></div>
       <input type="file" id="note-photo-input" accept="image/*" multiple hidden />
@@ -1045,7 +1046,7 @@ document.getElementById('new-gsheet-btn').addEventListener('click', () => {
     dirty: true, updated: Date.now(),
   });
   saveMeta(); renderTree();
-  openSheet(meta.sheets[meta.sheets.length - 1].id);
+  openFolderView(selectedFolderId || null);
 });
 
 /* ═══ 웹사이트 연결 (🔗) ═══ */
@@ -1078,7 +1079,7 @@ document.getElementById('new-web-btn').addEventListener('click', () => {
     dirty: true, updated: Date.now(),
   });
   saveMeta(); renderTree();
-  openSheet(meta.sheets[meta.sheets.length - 1].id);
+  openFolderView(selectedFolderId || null);
 });
 
 /* ═══ 블로그형 노트 (📝) ═══ */
@@ -1111,6 +1112,21 @@ document.getElementById('note-title').addEventListener('input', (e) => {
 // 제목에서 Enter 치면 본문으로
 document.getElementById('note-title').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); document.getElementById('note-edit').focus(); }
+});
+
+// 완료 — 저장 후 소속 폴더의 미리보기 카드로
+document.getElementById('note-done-btn').addEventListener('click', () => {
+  const s = meta.sheets.find(x => x.id === currentId);
+  clearTimeout(noteSaveTimer);
+  clearTimeout(noteTitleTimer);
+  // 제목 즉시 반영
+  if (s && s.type === 'note') {
+    const tv = document.getElementById('note-title').value.trim();
+    s.name = tv || '제목 없음';
+  }
+  noteChanged = true;
+  persistCurrent();
+  openFolderView(s ? (s.folder || null) : null);
 });
 
 // 편집 → 디바운스 자동저장
@@ -1493,7 +1509,7 @@ document.getElementById('rs-import-btn').addEventListener('click', () => {
   _rsSelected = new Set();
   saveMeta(); renderTree();
   document.getElementById('rs-modal').style.display = 'none';
-  if (lastId) openSheet(lastId);
+  openFolderView(selectedFolderId || null); // 가져온 위치의 미리보기 카드로
   toast(`🔬 카드 ${count}개 가져옴`);
 });
 
@@ -1694,7 +1710,7 @@ function renderIdxList(q) {
       });
       saveMeta(); renderTree();
       document.getElementById('rs-modal').style.display = 'none';
-      openSheet(id);
+      openFolderView(selectedFolderId || null);
       toast(`📈 "${ind.name}" 가져옴`);
     });
     list.appendChild(div);
