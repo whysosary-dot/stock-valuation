@@ -1234,16 +1234,34 @@ function resizeImage(file, maxW, quality) {
 }
 
 /* ═══ 리서치 카드 가져오기 (🔬) ═══ */
-const RESEARCH_JSON = 'https://raw.githubusercontent.com/whysosary-dot/investment-notes/main/data/companies.json';
 let _rsData = null;      // {companies:[...]} 캐시
 let _rsCompanyId = null; // 모달에서 선택된 기업
 
 async function loadResearchData() {
   if (_rsData) return _rsData;
-  const r = await fetch(RESEARCH_JSON + '?t=' + Date.now(), { cache: 'no-store' });
+  const pat = (localStorage.getItem(PAT_KEY) || '').trim();
+  if (!pat) throw new Error('토큰 필요 — 대시보드 ⚙️에서 저장');
+  const r = await fetch('https://api.github.com/repos/whysosary-dot/invest-private/contents/research/companies.json?ref=main&t=' + Date.now(), {
+    cache: 'no-store',
+    headers: { Authorization: 'token ' + pat, Accept: 'application/vnd.github.raw' }
+  });
   if (!r.ok) throw new Error('HTTP ' + r.status);
   _rsData = await r.json();
   return _rsData;
+}
+
+// 비공개 리포 이미지 → 인증 blob URL (캐시)
+const _privImgCache = {};
+async function privResearchImg(rel) {
+  if (_privImgCache[rel]) return _privImgCache[rel];
+  const pat = (localStorage.getItem(PAT_KEY) || '').trim();
+  if (!pat) return null;
+  const r = await fetch('https://api.github.com/repos/whysosary-dot/invest-private/contents/research/' + encodeURI(rel) + '?ref=main', {
+    headers: { Authorization: 'token ' + pat, Accept: 'application/vnd.github.raw' }
+  });
+  if (!r.ok) return null;
+  _privImgCache[rel] = URL.createObjectURL(await r.blob());
+  return _privImgCache[rel];
 }
 
 function openPickerModal(mode, title, placeholder) {
@@ -1424,13 +1442,13 @@ async function renderResearchCard(s) {
     (cd.tags || []).forEach(t => { const tg = document.createElement('span'); tg.className = 'rc-tag'; tg.textContent = t; metaDiv.appendChild(tg); });
     card.appendChild(metaDiv);
 
-    // 이미지
+    // 이미지 (비공개 리포 → 인증 blob)
     (cd.images || []).forEach(rel => {
       const img = document.createElement('img');
-      img.src = 'https://whysosary-dot.github.io/investment-notes/' + rel;
       img.loading = 'lazy';
       img.style.cssText = 'max-width:100%; border-radius:10px; display:block; margin:0 0 14px;';
       card.appendChild(img);
+      privResearchImg(rel).then(u => { if (u) img.src = u; else img.remove(); });
     });
 
     if (cd.summary && cd.summary.length) {
@@ -1824,13 +1842,12 @@ function buildItemCard(s) {
       });
       bodyWrap.appendChild(metaDiv);
 
-      // 이미지 (investment-notes 리포 상대경로 → 절대 URL)
+      // 이미지 (비공개 리포 → 인증 blob)
       (cd.images || []).forEach(rel => {
         const img = document.createElement('img');
-        img.src = 'https://whysosary-dot.github.io/investment-notes/' + rel;
         img.loading = 'lazy';
-        img.addEventListener('load', () => { /* 접힘 재측정은 아래 tryCollapseR 에서 */ });
         bodyWrap.appendChild(img);
+        privResearchImg(rel).then(u => { if (u) img.src = u; else img.remove(); });
       });
 
       // 리서치 탭과 동일 순서: 차트 먼저 → 요약 텍스트
