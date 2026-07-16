@@ -3915,9 +3915,9 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
     lastFresh = Date.now();
     try{
       if(typeof syncStocksFromGitHub==='function'){
-        const result = await syncStocksFromGitHub(); // SHA 비교 — 새 커밋 있을 때만 GitHub 우선, 아니면 로컬 입력 보존
+        await syncStocksFromGitHub(); // SHA 비교 — 새 커밋 있을 때만 GitHub 우선, 아니면 로컬 입력 보존
         if(typeof render==='function') render();
-        if(result === 'gh-updated' && typeof toast==='function') toast('🔄 최신 데이터로 갱신됨', 'ok', 1800);
+        // 갱신은 조용히 — 토스트 없음 (사용자 요청)
       }
       if(typeof refreshTabUpdateDots==='function') refreshTabUpdateDots();
     }catch(e){}
