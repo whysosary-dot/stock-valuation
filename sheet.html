@@ -221,6 +221,20 @@
     background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
     padding: 16px 18px; display: flex; flex-direction: column; gap: 8px;
     transition: box-shadow .12s, border-color .12s;
+    position: relative;
+  }
+  .fv-del {
+    position: absolute; top: 8px; right: 8px; z-index: 5;
+    width: 26px; height: 26px; display: none; align-items: center; justify-content: center;
+    border: none; border-radius: 50%; background: rgba(15,23,42,.55); color: #fff;
+    font-size: 13px; font-weight: 700; cursor: pointer; line-height: 1;
+  }
+  .fv-card:hover .fv-del { display: flex; }
+  .fv-del:hover { background: var(--red); }
+  /* 터치 기기: hover 없음 → 반투명으로 상시 표시 */
+  @media (hover: none) {
+    .fv-del { display: flex; opacity: .45; }
+    .fv-del:active { opacity: 1; background: var(--red); }
   }
   .fv-card:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgba(37,99,235,.08); }
   .fv-head { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
@@ -1668,6 +1682,28 @@ function buildItemCard(s) {
   head.querySelector('.ttl').textContent = s.name;
   head.addEventListener('click', () => openSheet(s.id));
   card.appendChild(head);
+
+  // 삭제 버튼 (hover 시 표시, 터치 기기는 반투명 상시)
+  const delBtn = document.createElement('button');
+  delBtn.className = 'fv-del';
+  delBtn.title = '삭제';
+  delBtn.textContent = '✕';
+  delBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!confirm(`"${s.name}" 을(를) 삭제할까요?\n(커밋하면 GitHub 에서도 삭제됩니다)`)) return;
+    const folderId = s.folder || null;
+    meta.sheets = meta.sheets.filter(x => x.id !== s.id);
+    localStorage.removeItem(DATA_PREF + s.id);
+    if (!['gsheet', 'rcard', 'awake', 'index'].includes(s.type)) {
+      meta._deleted = meta._deleted || [];
+      meta._deleted.push(s.id);
+    }
+    if (currentId === s.id) currentId = null;
+    saveMeta();
+    openFolderView(folderId); // 현재 폴더 뷰 갱신 (내부에서 renderTree)
+    toast(`"${s.name}" 삭제됨`);
+  });
+  card.appendChild(delBtn);
 
   const addMoreToggle = (body, extraEl) => {
     const btn = document.createElement('button');
