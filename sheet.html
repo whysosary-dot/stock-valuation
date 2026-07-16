@@ -494,7 +494,7 @@ function renderSearchResults(tree, q) {
       saveCollapsed();
       treeSearchQuery = '';
       document.getElementById('tree-search').value = '';
-      openFolderView(f.id);
+      openFolderView(f.id, true);
     });
     tree.appendChild(div);
   });
@@ -547,7 +547,7 @@ function renderTree() {
           saveCollapsed();
         }
         selectedFolderId = f.id;
-        openFolderView(f.id); // 내부에서 renderTree 호출
+        openFolderView(f.id, true); // 내부에서 renderTree 호출
       });
       const renameFolder = () => {
         const nm = prompt('폴더 이름 변경:', f.name);
@@ -1746,7 +1746,11 @@ function firstImgSrc(html) {
 let _fvCharts = []; // 폴더뷰 Chart.js 인스턴스 정리용
 let currentFolderViewId = null; // 현재 열려있는 폴더 뷰 (null=최상위 전체)
 
-function openFolderView(folderId) {
+function openFolderView(folderId, pushHist) {
+  // 실제 탐색 이동일 때만 히스토리 엔트리 추가 → 뒤로가기(스와이프)가 상위 폴더로 한 단계씩
+  if (pushHist && (folderId || null) !== currentFolderViewId) {
+    try { history.pushState({ svFolder: folderId || null }, ''); } catch(_) {}
+  }
   persistCurrent();
   currentId = null;
   currentFolderViewId = folderId || null;
@@ -1788,7 +1792,7 @@ function openFolderView(folderId) {
       selectedFolderId = sf.id;
       collapsed.delete(sf.id); saveCollapsed();
       renderTree();
-      openFolderView(sf.id);
+      openFolderView(sf.id, true);
     });
     card.appendChild(head);
     const sub = document.createElement('div'); sub.className = 'fv-sub';
