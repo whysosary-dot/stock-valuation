@@ -389,7 +389,7 @@
    - GitHub: sheets/index.json + sheets/data/<id>.json
    - PAT   : localStorage sv_github_pat (index.html 과 공유 — same origin)
 ═══════════════════════════════════════════ */
-const GH = { OWNER: 'whysosary-dot', REPO: 'stock-valuation', BRANCH: 'main' };
+const GH = { OWNER: 'whysosary-dot', REPO: 'invest-private', BRANCH: 'main' }; // 비공개 데이터 리포
 const META_KEY  = 'sv_sheets_meta_v1';
 const SHA_KEY   = 'sv_sheets_gh_sha_v1';
 const PAT_KEY   = 'sv_github_pat';
@@ -2068,7 +2068,17 @@ async function ghDelete(path, sha, message, pat) {
 (async function initialSync() {
   try {
     const lastSha = localStorage.getItem(SHA_KEY) || '';
-    const idxFile = await ghGet('sheets/index.json', null);
+    const pat = (localStorage.getItem(PAT_KEY) || '').trim();
+    if (!pat) {
+      // 비공개 리포 — 토큰 없으면 동기화 스킵 + 안내
+      renderTree();
+      const tree = document.getElementById('tree');
+      if (!meta.folders.length && !meta.sheets.length) {
+        tree.innerHTML = '<div class="empty-tip">🔑 대시보드 ⚙️ 버튼에서<br>GitHub 토큰을 저장하면<br>내용이 표시됩니다.</div>';
+      }
+      return;
+    }
+    const idxFile = await ghGet('sv/sheets/index.json', pat);
     if (!idxFile) { renderTree(); return; }              // GitHub 에 아직 없음 → 로컬만
     const ghSha = String(idxFile.sha || '');
     if (ghSha && lastSha === ghSha) { renderTree(); return; }  // 새 커밋 없음 → 로컬 보존
@@ -2089,7 +2099,7 @@ async function ghDelete(path, sha, message, pat) {
     // GitHub 시트 데이터 다운로드 (dirty 아닌 것만 덮어씀)
     for (const s of ghSheets) {
       try {
-        const f = await ghGet(`sheets/data/${s.id}.json`, null);
+        const f = await ghGet(`sv/sheets/data/${s.id}.json`, pat);
         if (f && f.content) saveSheetData(s.id, JSON.parse(b64decodeUtf8(f.content)));
       } catch(_) {}
     }
