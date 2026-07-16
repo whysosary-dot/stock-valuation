@@ -1693,11 +1693,15 @@ function firstImgSrc(html) {
 }
 
 let _fvCharts = []; // 폴더뷰 Chart.js 인스턴스 정리용
+let currentFolderViewId = null; // 현재 열려있는 폴더 뷰 (null=최상위 전체)
 
 function openFolderView(folderId) {
   persistCurrent();
   currentId = null;
+  currentFolderViewId = folderId || null;
   hideAllViews();
+  // 최상위가 아니면 ← (상위 폴더로) 표시
+  document.getElementById('back-to-folder').style.display = currentFolderViewId ? '' : 'none';
   _fvCharts.forEach(ch => { try { ch.destroy(); } catch(_) {} });
   _fvCharts = [];
   const fv = document.getElementById('folderview');
@@ -2247,11 +2251,21 @@ const _autoCollapse = () => {
    아이패드 Safari 는 iframe 내부 히스토리를 스와이프 제스처에서 무시하는 경우가 있어
    상단바 ← 버튼을 주 수단으로, popstate 는 보조로 둔다. */
 function goBackToFolder() {
-  if (!currentId) return;
-  const s = meta.sheets.find(x => x.id === currentId);
-  const fid = s ? (s.folder || null) : null;
-  selectedFolderId = fid;
-  openFolderView(fid); // fid=null 이면 최상위 전체 보기
+  if (currentId) {
+    // 항목 열림 → 소속 폴더 뷰로
+    const s = meta.sheets.find(x => x.id === currentId);
+    const fid = s ? (s.folder || null) : null;
+    selectedFolderId = fid;
+    openFolderView(fid);
+    return;
+  }
+  if (currentFolderViewId) {
+    // 폴더 뷰 → 상위 폴더 뷰로 (최상위 도달 시 전체 보기)
+    const f = meta.folders.find(x => x.id === currentFolderViewId);
+    const parent = f ? (f.parent || null) : null;
+    selectedFolderId = parent;
+    openFolderView(parent);
+  }
 }
 document.getElementById('back-to-folder').addEventListener('click', goBackToFolder);
 window.addEventListener('popstate', goBackToFolder);
