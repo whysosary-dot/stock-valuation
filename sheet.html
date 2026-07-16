@@ -947,7 +947,8 @@ function openSheet(id) {
     hideAllViews();
     const gview = document.getElementById('gview');
     const frame = document.getElementById('gview-frame');
-    if (frame.src !== s.wembed) frame.src = s.wembed;
+    const emb = webEmbedOf(s);
+    if (frame.src !== emb) frame.src = emb;
     gview.style.display = 'flex';
     const editLink = document.getElementById('gedit-link');
     editLink.href = s.wurl;
@@ -1051,10 +1052,18 @@ document.getElementById('new-gsheet-btn').addEventListener('click', () => {
 function normalizeWebUrl(url) {
   let u = url.trim();
   if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
-  // 유튜브 → embed 주소로 자동 변환 (일반 주소는 iframe 차단됨)
+  // 유튜브 → embed 주소 (일반 주소는 iframe 차단)
   const yt = u.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
   if (yt) return { url: u, embed: 'https://www.youtube.com/embed/' + yt[1] };
-  return { url: u, embed: u };
+  // 네이버 블로그 → 모바일 버전 (데스크톱은 비반응형 프레임 구조라 미리보기가 지저분)
+  let embed = u.replace(/^https?:\/\/blog\.naver\.com\//i, 'https://m.blog.naver.com/');
+  return { url: u, embed };
+}
+
+/* 저장된 항목도 항상 최신 변환 규칙 적용 (기존 카드 자동 마이그레이션) */
+function webEmbedOf(s) {
+  try { return normalizeWebUrl(s.wurl || s.wembed || '').embed; }
+  catch(_) { return s.wembed || s.wurl; }
 }
 document.getElementById('new-web-btn').addEventListener('click', () => {
   const raw = prompt('웹사이트 주소를 붙여넣으세요:\n(블로그 글, 유튜브 등 — 사이트에 따라 미리보기가 차단될 수 있음)');
@@ -2084,7 +2093,7 @@ function buildItemCard(s) {
     const frameWrap = document.createElement('div');
     frameWrap.style.cssText = 'position:relative; height:220px; border:1px solid var(--border); border-radius:8px; overflow:hidden; cursor:pointer; background:var(--panel-2);';
     const frame = document.createElement('iframe');
-    frame.src = s.wembed || s.wurl;
+    frame.src = webEmbedOf(s);
     frame.loading = 'lazy';
     frame.style.cssText = 'border:none; pointer-events:none; transform-origin:0 0;';
     frameWrap.appendChild(frame);
