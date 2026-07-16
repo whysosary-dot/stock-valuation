@@ -2097,21 +2097,39 @@ function buildItemCard(s) {
     frame.loading = 'lazy';
     frame.style.cssText = 'border:none; pointer-events:none; transform-origin:0 0;';
     frameWrap.appendChild(frame);
-    requestAnimationFrame(() => {
-      const VIEW_W = 420; // 페이지가 인식할 가상 폭 (모바일 레이아웃 유도)
+    const applyScale = () => {
+      // 📱 모바일(420px) / 🖥️ PC(1280px) — PC 전용 사이트는 전체 폭을 카드에 맞게 축소
+      const VIEW_W = s.wpc ? 1280 : 420;
       const cw = frameWrap.clientWidth || 320;
       const scale = cw / VIEW_W;
       frame.style.width = VIEW_W + 'px';
       frame.style.height = Math.ceil(220 / scale) + 'px';
       frame.style.transform = `scale(${scale})`;
-    });
+    };
+    requestAnimationFrame(applyScale);
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:absolute; inset:0;';
     overlay.addEventListener('click', () => openSheet(s.id));
     frameWrap.appendChild(overlay);
     card.appendChild(frameWrap);
     const sub = document.createElement('div'); sub.className = 'fv-sub';
-    try { sub.textContent = '🔗 ' + new URL(s.wurl).hostname; } catch(_) { sub.textContent = '🔗 웹사이트'; }
+    sub.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    const domSpan = document.createElement('span');
+    try { domSpan.textContent = '🔗 ' + new URL(s.wurl).hostname; } catch(_) { domSpan.textContent = '🔗 웹사이트'; }
+    sub.appendChild(domSpan);
+    // 뷰포트 전환 버튼 (모바일 레이아웃 ↔ PC 전체폭 축소)
+    const vwBtn = document.createElement('button');
+    vwBtn.style.cssText = 'margin-left:auto; border:1px solid var(--border); background:var(--panel); border-radius:6px; padding:2px 8px; font-size:12px; cursor:pointer;';
+    vwBtn.textContent = s.wpc ? '🖥️ PC' : '📱 모바일';
+    vwBtn.title = 'PC 전용 사이트는 🖥️ 로 바꾸면 전체 폭이 카드에 맞게 축소됩니다';
+    vwBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      s.wpc = !s.wpc;
+      s.dirty = true; saveMeta();
+      vwBtn.textContent = s.wpc ? '🖥️ PC' : '📱 모바일';
+      applyScale();
+    });
+    sub.appendChild(vwBtn);
     card.appendChild(sub);
   }
   else if (s.type === 'index') {
