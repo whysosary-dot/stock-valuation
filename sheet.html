@@ -1790,7 +1790,7 @@ function openFolderView(folderId, pushHist) {
     head.querySelector('.ttl').textContent = sf.name;
     head.addEventListener('click', () => {
       selectedFolderId = sf.id;
-      collapsed.delete(sf.id); saveCollapsed();
+      // 트리 접힘 상태는 건드리지 않음 (미리보기 진입 시 좌측 카테고리 펼침 방지)
       renderTree();
       openFolderView(sf.id, true);
     });
