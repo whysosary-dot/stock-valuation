@@ -341,9 +341,11 @@
         <button data-cmd="outdent" title="내어쓰기">⇤</button>
         <button data-cmd="indent" title="들여쓰기">⇥</button>
         <button data-cmd="photo" title="사진 삽입">📷</button>
+        <button data-cmd="pdf" title="PDF 삽입 (페이지를 이미지로 변환)">📎</button>
       </div>
-      <div id="note-edit" contenteditable="true" data-placeholder="투자 기록을 남겨보세요. 📷 버튼으로 사진을 넣을 수 있습니다."></div>
+      <div id="note-edit" contenteditable="true" data-placeholder="투자 기록을 남겨보세요. 📷 사진 · 📎 PDF 를 넣을 수 있습니다."></div>
       <input type="file" id="note-photo-input" accept="image/*" multiple hidden />
+      <input type="file" id="note-pdf-input" accept="application/pdf" hidden />
       <button id="note-img-del" title="사진 삭제" style="display:none;">✕</button>
     </div>
     <!-- 리서치 카드 뷰 -->
@@ -1055,7 +1057,8 @@ document.querySelector('.note-toolbar').addEventListener('click', (e) => {
   else if (cmd === 'indent')  document.execCommand('indent');
   else if (cmd === 'outdent') document.execCommand('outdent');
   else if (cmd === 'photo') document.getElementById('note-photo-input').click();
-  if (cmd !== 'photo') {
+  else if (cmd === 'pdf') document.getElementById('note-pdf-input').click();
+  if (cmd !== 'photo' && cmd !== 'pdf') {
     noteChanged = true;
     clearTimeout(noteSaveTimer);
     noteSaveTimer = setTimeout(persistCurrent, 800);
@@ -1143,6 +1146,66 @@ _imgDelBtn.addEventListener('click', () => {
 // 스크롤·입력 시 ✕ 숨김 (위치가 어긋나므로)
 document.getElementById('note-edit').addEventListener('scroll', hideImgDel, { passive: true });
 document.getElementById('note-edit').addEventListener('input', hideImgDel);
+
+/* ── PDF 삽입: PDF.js 로 각 페이지를 이미지로 변환 ── */
+let _pdfjsReady = null;
+function ensurePdfJs() {
+  if (_pdfjsReady) return _pdfjsReady;
+  _pdfjsReady = new Promise((resolve, reject) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    sc.onload = () => {
+      try {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        resolve(window.pdfjsLib);
+      } catch(e) { reject(e); }
+    };
+    sc.onerror = () => reject(new Error('PDF.js 로드 실패'));
+    document.head.appendChild(sc);
+  });
+  return _pdfjsReady;
+}
+
+document.getElementById('note-pdf-input').addEventListener('change', async (e) => {
+  const file = (e.target.files || [])[0];
+  e.target.value = '';
+  if (!file) return;
+  setStatus('PDF 변환 중…', false);
+  try {
+    const pdfjs = await ensurePdfJs();
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjs.getDocument({ data: buf }).promise;
+    const total = pdf.numPages;
+    if (total > 15 && !confirm(`PDF 가 ${total}페이지입니다.\n전부 이미지로 변환하면 용량이 커질 수 있어요.\n계속할까요?`)) {
+      setStatus('', false); return;
+    }
+    const ed = document.getElementById('note-edit');
+    ed.focus();
+    for (let p = 1; p <= total; p++) {
+      setStatus(`PDF 변환 중… ${p}/${total}`, false);
+      const page = await pdf.getPage(p);
+      const vp1 = page.getViewport({ scale: 1 });
+      const scale = Math.min(2, 1100 / vp1.width); // 목표 폭 ~1100px
+      const vp = page.getViewport({ scale });
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(vp.width);
+      cv.height = Math.round(vp.height);
+      await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+      const dataUrl = cv.toDataURL('image/jpeg', 0.8);
+      document.execCommand('insertHTML', false, `<img src="${dataUrl}"><br>`);
+    }
+    noteChanged = true;
+    clearTimeout(noteSaveTimer);
+    noteSaveTimer = setTimeout(persistCurrent, 400);
+    setStatus(`PDF ${total}페이지 삽입됨 ✓`, true);
+    toast(`📎 PDF ${total}페이지 삽입`);
+  } catch(err) {
+    console.warn('pdf insert fail', err);
+    setStatus('', false);
+    toast('❌ PDF 변환 실패: ' + err.message, 'err', 4500);
+  }
+});
 
 function resizeImage(file, maxW, quality) {
   return new Promise((resolve, reject) => {
