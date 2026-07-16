@@ -1881,12 +1881,53 @@ function buildItemCard(s) {
   }
   else if (s.type === 'index') {
     const sub = document.createElement('div'); sub.className = 'fv-sub';
-    sub.textContent = '📈 지표 — 제목을 누르면 차트 보기';
+    sub.textContent = '📈 불러오는 중…';
     card.appendChild(sub);
+    const chartBox = document.createElement('div');
+    card.appendChild(chartBox);
     loadIndexData().then(inds => {
       const ind = inds.find(x => x.id === s.iid);
-      if (ind) sub.textContent = `📈 ${ind.category || '지표'}${ind.unit ? ' · ' + ind.unit : ''} — 제목을 누르면 차트`;
-    }).catch(() => {});
+      if (!ind) { sub.textContent = '📈 지표를 찾을 수 없어요'; return; }
+      sub.textContent = `📈 ${ind.category || '지표'}${ind.unit ? ' · ' + ind.unit : ''}`;
+      const rows = (ind.data || []).filter(d => d && d.value !== null && d.value !== undefined);
+      if (!rows.length) return;
+      // 미니 라인 차트
+      const cvBox = document.createElement('div');
+      cvBox.style.cssText = 'position:relative; height:160px;';
+      const cv = document.createElement('canvas');
+      cvBox.appendChild(cv); chartBox.appendChild(cvBox);
+      try {
+        _fvCharts.push(new Chart(cv, {
+          type: 'line',
+          data: {
+            labels: rows.map(d => d.label),
+            datasets: [{
+              data: rows.map(d => d.value),
+              borderColor: ind.color || '#378ADD',
+              backgroundColor: (ind.color || '#378ADD') + '33',
+              borderWidth: 2, pointRadius: 0, fill: true, tension: 0.2,
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { ticks: { maxTicksLimit: 6, font: { size: 10 } } }, y: { ticks: { font: { size: 10 } } } },
+          }
+        }));
+      } catch(e) { console.warn('fv index chart fail', e); }
+      // 최근값 + 전기比
+      const last = rows[rows.length - 1];
+      const prev = rows.length > 1 ? rows[rows.length - 2] : null;
+      const sum = document.createElement('div');
+      sum.style.cssText = 'font-size:13px; color:var(--text); margin-top:6px;';
+      let txt = `${last.label}: <b>${Number(last.value).toLocaleString('ko-KR')}${ind.unit ? ' ' + ind.unit : ''}</b>`;
+      if (prev && prev.value) {
+        const pct = (last.value - prev.value) / Math.abs(prev.value) * 100;
+        txt += ` <span style="color:${pct >= 0 ? '#16a34a' : 'var(--red)'};">(${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)</span>`;
+      }
+      sum.innerHTML = txt;
+      chartBox.appendChild(sum);
+    }).catch(() => { sub.textContent = '📈 불러오기 실패'; });
   }
   else if (s.type === 'awake') {
     const sub = document.createElement('div'); sub.className = 'fv-sub';
