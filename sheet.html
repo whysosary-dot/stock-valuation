@@ -1386,7 +1386,7 @@ document.getElementById('rs-import-btn').addEventListener('click', () => {
     if (!_rsSelected.has(cd.id)) return;
     const id = uid();
     meta.sheets.push({
-      id, name: `${c.name} — ${cd.title}`, folder: selectedFolderId || null,
+      id, name: cd.title || cd.id, folder: selectedFolderId || null,
       type: 'rcard', rid: c.id, cid: cd.id,
       dirty: true, updated: Date.now(),
     });
