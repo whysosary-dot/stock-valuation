@@ -693,6 +693,13 @@ function cmpOrd(a, b) {
   return ((a.ord ?? 1e9) - (b.ord ?? 1e9)) || a.name.localeCompare(b.name, 'ko');
 }
 
+/* 해당 폴더에서 '맨 앞' ord 값 (새 항목은 항상 맨 앞으로) */
+function frontOrd(folderId) {
+  const sibs = meta.sheets.filter(x => (x.folder || null) === (folderId || null));
+  const m = sibs.reduce((mm, x) => Math.min(mm, x.ord ?? 1e9), 1e9);
+  return (m === 1e9) ? 10 : m - 10;
+}
+
 /* 드랍 판정:
    { type:'into',   folderId }                  → 폴더 안으로 이동 (또는 최상위)
    { type:'insert', kind, refId, pos }          → refId 앞/뒤 삽입 (같은 카테고리 순서 변경)
@@ -887,9 +894,7 @@ function persistCurrent() {
     saveSheetData(currentId, { type: 'note', html: ed.innerHTML });
     s.dirty = true; s.updated = Date.now();
     // 최신 편집 글을 같은 폴더 카드들 맨 앞으로
-    const sibs = meta.sheets.filter(x => x !== s && (x.folder || null) === (s.folder || null));
-    const minOrd = sibs.reduce((m, x) => Math.min(m, x.ord ?? 1e9), 1e9);
-    s.ord = (minOrd === 1e9) ? 10 : minOrd - 10;
+    s.ord = frontOrd(s.folder);
     saveMeta();
     noteChanged = false;
     setStatus('저장됨 ✓ (로컬)', true);
@@ -1016,6 +1021,7 @@ document.getElementById('new-gsheet-btn').addEventListener('click', () => {
   meta.sheets.push({
     id: uid(), name: nm.trim(), folder: selectedFolderId || null,
     type: 'gsheet', gid: m[1], ggid: gidM ? gidM[1] : null,
+    ord: frontOrd(selectedFolderId),
     dirty: true, updated: Date.now(),
   });
   saveMeta(); renderTree();
@@ -1025,11 +1031,7 @@ document.getElementById('new-gsheet-btn').addEventListener('click', () => {
 /* ═══ 블로그형 노트 (📝) ═══ */
 document.getElementById('new-note-btn').addEventListener('click', () => {
   const id = uid();
-  // 새 글은 폴더 맨 앞에
-  const sibs = meta.sheets.filter(x => (x.folder || null) === (selectedFolderId || null));
-  const minOrd = sibs.reduce((m, x) => Math.min(m, x.ord ?? 1e9), 1e9);
-  const frontOrd = (minOrd === 1e9) ? 10 : minOrd - 10;
-  meta.sheets.push({ id, name: '제목 없음', folder: selectedFolderId || null, type: 'note', ord: frontOrd, dirty: true, updated: Date.now() });
+  meta.sheets.push({ id, name: '제목 없음', folder: selectedFolderId || null, type: 'note', ord: frontOrd(selectedFolderId), dirty: true, updated: Date.now() });
   saveSheetData(id, { type: 'note', html: '' });
   saveMeta(); renderTree();
   openSheet(id);
@@ -1422,13 +1424,15 @@ document.getElementById('rs-import-btn').addEventListener('click', () => {
   if (!_rsCompanyId || !_rsSelected.size) return;
   const c = (_rsData.companies || []).find(x => x.id === _rsCompanyId);
   if (!c) return;
+  const picked = (c.cards || []).filter(cd => _rsSelected.has(cd.id));
+  const base = frontOrd(selectedFolderId);
   let lastId = null, count = 0;
-  (c.cards || []).forEach(cd => {
-    if (!_rsSelected.has(cd.id)) return;
+  picked.forEach((cd, i) => {
     const id = uid();
     meta.sheets.push({
       id, name: cd.title || cd.id, folder: selectedFolderId || null,
       type: 'rcard', rid: c.id, cid: cd.id,
+      ord: base - (picked.length - 1 - i) * 10, // 선택 순서 유지하며 맨 앞 블록
       dirty: true, updated: Date.now(),
     });
     lastId = id; count++;
@@ -1632,6 +1636,7 @@ function renderIdxList(q) {
       meta.sheets.push({
         id, name: ind.name || ind.id, folder: selectedFolderId || null,
         type: 'index', iid: ind.id,
+        ord: frontOrd(selectedFolderId),
         dirty: true, updated: Date.now(),
       });
       saveMeta(); renderTree();
