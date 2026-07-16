@@ -863,6 +863,10 @@ function persistCurrent() {
     const ed = document.getElementById('note-edit');
     saveSheetData(currentId, { type: 'note', html: ed.innerHTML });
     s.dirty = true; s.updated = Date.now();
+    // 최신 편집 글을 같은 폴더 카드들 맨 앞으로
+    const sibs = meta.sheets.filter(x => x !== s && (x.folder || null) === (s.folder || null));
+    const minOrd = sibs.reduce((m, x) => Math.min(m, x.ord ?? 1e9), 1e9);
+    s.ord = (minOrd === 1e9) ? 10 : minOrd - 10;
     saveMeta();
     noteChanged = false;
     setStatus('저장됨 ✓ (로컬)', true);
@@ -998,7 +1002,11 @@ document.getElementById('new-gsheet-btn').addEventListener('click', () => {
 /* ═══ 블로그형 노트 (📝) ═══ */
 document.getElementById('new-note-btn').addEventListener('click', () => {
   const id = uid();
-  meta.sheets.push({ id, name: '제목 없음', folder: selectedFolderId || null, type: 'note', dirty: true, updated: Date.now() });
+  // 새 글은 폴더 맨 앞에
+  const sibs = meta.sheets.filter(x => (x.folder || null) === (selectedFolderId || null));
+  const minOrd = sibs.reduce((m, x) => Math.min(m, x.ord ?? 1e9), 1e9);
+  const frontOrd = (minOrd === 1e9) ? 10 : minOrd - 10;
+  meta.sheets.push({ id, name: '제목 없음', folder: selectedFolderId || null, type: 'note', ord: frontOrd, dirty: true, updated: Date.now() });
   saveSheetData(id, { type: 'note', html: '' });
   saveMeta(); renderTree();
   openSheet(id);
