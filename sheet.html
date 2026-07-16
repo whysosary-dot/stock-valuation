@@ -2134,7 +2134,7 @@ async function ghDelete(path, sha, message, pat) {
     }
     localStorage.setItem(SHA_KEY, ghSha);
     renderTree();
-    toast('☁️ GitHub 시트 동기화 완료');
+    // 동기화는 조용히 (토스트 없음)
   } catch (e) {
     console.warn('sheet sync fail', e);
     renderTree();
