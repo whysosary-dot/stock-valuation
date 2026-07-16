@@ -223,6 +223,19 @@
     transition: box-shadow .12s, border-color .12s;
     position: relative;
   }
+  .fv-pin {
+    position: absolute; top: 8px; right: 40px; z-index: 5;
+    width: 26px; height: 26px; display: none; align-items: center; justify-content: center;
+    border: none; border-radius: 50%; background: rgba(15,23,42,.55); color: #fff;
+    font-size: 13px; cursor: pointer; line-height: 1;
+  }
+  .fv-card:hover .fv-pin { display: flex; }
+  .fv-pin:hover { background: var(--accent); }
+  .fv-pin.on { display: flex; background: var(--accent); }
+  @media (hover: none) {
+    .fv-pin { display: flex; opacity: .45; }
+    .fv-pin.on { opacity: 1; }
+  }
   .fv-del {
     position: absolute; top: 8px; right: 8px; z-index: 5;
     width: 26px; height: 26px; display: none; align-items: center; justify-content: center;
@@ -237,6 +250,12 @@
     .fv-del:active { opacity: 1; background: var(--red); }
   }
   .fv-card:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgba(37,99,235,.08); }
+  /* 카드 드래그 정렬 */
+  .fv-card { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .fv-card.fv-drop-left  { box-shadow: inset 3px 0 0 0 var(--accent); }
+  .fv-card.fv-drop-right { box-shadow: inset -3px 0 0 0 var(--accent); }
+  .fv-card.drop-target   { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
+  .fv-card.fv-dragging   { opacity: .45; }
   .fv-head { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
   .fv-head .ttl { flex: 1; font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.45; }
   .fv-head:hover .ttl { color: var(--accent); }
@@ -572,7 +591,7 @@ function renderTree() {
     });
   }
   function addSheetNodes(folderKey, depth) {
-    (sheetsByFolder[folderKey] || []).sort(cmpOrd).forEach(s => {
+    (sheetsByFolder[folderKey] || []).sort((a, b) => ((b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)) || cmpOrd(a, b)).forEach(s => {
       const div = document.createElement('div');
       div.className = 'node sheet' + (currentId === s.id ? ' selected' : '');
       div.style.paddingLeft = (8 + depth * 16 + 12) + 'px';
@@ -1734,7 +1753,8 @@ function openFolderView(folderId) {
   grid.className = 'folder-grid';
 
   const subFolders = meta.folders.filter(x => (x.parent || null) === folderId).sort(cmpOrd);
-  const sheets = meta.sheets.filter(s => (s.folder || null) === folderId).sort(cmpOrd);
+  const sheets = meta.sheets.filter(s => (s.folder || null) === folderId)
+    .sort((a, b) => ((b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)) || cmpOrd(a, b)); // 📌 고정 카드 항상 앞
 
   if (!subFolders.length && !sheets.length) {
     fv.innerHTML = '<div class="empty-tip" style="padding:60px 20px;">이 폴더는 비어있어요.<br>사이드바 버튼으로 항목을 추가해보세요.</div>';
@@ -1760,6 +1780,8 @@ function openFolderView(folderId) {
     const sub = document.createElement('div'); sub.className = 'fv-sub';
     sub.textContent = `${cnt}개 항목`;
     card.appendChild(sub);
+    card.dataset.fid = sf.id;
+    attachCardDnD(card, 'folder', sf.id, sf.name);
     grid.appendChild(card);
   });
 
@@ -1772,6 +1794,8 @@ function buildItemCard(s) {
   const card = document.createElement('div');
   card.className = 'fv-card';
   card.style.cursor = 'pointer';
+  card.dataset.sid = s.id;
+  attachCardDnD(card, 'sheet', s.id, s.name);
   // 카드 어디를 눌러도 전체 화면으로 (더보기/삭제/링크 제외)
   card.addEventListener('click', (e) => {
     if (e.target.closest('.fv-toggle, .fv-del, a')) return;
@@ -1779,10 +1803,25 @@ function buildItemCard(s) {
   });
 
   const head = document.createElement('div'); head.className = 'fv-head';
-  head.innerHTML = `<span>${itemIcon(s)}</span><span class="ttl"></span>`;
+  head.innerHTML = `<span>${s.pinned ? '📌' : itemIcon(s)}</span><span class="ttl"></span>`;
   head.querySelector('.ttl').textContent = s.name;
   head.addEventListener('click', () => openSheet(s.id));
   card.appendChild(head);
+
+  // 고정 핀 버튼 — 고정된 카드는 최신글이 와도 안 밀리고 맨 앞 유지
+  const pinBtn = document.createElement('button');
+  pinBtn.className = 'fv-pin' + (s.pinned ? ' on' : '');
+  pinBtn.title = s.pinned ? '고정 해제' : '맨 앞에 고정';
+  pinBtn.textContent = '📌';
+  pinBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    s.pinned = !s.pinned;
+    s.dirty = true; s.updated = Date.now();
+    saveMeta();
+    openFolderView(currentFolderViewId); // 재정렬 반영
+    toast(s.pinned ? `📌 "${s.name}" 고정됨` : `"${s.name}" 고정 해제`);
+  });
+  card.appendChild(pinBtn);
 
   // 삭제 버튼 (hover 시 표시, 터치 기기는 반투명 상시)
   const delBtn = document.createElement('button');
@@ -2327,6 +2366,129 @@ async function fetchMissingSheetData(pat) {
     } catch(_) {}
   }
 }
+
+/* ═══ 폴더 뷰 카드 드래그 정렬 ═══
+   - 데스크톱: 카드를 그대로 드래그
+   - 아이패드: 0.4초 꾹 누른 뒤 드래그
+   - 다른 카드의 왼쪽/오른쪽 절반에 놓으면 그 앞/뒤로 (파란 세로선 표시)
+   - 시트 카드를 폴더 카드 위에 놓으면 그 폴더 안으로 이동 */
+let _fvDrag = null, _fvGhost = null, _fvPressTimer = null, _fvStartPos = null, _fvTouchDragging = false;
+
+function fvClearHl() {
+  document.querySelectorAll('#folderview .drop-target, #folderview .fv-drop-left, #folderview .fv-drop-right')
+    .forEach(el => el.classList.remove('drop-target', 'fv-drop-left', 'fv-drop-right'));
+}
+function fvDropInfo(x, y) {
+  if (!_fvDrag) return null;
+  const el = document.elementFromPoint(x, y);
+  const card = el && el.closest('.fv-card');
+  if (!card) return null;
+  if (card.dataset.fid) { // 폴더 카드
+    if (_fvDrag.kind === 'sheet') return { type: 'into', fid: card.dataset.fid, el: card };
+    if (_fvDrag.kind === 'folder' && card.dataset.fid !== _fvDrag.id) {
+      const r = card.getBoundingClientRect();
+      return { type: 'insert', kind: 'folder', ref: card.dataset.fid, pos: (x < r.left + r.width / 2) ? 'before' : 'after', el: card };
+    }
+    return null;
+  }
+  if (card.dataset.sid && _fvDrag.kind === 'sheet' && card.dataset.sid !== _fvDrag.id) {
+    const r = card.getBoundingClientRect();
+    return { type: 'insert', kind: 'sheet', ref: card.dataset.sid, pos: (x < r.left + r.width / 2) ? 'before' : 'after', el: card };
+  }
+  return null;
+}
+function fvApplyHl(info) {
+  fvClearHl();
+  if (!info) return;
+  if (info.type === 'into') info.el.classList.add('drop-target');
+  else info.el.classList.add(info.pos === 'before' ? 'fv-drop-left' : 'fv-drop-right');
+}
+function fvPerform(info) {
+  if (!info || !_fvDrag) return;
+  const fid = currentFolderViewId;
+  if (info.type === 'into') moveItem('sheet', _fvDrag.id, info.fid);
+  else reorderItem(info.kind, _fvDrag.id, info.ref, info.pos);
+  openFolderView(fid); // 폴더 뷰 갱신
+}
+function fvEndTouchDrag() {
+  _fvTouchDragging = false; _fvDrag = null;
+  if (_fvGhost) { _fvGhost.remove(); _fvGhost = null; }
+  document.querySelectorAll('.fv-card.fv-dragging').forEach(el => el.classList.remove('fv-dragging'));
+  fvClearHl();
+}
+
+function attachCardDnD(card, kind, id, name) {
+  // ── 데스크톱 HTML5 DnD ──
+  card.draggable = true;
+  card.addEventListener('dragstart', (e) => {
+    _fvDrag = { kind, id };
+    card.classList.add('fv-dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', id); } catch(_) {}
+  });
+  card.addEventListener('dragend', () => {
+    card.classList.remove('fv-dragging');
+    _fvDrag = null; fvClearHl();
+  });
+
+  // ── 터치: 0.4초 롱프레스 → 드래그 ──
+  card.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    _fvStartPos = { x: t.clientX, y: t.clientY };
+    clearTimeout(_fvPressTimer);
+    _fvPressTimer = setTimeout(() => {
+      _fvTouchDragging = true;
+      _fvDrag = { kind, id };
+      card.classList.add('fv-dragging');
+      _fvGhost = document.createElement('div');
+      _fvGhost.className = 'drag-ghost';
+      _fvGhost.textContent = (kind === 'folder' ? '📂 ' : '📄 ') + name;
+      document.body.appendChild(_fvGhost);
+      _fvGhost.style.left = (t.clientX + 12) + 'px';
+      _fvGhost.style.top = (t.clientY - 14) + 'px';
+    }, 400);
+  }, { passive: true });
+
+  card.addEventListener('touchmove', (e) => {
+    const t = e.touches[0];
+    if (!_fvTouchDragging) {
+      if (_fvStartPos && (Math.abs(t.clientX - _fvStartPos.x) > 10 || Math.abs(t.clientY - _fvStartPos.y) > 10)) {
+        clearTimeout(_fvPressTimer); // 스크롤 의도
+      }
+      return;
+    }
+    e.preventDefault();
+    if (_fvGhost) { _fvGhost.style.left = (t.clientX + 12) + 'px'; _fvGhost.style.top = (t.clientY - 14) + 'px'; }
+    fvApplyHl(fvDropInfo(t.clientX, t.clientY));
+  }, { passive: false });
+
+  card.addEventListener('touchend', (e) => {
+    clearTimeout(_fvPressTimer);
+    if (!_fvTouchDragging) return;
+    const t = e.changedTouches[0];
+    fvPerform(fvDropInfo(t.clientX, t.clientY));
+    fvEndTouchDrag();
+    e.preventDefault(); // 드랍 후 클릭 합성 방지
+  }, { passive: false });
+
+  card.addEventListener('touchcancel', () => { clearTimeout(_fvPressTimer); fvEndTouchDrag(); }, { passive: true });
+}
+
+/* 폴더뷰 레벨 위임 (데스크톱 dragover/drop) */
+(function() {
+  const fv = document.getElementById('folderview');
+  fv.addEventListener('dragover', (e) => {
+    if (!_fvDrag) return;
+    e.preventDefault();
+    fvApplyHl(fvDropInfo(e.clientX, e.clientY));
+  });
+  fv.addEventListener('drop', (e) => {
+    e.preventDefault();
+    fvPerform(fvDropInfo(e.clientX, e.clientY));
+    _fvDrag = null; fvClearHl();
+  });
+})();
 
 /* ── 폴더 뷰 빈 영역 클릭 → 사이드바 접기 (카드 영역 확대) ── */
 document.getElementById('folderview').addEventListener('click', (e) => {
