@@ -1749,6 +1749,12 @@ function openFolderView(folderId) {
 function buildItemCard(s) {
   const card = document.createElement('div');
   card.className = 'fv-card';
+  card.style.cursor = 'pointer';
+  // 카드 어디를 눌러도 전체 화면으로 (더보기/삭제/링크 제외)
+  card.addEventListener('click', (e) => {
+    if (e.target.closest('.fv-toggle, .fv-del, a')) return;
+    openSheet(s.id);
+  });
 
   const head = document.createElement('div'); head.className = 'fv-head';
   head.innerHTML = `<span>${itemIcon(s)}</span><span class="ttl"></span>`;
