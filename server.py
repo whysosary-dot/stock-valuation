@@ -230,8 +230,8 @@ def _run_git(*args, cwd=None):
 # ─────────────────────────────────────────────
 #   GitHub Contents API (fallback for local git)
 # ─────────────────────────────────────────────
-REPO = "whysosary-dot/stock-valuation"
-FILE_PATH = "stocks.json"
+REPO = "whysosary-dot/invest-private"  # 비공개 데이터 리포
+FILE_PATH = "sv/stocks.json"
 TOKEN_FILE = BASE_DIR / ".github_token"
 DEFAULT_BRANCH = "main"
 
