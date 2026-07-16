@@ -2114,10 +2114,15 @@ async function ghDelete(path, sha, message, pat) {
     saveMeta();
 
     // GitHub 시트 데이터 다운로드 (dirty 아닌 것만 덮어씀)
+    // ⚠️ Contents API 의 JSON 응답은 1MB 초과 파일의 content 를 비워서 반환한다
+    //    (PDF 페이지가 든 노트 등). raw 미디어타입은 대용량도 원본 그대로 반환.
     for (const s of ghSheets) {
       try {
-        const f = await ghGet(`sv/sheets/data/${s.id}.json`, pat);
-        if (f && f.content) saveSheetData(s.id, JSON.parse(b64decodeUtf8(f.content)));
+        const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/sv/sheets/data/${s.id}.json?ref=${GH.BRANCH}&t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: { Authorization: 'token ' + pat, Accept: 'application/vnd.github.raw' }
+        });
+        if (r.ok) saveSheetData(s.id, await r.json());
       } catch(_) {}
     }
     localStorage.setItem(SHA_KEY, ghSha);
