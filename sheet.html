@@ -2098,7 +2098,14 @@ async function ghDelete(path, sha, message, pat) {
     const idxFile = await ghGet('sv/sheets/index.json', pat);
     if (!idxFile) { renderTree(); return; }              // GitHub 에 아직 없음 → 로컬만
     const ghSha = String(idxFile.sha || '');
-    if (ghSha && lastSha === ghSha) { renderTree(); return; }  // 새 커밋 없음 → 로컬 보존
+    if (ghSha && lastSha === ghSha) {
+      // 새 커밋 없음 → 머지는 스킵 (로컬 보존).
+      // 단, 인덱스에 있는데 이 기기에 데이터가 없는 항목은 받아온다
+      // (과거 동기화가 1MB 초과 파일을 스킵했던 버그의 잔여 복구용)
+      await fetchMissingSheetData(pat);
+      renderTree();
+      return;
+    }
 
     const ghIndex = JSON.parse(b64decodeUtf8(idxFile.content));
     // GitHub 우선 머지: 같은 id 는 GitHub, 로컬 전용(미커밋) 시트는 보존
@@ -2301,6 +2308,25 @@ function goBackToFolder() {
 }
 document.getElementById('back-to-folder').addEventListener('click', goBackToFolder);
 window.addEventListener('popstate', goBackToFolder);
+
+/* 인덱스엔 있는데 로컬 데이터가 없는 시트(note/자체시트) 를 raw 로 받아옴 */
+async function fetchMissingSheetData(pat) {
+  const targets = (meta.sheets || []).filter(s =>
+    !['gsheet', 'rcard', 'awake', 'index'].includes(s.type) &&
+    !localStorage.getItem(DATA_PREF + s.id));
+  for (const s of targets) {
+    try {
+      const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/sv/sheets/data/${s.id}.json?ref=${GH.BRANCH}&t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { Authorization: 'token ' + pat, Accept: 'application/vnd.github.raw' }
+      });
+      if (r.ok) {
+        saveSheetData(s.id, await r.json());
+        console.log('[sheets] 누락 데이터 복구:', s.name);
+      }
+    } catch(_) {}
+  }
+}
 
 /* ── 언로드 시 저장 ── */
 window.addEventListener('pagehide', persistCurrent);
