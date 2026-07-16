@@ -232,9 +232,12 @@
   .fv-card:hover .fv-pin { display: flex; }
   .fv-pin:hover { background: var(--accent); }
   .fv-pin.on { display: flex; background: var(--accent); }
+  /* 터치 기기: 평소엔 숨김 — 카드를 살짝 터치해 파란 테두리(hover 상태)일 때만 반투명 표시.
+     단 고정된 카드의 📌 는 상태 표시를 위해 항상 보임 */
   @media (hover: none) {
-    .fv-pin { display: flex; opacity: .45; }
-    .fv-pin.on { opacity: 1; }
+    .fv-pin { display: none; }
+    .fv-card:hover .fv-pin { display: flex; opacity: .85; }
+    .fv-pin.on { display: flex; opacity: 1; }
   }
   .fv-del {
     position: absolute; top: 8px; right: 8px; z-index: 5;
@@ -244,9 +247,10 @@
   }
   .fv-card:hover .fv-del { display: flex; }
   .fv-del:hover { background: var(--red); }
-  /* 터치 기기: hover 없음 → 반투명으로 상시 표시 */
+  /* 터치 기기: 평소엔 숨김 — 카드 살짝 터치(파란 테두리 hover 상태)일 때만 반투명 표시 */
   @media (hover: none) {
-    .fv-del { display: flex; opacity: .45; }
+    .fv-del { display: none; }
+    .fv-card:hover .fv-del { display: flex; opacity: .85; }
     .fv-del:active { opacity: 1; background: var(--red); }
   }
   .fv-card:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgba(37,99,235,.08); }
