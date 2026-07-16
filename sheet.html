@@ -2080,13 +2080,22 @@ function buildItemCard(s) {
   }
   else if (s.type === 'web') {
     // 미니 미리보기 (허용 사이트만 표시됨 — 차단 시 빈 박스)
+    // 모바일 뷰포트 폭(420px)으로 렌더한 뒤 카드 폭에 맞게 축소 → 페이지 전체 폭이 카드에 딱 맞음
     const frameWrap = document.createElement('div');
-    frameWrap.style.cssText = 'position:relative; height:200px; border:1px solid var(--border); border-radius:8px; overflow:hidden; cursor:pointer; background:var(--panel-2);';
+    frameWrap.style.cssText = 'position:relative; height:220px; border:1px solid var(--border); border-radius:8px; overflow:hidden; cursor:pointer; background:var(--panel-2);';
     const frame = document.createElement('iframe');
     frame.src = s.wembed || s.wurl;
     frame.loading = 'lazy';
-    frame.style.cssText = 'width:200%; height:200%; border:none; pointer-events:none; transform:scale(0.5); transform-origin:0 0;';
+    frame.style.cssText = 'border:none; pointer-events:none; transform-origin:0 0;';
     frameWrap.appendChild(frame);
+    requestAnimationFrame(() => {
+      const VIEW_W = 420; // 페이지가 인식할 가상 폭 (모바일 레이아웃 유도)
+      const cw = frameWrap.clientWidth || 320;
+      const scale = cw / VIEW_W;
+      frame.style.width = VIEW_W + 'px';
+      frame.style.height = Math.ceil(220 / scale) + 'px';
+      frame.style.transform = `scale(${scale})`;
+    });
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:absolute; inset:0;';
     overlay.addEventListener('click', () => openSheet(s.id));
