@@ -2328,6 +2328,12 @@ async function fetchMissingSheetData(pat) {
   }
 }
 
+/* ── 폴더 뷰 빈 영역 클릭 → 사이드바 접기 (카드 영역 확대) ── */
+document.getElementById('folderview').addEventListener('click', (e) => {
+  if (e.target.closest('.fv-card')) return; // 카드 클릭은 제외
+  document.querySelector('.app').classList.add('sb-hidden');
+});
+
 /* ── 언로드 시 저장 ── */
 window.addEventListener('pagehide', persistCurrent);
 window.addEventListener('resize', () => { try { luckysheet.resize(); } catch(_) {} });
