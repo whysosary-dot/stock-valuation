@@ -401,6 +401,21 @@
   </div>
 </div>
 
+<!-- URL 입력 모달 (prompt 대체 — 비차단이라 탭 전환해도 렉 없음) -->
+<div id="url-modal" class="rs-modal" style="display:none;">
+  <div class="rs-box" style="max-width:420px;">
+    <div class="rs-head">
+      <strong id="um-title">🔗 웹사이트 연결</strong>
+      <button id="um-close" class="sb-btn">✕</button>
+    </div>
+    <input id="um-url" type="url" placeholder="주소 붙여넣기 (https://...)" autocomplete="off"
+      style="padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; outline:none; -webkit-user-select:text; user-select:text;" />
+    <input id="um-name" type="text" placeholder="표시할 이름" autocomplete="off"
+      style="padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; outline:none; -webkit-user-select:text; user-select:text;" />
+    <button id="um-ok" class="rs-import-btn">추가</button>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/expendPlugins/chart/chartmix.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js"></script>
@@ -1032,21 +1047,19 @@ document.getElementById('new-folder-btn').addEventListener('click', () => {
 });
 /* 실제 구글 스프레드시트 연결 */
 document.getElementById('new-gsheet-btn').addEventListener('click', () => {
-  const url = prompt('구글 스프레드시트 URL 을 붙여넣으세요:\n(https://docs.google.com/spreadsheets/d/... 형식)');
-  if (!url || !url.trim()) return;
-  const m = url.match(/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
-  if (!m) { toast('올바른 구글시트 URL 이 아닙니다.', 'err', 3500); return; }
-  const nm = prompt('표시할 이름:');
-  if (!nm || !nm.trim()) return;
-  const gidM = url.match(/[#&?]gid=(\d+)/);
-  meta.sheets.push({
-    id: uid(), name: nm.trim(), folder: selectedFolderId || null,
-    type: 'gsheet', gid: m[1], ggid: gidM ? gidM[1] : null,
-    ord: frontOrd(selectedFolderId),
-    dirty: true, updated: Date.now(),
+  openUrlModal('📄 구글 스프레드시트 연결', 'https://docs.google.com/spreadsheets/d/...', (url, nm) => {
+    const m = url.match(/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+    if (!m) { toast('올바른 구글시트 URL 이 아닙니다.', 'err', 3500); return; }
+    const gidM = url.match(/[#&?]gid=(\d+)/);
+    meta.sheets.push({
+      id: uid(), name: nm, folder: selectedFolderId || null,
+      type: 'gsheet', gid: m[1], ggid: gidM ? gidM[1] : null,
+      ord: frontOrd(selectedFolderId),
+      dirty: true, updated: Date.now(),
+    });
+    saveMeta(); renderTree();
+    openFolderView(selectedFolderId || null);
   });
-  saveMeta(); renderTree();
-  openFolderView(selectedFolderId || null);
 });
 
 /* ═══ 웹사이트 연결 (🔗) ═══ */
@@ -1066,20 +1079,50 @@ function webEmbedOf(s) {
   try { return normalizeWebUrl(s.wurl || s.wembed || '').embed; }
   catch(_) { return s.wembed || s.wurl; }
 }
+/* URL 입력 모달 (비차단) */
+let _umCallback = null;
+function openUrlModal(title, urlPlaceholder, cb) {
+  _umCallback = cb;
+  document.getElementById('um-title').textContent = title;
+  document.getElementById('um-url').placeholder = urlPlaceholder;
+  document.getElementById('um-url').value = '';
+  document.getElementById('um-name').value = '';
+  document.getElementById('url-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('um-url').focus(), 60);
+}
+document.getElementById('um-close').addEventListener('click', () => {
+  document.getElementById('url-modal').style.display = 'none'; _umCallback = null;
+});
+document.getElementById('url-modal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('url-modal')) {
+    document.getElementById('url-modal').style.display = 'none'; _umCallback = null;
+  }
+});
+document.getElementById('um-ok').addEventListener('click', () => {
+  const url = document.getElementById('um-url').value.trim();
+  const name = document.getElementById('um-name').value.trim();
+  if (!url) { toast('주소를 입력하세요', 'err', 2500); return; }
+  if (!name) { toast('이름을 입력하세요', 'err', 2500); return; }
+  document.getElementById('url-modal').style.display = 'none';
+  const cb = _umCallback; _umCallback = null;
+  if (cb) cb(url, name);
+});
+document.getElementById('um-name').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('um-ok').click();
+});
+
 document.getElementById('new-web-btn').addEventListener('click', () => {
-  const raw = prompt('웹사이트 주소를 붙여넣으세요:\n(블로그 글, 유튜브 등 — 사이트에 따라 미리보기가 차단될 수 있음)');
-  if (!raw || !raw.trim()) return;
-  const nm = prompt('표시할 이름:');
-  if (!nm || !nm.trim()) return;
-  const { url, embed } = normalizeWebUrl(raw);
-  meta.sheets.push({
-    id: uid(), name: nm.trim(), folder: selectedFolderId || null,
-    type: 'web', wurl: url, wembed: embed,
-    ord: frontOrd(selectedFolderId),
-    dirty: true, updated: Date.now(),
+  openUrlModal('🔗 웹사이트 연결', '주소 붙여넣기 (블로그·유튜브 등)', (raw, nm) => {
+    const { url, embed } = normalizeWebUrl(raw);
+    meta.sheets.push({
+      id: uid(), name: nm.trim(), folder: selectedFolderId || null,
+      type: 'web', wurl: url, wembed: embed,
+      ord: frontOrd(selectedFolderId),
+      dirty: true, updated: Date.now(),
+    });
+    saveMeta(); renderTree();
+    openFolderView(selectedFolderId || null);
   });
-  saveMeta(); renderTree();
-  openFolderView(selectedFolderId || null);
 });
 
 /* ═══ 블로그형 노트 (📝) ═══ */
