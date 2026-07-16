@@ -1230,10 +1230,22 @@ td input, td textarea{border-radius:8px}
 /* ───────── 설정 ───────── */
 const GH = {
   OWNER: 'whysosary-dot',
-  REPO:  'stock-valuation',
-  PATH:  'stocks.json',
+  REPO:  'invest-private',   // 민감 데이터 전용 비공개 리포
+  PATH:  'sv/stocks.json',
   BRANCH:'main',
 };
+/* 비공개 리포 읽기: Contents API + raw 미디어타입 (base64 래핑 없음, 대용량 OK, PAT 필수) */
+function svPat() { return (localStorage.getItem('sv_github_pat') || '').trim() || null; }
+async function ghPrivateRaw(path) {
+  const pat = svPat();
+  if (!pat) throw new Error('NO_PAT');
+  const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/${path}?ref=${GH.BRANCH}&t=${Date.now()}`, {
+    cache: 'no-store',
+    headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github.raw' }
+  });
+  if (!r.ok) throw new Error(`GET ${path}: ${r.status}`);
+  return r.json();
+}
 const LS_KEY = 'sv_user_inputs_v1';
 const LS_UI_KEY = 'sv_ui_v1';
 const LS_PAT_KEY = 'sv_github_pat';
@@ -1451,10 +1463,7 @@ function sortValue(s, k) {
 }
 
 async function fetchFromGitHub() {
-  const url = `https://raw.githubusercontent.com/${GH.OWNER}/${GH.REPO}/${GH.BRANCH}/${GH.PATH}?t=${Date.now()}`;
-  const r = await fetch(url, { cache: 'no-store' });
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
+  return ghPrivateRaw(GH.PATH);
 }
 
 /* ───────── 렌더 ───────── */
@@ -2065,7 +2074,11 @@ async function init() {
     const gh = await fetchFromGitHub();
     mergeAndSetStocks(gh);
   } catch (e) {
-    toast('데이터 로드 실패: ' + e.message, 'err', 6000);
+    if (e.message === 'NO_PAT') {
+      toast('🔑 ⚙️ 버튼에서 GitHub 토큰을 저장하면 데이터가 표시됩니다', 'err', 8000);
+    } else {
+      toast('데이터 로드 실패: ' + e.message, 'err', 6000);
+    }
     state.stocks = [];
   }
   render();
@@ -2229,7 +2242,7 @@ window.addEventListener('popstate', (e) => {
 // 각 탭별: repo 전체 최신 커밋 추적 또는 특정 파일 경로의 최신 커밋만 추적
 // stock-valuation repo는 stocks.json / diary.json을 함께 보관하므로 path 필터 필수
 const TAB_REPOS = {
-  valuation: { repo: 'whysosary-dot/stock-valuation', path: 'stocks.json' },
+  valuation: { repo: 'whysosary-dot/invest-private', path: 'sv/stocks.json' },
   calendar:  { repo: 'whysosary-dot/investment-calendar' },
   index:     { repo: 'whysosary-dot/invest-index' },
   tptracker: { repo: 'whysosary-dot/tp-tracker' },
@@ -2242,7 +2255,7 @@ const TAB_REPOS = {
   earning:   { repo: 'whysosary-dot/kospi-kosdaq-dashboard' },
   interest:  { repo: 'whysosary-dot/watchlist-briefing' },
   research:  { repo: 'whysosary-dot/investment-notes' },
-  diary:     { repo: 'whysosary-dot/stock-valuation', path: 'diary.json' },
+  diary:     { repo: 'whysosary-dot/invest-private', path: 'sv/diary.json' },
 };
 const TAB_VISIT_KEY    = 'sv_tab_lastvisit_v1';
 const TAB_COMMIT_KEY   = 'sv_tab_commit_cache_v1';
@@ -3282,12 +3295,16 @@ function initDiary() {
       // ☁️커밋 시에도 새 SHA 를 저장해서 같은 기기 커밋 직후 새로고침은 머지 안 함.
       const lastSha = localStorage.getItem(DIARY_GH_SHA_KEY) || '';
 
-      // 1차: GitHub Contents API (캐시 짧음, blob SHA 함께 얻음)
+      // 비공개 리포 — PAT 없으면 동기화 스킵 (로컬 템플릿/캐시만 표시)
+      const pat = svPat();
+      if (!pat) return;
+
       let ghDiary = null, ghSha = '';
       try {
         const r1 = await fetch(
-          `https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/diary.json?ref=${GH.BRANCH}&t=${Date.now()}`,
-          { signal: _diaryAbort.signal, cache: 'no-store', headers: { Accept: 'application/vnd.github+json' } }
+          `https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/sv/diary.json?ref=${GH.BRANCH}&t=${Date.now()}`,
+          { signal: _diaryAbort.signal, cache: 'no-store',
+            headers: { Accept: 'application/vnd.github+json', Authorization: `token ${pat}` } }
         );
         if (r1.ok) {
           const meta = await r1.json();
@@ -3301,18 +3318,6 @@ function initDiary() {
         }
       } catch(e) {
         if (e && e.name === 'AbortError') return;
-      }
-
-      // 2차 fallback: raw (SHA 못 얻으니 보수적으로 머지 진행. 단 lastSha 가 없을 때만
-      // — lastSha 가 있는데 API 가 실패한 상태에서 raw 옛 응답으로 덮어쓰지 않도록)
-      if (!ghDiary) {
-        if (lastSha) return; // 마지막 SHA 가 있는데 API 가 실패 → 안전하게 미머지
-        const r = await fetch(
-          `https://raw.githubusercontent.com/${GH.OWNER}/${GH.REPO}/${GH.BRANCH}/diary.json?t=${Date.now()}`,
-          { signal: _diaryAbort.signal, cache: 'no-store' }
-        );
-        if (!r.ok) return;
-        ghDiary = await r.json();
       }
       if (!ghDiary || typeof ghDiary !== 'object') return;
       // GitHub 데이터가 비어있으면 localStorage 보존 (네트워크 오류·빈 응답 방어)
@@ -3421,21 +3426,15 @@ async function ghCommitAll() {
 
     // ── 1. stocks.json : raw URL(직접 JSON) + Trees API(SHA) 병렬 조회 ──
     // Contents API는 556KB 파일을 base64 래핑해 응답이 750KB+ → Safari iOS 파싱 실패
-    const [treeRes, rawRes] = await Promise.all([
-      fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/git/trees/${GH.BRANCH}`, {
-        headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'User-Agent': 'sv-browser' }
-      }),
-      fetch(`https://raw.githubusercontent.com/${GH.OWNER}/${GH.REPO}/${GH.BRANCH}/${GH.PATH}?t=${Date.now()}`, {
-        cache: 'no-store'
-      })
-    ]);
+    const treeRes = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/git/trees/${GH.BRANCH}?recursive=1`, {
+      headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'User-Agent': 'sv-browser' }
+    });
     if (!treeRes.ok) throw new Error(`GET tree: ${treeRes.status}`);
-    if (!rawRes.ok)  throw new Error(`GET raw stocks: ${rawRes.status}`);
     const treeData  = await treeRes.json();
     const treeEntry = treeData.tree.find(e => e.path === GH.PATH);
     if (!treeEntry) throw new Error('stocks.json을 트리에서 찾을 수 없음');
     const stocksSha = treeEntry.sha;
-    const stocksData = await rawRes.json();
+    const stocksData = await ghPrivateRaw(GH.PATH);
     // localStorage 대신 현재 메모리 state에서 직접 읽기 (즐겨찾기 등 미저장 변경 포함)
     const liveInputs = {};
     for (const s of state.stocks) {
@@ -3457,8 +3456,8 @@ async function ghCommitAll() {
       `sync: 밸류에이션 입력값 업데이트 ${today}`);
 
     // ── 2. diary.json : localStorage 다이어리 전체 커밋 ──
-    const diaryFile = await ghApiGet(pat, 'diary.json');
-    const diaryPutRes = await ghApiPut(pat, 'diary.json', JSON.stringify(diary.data, null, 2),
+    const diaryFile = await ghApiGet(pat, 'sv/diary.json');
+    const diaryPutRes = await ghApiPut(pat, 'sv/diary.json', JSON.stringify(diary.data, null, 2),
       diaryFile ? diaryFile.sha : null,
       `sync: 다이어리 업데이트 ${today}`);
     // 새 blob SHA 저장 → 같은 기기에서 커밋 직후 새로고침해도 머지 스킵 (미커밋 변경 보존)
@@ -3471,9 +3470,9 @@ async function ghCommitAll() {
       if (sheetsMeta && (sheetsMeta.sheets || []).length) {
         // 삭제 예약 처리
         for (const delId of (sheetsMeta._deleted || [])) {
-          const f = await ghApiGet(pat, `sheets/data/${delId}.json`);
+          const f = await ghApiGet(pat, `sv/sheets/data/${delId}.json`);
           if (f) {
-            await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/sheets/data/${delId}.json`, {
+            await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/sv/sheets/data/${delId}.json`, {
               method: 'DELETE',
               headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
               body: JSON.stringify({ message: `sheets: 시트 삭제 ${delId}`, sha: f.sha, branch: GH.BRANCH })
@@ -3487,8 +3486,8 @@ async function ghCommitAll() {
           if (['gsheet', 'rcard', 'awake', 'index'].includes(s.type)) { s.dirty = false; continue; }
           const dataStr = localStorage.getItem('sv_sheet_data_' + s.id);
           if (!dataStr) continue;
-          const existing = await ghApiGet(pat, `sheets/data/${s.id}.json`);
-          await ghApiPut(pat, `sheets/data/${s.id}.json`, dataStr,
+          const existing = await ghApiGet(pat, `sv/sheets/data/${s.id}.json`);
+          await ghApiPut(pat, `sv/sheets/data/${s.id}.json`, dataStr,
             existing ? existing.sha : null, `sheets: ${s.name} 업데이트 ${today}`);
           s.dirty = false;
         }
@@ -3500,8 +3499,8 @@ async function ghCommitAll() {
                  ...(ord !== undefined ? { ord } : {}),
                  ...(type ? { type, gid, ggid, rid, cid, adate, code, iid } : {}) })),
           };
-          const idxFile = await ghApiGet(pat, 'sheets/index.json');
-          const idxPut = await ghApiPut(pat, 'sheets/index.json', JSON.stringify(idxData, null, 2),
+          const idxFile = await ghApiGet(pat, 'sv/sheets/index.json');
+          const idxPut = await ghApiPut(pat, 'sv/sheets/index.json', JSON.stringify(idxData, null, 2),
             idxFile ? idxFile.sha : null, `sheets: 인덱스 업데이트 ${today}`);
           const newIdxSha = idxPut && idxPut.content && idxPut.content.sha;
           if (newIdxSha) localStorage.setItem('sv_sheets_gh_sha_v1', String(newIdxSha));
