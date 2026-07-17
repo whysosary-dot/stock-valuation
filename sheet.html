@@ -223,6 +223,18 @@
     transition: box-shadow .12s, border-color .12s;
     position: relative;
   }
+  .fv-ren {
+    position: absolute; top: 8px; right: 72px; z-index: 5;
+    width: 26px; height: 26px; display: none; align-items: center; justify-content: center;
+    border: none; border-radius: 50%; background: rgba(15,23,42,.55); color: #fff;
+    font-size: 12px; cursor: pointer; line-height: 1;
+  }
+  .fv-card:hover .fv-ren { display: flex; }
+  .fv-ren:hover { background: var(--accent); }
+  @media (hover: none) {
+    .fv-ren { display: none; }
+    .fv-card:hover .fv-ren { display: flex; opacity: .85; }
+  }
   .fv-pin {
     position: absolute; top: 8px; right: 40px; z-index: 5;
     width: 26px; height: 26px; display: none; align-items: center; justify-content: center;
@@ -427,6 +439,19 @@
   </div>
 </div>
 
+<!-- 이름 입력 모달 (prompt 대체) -->
+<div id="pr-modal" class="rs-modal" style="display:none; z-index:600;">
+  <div class="rs-box" style="max-width:380px;">
+    <strong id="pr-title" style="font-size:15px;">이름 변경</strong>
+    <input id="pr-input" type="text" autocomplete="off"
+      style="padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; outline:none; -webkit-user-select:text; user-select:text;" />
+    <div style="display:flex; gap:8px;">
+      <button id="pr-cancel" class="sb-btn" style="flex:1; padding:10px; font-size:14px;">취소</button>
+      <button id="pr-ok" class="rs-import-btn" style="flex:1;">확인</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/expendPlugins/chart/chartmix.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js"></script>
@@ -497,6 +522,36 @@ document.getElementById('cf-ok').addEventListener('click', () => {
   document.getElementById('cf-modal').style.display = 'none';
   const cb = _cfCb; _cfCb = null;
   if (cb) cb();
+});
+
+/* 시스템 prompt 대체 — 이름 입력 모달 */
+let _prCb = null;
+function svPrompt(title, initValue, cb) {
+  _prCb = cb;
+  document.getElementById('pr-title').textContent = title;
+  const inp = document.getElementById('pr-input');
+  inp.value = initValue || '';
+  document.getElementById('pr-modal').style.display = 'flex';
+  setTimeout(() => { inp.focus(); inp.select(); }, 60);
+}
+document.getElementById('pr-cancel').addEventListener('click', () => {
+  document.getElementById('pr-modal').style.display = 'none'; _prCb = null;
+});
+document.getElementById('pr-modal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('pr-modal')) {
+    document.getElementById('pr-modal').style.display = 'none'; _prCb = null;
+  }
+});
+function _prSubmit() {
+  const v = document.getElementById('pr-input').value.trim();
+  if (!v) { toast('이름을 입력하세요', 'err', 2500); return; }
+  document.getElementById('pr-modal').style.display = 'none';
+  const cb = _prCb; _prCb = null;
+  if (cb) cb(v);
+}
+document.getElementById('pr-ok').addEventListener('click', _prSubmit);
+document.getElementById('pr-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') _prSubmit();
 });
 
 function setStatus(txt, saved) {
@@ -600,8 +655,7 @@ function renderTree() {
         openFolderView(f.id, true); // 내부에서 renderTree 호출
       });
       const renameFolder = () => {
-        const nm = prompt('폴더 이름 변경:', f.name);
-        if (nm && nm.trim()) { f.name = nm.trim(); saveMeta(); renderTree(); }
+        svPrompt('폴더 이름 변경', f.name, (v) => { f.name = v; saveMeta(); renderTree(); });
       };
       // 더블클릭 이름변경 제거 — 재클릭이 접기/펼치기 토글이라 충돌. 이름변경은 ✎ 버튼으로만
       div.querySelector('.ren').addEventListener('click', renameFolder);
@@ -654,8 +708,7 @@ function renderTree() {
         openSheet(s.id);
       });
       const renameSheet = () => {
-        const nm = prompt('시트 이름 변경:', s.name);
-        if (nm && nm.trim()) { s.name = nm.trim(); s.dirty = true; saveMeta(); renderTree(); updateTopbar(); }
+        svPrompt('이름 변경', s.name, (v) => { s.name = v; s.dirty = true; saveMeta(); renderTree(); updateTopbar(); });
       };
       div.addEventListener('dblclick', renameSheet);
       div.querySelector('.ren').addEventListener('click', renameSheet);
@@ -1070,10 +1123,10 @@ function defaultWorkbook() {
 
 /* ── 새 폴더/시트 ── */
 document.getElementById('new-folder-btn').addEventListener('click', () => {
-  const nm = prompt('새 폴더 이름:');
-  if (!nm || !nm.trim()) return;
-  meta.folders.push({ id: uid(), name: nm.trim(), parent: selectedFolderId || null });
-  saveMeta(); renderTree();
+  svPrompt('새 폴더 이름', '', (v) => {
+    meta.folders.push({ id: uid(), name: v, parent: selectedFolderId || null });
+    saveMeta(); renderTree();
+  });
 });
 /* 실제 구글 스프레드시트 연결 */
 document.getElementById('new-gsheet-btn').addEventListener('click', () => {
@@ -1967,6 +2020,23 @@ function buildItemCard(s) {
   head.querySelector('.ttl').textContent = s.name;
   head.addEventListener('click', () => openSheet(s.id));
   card.appendChild(head);
+
+  // 이름 변경 버튼
+  const renBtn = document.createElement('button');
+  renBtn.className = 'fv-ren';
+  renBtn.title = '이름 변경';
+  renBtn.textContent = '✎';
+  renBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    svPrompt('이름 변경', s.name, (v) => {
+      s.name = v;
+      s.dirty = true; s.updated = Date.now();
+      saveMeta();
+      openFolderView(currentFolderViewId);
+      renderTree();
+    });
+  });
+  card.appendChild(renBtn);
 
   // 고정 핀 버튼 — 고정된 카드는 최신글이 와도 안 밀리고 맨 앞 유지
   const pinBtn = document.createElement('button');
