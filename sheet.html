@@ -2326,17 +2326,22 @@ async function ghDelete(path, sha, message, pat) {
     }
 
     const ghIndex = JSON.parse(b64decodeUtf8(idxFile.content));
-    // GitHub 우선 머지: 같은 id 는 GitHub, 로컬 전용(미커밋) 시트는 보존
-    const localOnly = meta.sheets.filter(ls => !(ghIndex.sheets || []).some(gs => gs.id === ls.id));
+    // 새 커밋 감지 → GitHub 상태로 통째 교체 (합집합 없음 — 중복 방지, 최신 푸시 = 진실)
     const ghSheets = (ghIndex.sheets || []).map(s => ({ ...s, dirty: false }));
     meta = {
       folders: ghIndex.folders || [],
-      sheets: [...ghSheets, ...localOnly],
-      _deleted: meta._deleted || [],
+      sheets: ghSheets,
+      _deleted: [],
     };
-    // 로컬 전용 시트의 폴더가 사라졌으면 루트로
-    meta.sheets.forEach(s => { if (s.folder && !meta.folders.some(f => f.id === s.folder)) s.folder = null; });
     saveMeta();
+    // GitHub 에 없는 항목의 로컬 데이터 정리 (고아 localStorage 제거)
+    const validIds = new Set(ghSheets.map(s => s.id));
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(DATA_PREF) && !validIds.has(k.slice(DATA_PREF.length))) {
+        localStorage.removeItem(k);
+      }
+    }
 
     // GitHub 시트 데이터 다운로드 (dirty 아닌 것만 덮어씀)
     // ⚠️ Contents API 의 JSON 응답은 1MB 초과 파일의 content 를 비워서 반환한다
