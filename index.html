@@ -1201,6 +1201,17 @@ td input, td textarea{border-radius:8px}
 
 <!-- ── 공용 모달 (position:fixed → 탭 밖에 위치해야 함) ── -->
 
+<!-- 범용 확인 모달 (시스템 confirm 대체 — iOS 히스토리 조작 후 confirm 무시 문제 회피) -->
+<div id="sv-cf-modal" style="display:none; position:fixed; inset:0; z-index:400; background:rgba(15,23,42,0.45); align-items:center; justify-content:center; padding:16px;">
+  <div style="background:#fff; border-radius:12px; padding:22px; max-width:380px; width:100%; display:flex; flex-direction:column; gap:14px; box-shadow:0 20px 60px rgba(15,23,42,0.25);">
+    <div id="sv-cf-msg" style="font-size:14.5px; line-height:1.7; color:#1f2933; white-space:pre-wrap;"></div>
+    <div style="display:flex; gap:8px;">
+      <button id="sv-cf-cancel" class="btn" style="flex:1; padding:10px;">취소</button>
+      <button id="sv-cf-ok" class="btn" style="flex:1; padding:10px; background:#2563eb; color:#fff; border-color:#2563eb; font-weight:600;">확인</button>
+    </div>
+  </div>
+</div>
+
 <!-- PAT 설정 모달 -->
 <div id="pat-modal" style="display:none; position:fixed; inset:0; z-index:300; background:rgba(15,23,42,0.45); align-items:center; justify-content:center; padding:16px;">
   <div style="background:#fff; border-radius:12px; padding:24px; max-width:480px; width:100%; display:flex; flex-direction:column; gap:16px; box-shadow:0 20px 60px rgba(15,23,42,0.25);">
@@ -2037,6 +2048,27 @@ function toast(msg, type='ok', ms=2500) {
   clearTimeout(t._timer);
   t._timer = setTimeout(() => t.classList.remove('show'), ms);
 }
+
+/* 시스템 confirm 대체 */
+let _svCfCb = null;
+function svConfirm(msg, onOk) {
+  _svCfCb = onOk;
+  document.getElementById('sv-cf-msg').textContent = msg;
+  document.getElementById('sv-cf-modal').style.display = 'flex';
+}
+document.getElementById('sv-cf-cancel').addEventListener('click', () => {
+  document.getElementById('sv-cf-modal').style.display = 'none'; _svCfCb = null;
+});
+document.getElementById('sv-cf-modal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('sv-cf-modal')) {
+    document.getElementById('sv-cf-modal').style.display = 'none'; _svCfCb = null;
+  }
+});
+document.getElementById('sv-cf-ok').addEventListener('click', () => {
+  document.getElementById('sv-cf-modal').style.display = 'none';
+  const cb = _svCfCb; _svCfCb = null;
+  if (cb) cb();
+});
 
 function mergeAndSetStocks(ghData, opts) {
   const ghFirst = !opts || opts.ghFirst !== false; // 기본: GitHub 우선 (기존 동작)
@@ -3445,8 +3477,10 @@ async function ghApiPut(pat, path, contentStr, sha, message) {
 async function ghCommitAll() {
   const pat = localStorage.getItem(LS_PAT_KEY) || '';
   if (!pat) { openPatModal(); return; }
-  if (!confirm('밸류에이션 입력값과 다이어리를 GitHub에 커밋 & 푸시할까요?')) return;
+  svConfirm('밸류에이션·다이어리·폴더를 GitHub에 커밋 & 푸시할까요?', () => ghCommitAllRun(pat));
+}
 
+async function ghCommitAllRun(pat) {
   const btn = document.getElementById('gh-commit-btn');
   btn.disabled = true;
   btn.textContent = '커밋 중...';
