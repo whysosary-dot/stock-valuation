@@ -3357,12 +3357,11 @@ function initDiary() {
                       + Object.keys(ghDiary.trades||{}).length;
       if (!ghHasData) return;
 
-      // 새 커밋 발견 → GitHub 우선 머지 (같은 키는 GitHub 값으로, GitHub 에 없는 키만 localStorage 보존)
-      const snapshot = loadDiary();
+      // 새 커밋 발견 → GitHub 상태로 통째 교체 (최신 푸시 = 진실, 모든 기기 미러링)
       diary.data = {
-        daily:  { ...(snapshot.daily  || {}), ...(ghDiary.daily  || {}) },
-        weekly: { ...(snapshot.weekly || {}), ...(ghDiary.weekly || {}) },
-        trades: { ...(snapshot.trades || {}), ...(ghDiary.trades || {}) },
+        daily:  ghDiary.daily  || {},
+        weekly: ghDiary.weekly || {},
+        trades: ghDiary.trades || {},
       };
       saveDiaryData(diary.data);
       if (ghSha) localStorage.setItem(DIARY_GH_SHA_KEY, ghSha);
