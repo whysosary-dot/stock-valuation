@@ -378,6 +378,7 @@
         <button data-cmd="indent" title="들여쓰기">⇥</button>
         <button data-cmd="photo" title="사진 삽입">📷</button>
         <button data-cmd="pdf" title="PDF 삽입 (페이지를 이미지로 변환)">📎</button>
+        <button id="note-edit-btn" title="수정 모드로 전환" style="margin-left:auto; background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600; display:none;">수정 ✏️</button>
         <button id="note-done-btn" title="작성 완료 — 미리보기 카드로" style="margin-left:auto; background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600;">완료 ✓</button>
       </div>
       <div id="note-edit" contenteditable="true" data-placeholder="투자 기록을 남겨보세요. 📷 사진 · 📎 PDF 를 넣을 수 있습니다."></div>
@@ -990,6 +991,7 @@ function persistCurrent() {
   const s = meta.sheets.find(x => x.id === currentId);
   // 노트: 변경 있을 때만 저장
   if (s && s.type === 'note') {
+    if (isEmptyNoteDraft(s)) { discardNoteDraft(s); return; } // 빈 초안 자동 폐기
     if (!noteChanged) return;
     const ed = document.getElementById('note-edit');
     saveSheetData(currentId, { type: 'note', html: ed.innerHTML });
@@ -1067,6 +1069,8 @@ function openSheet(id) {
     ed.innerHTML = (data && data.html) || '';
     document.getElementById('note-title').value = (s.name === '제목 없음') ? '' : s.name;
     noteChanged = false;
+    setNoteMode(_openNoteEdit);
+    _openNoteEdit = false;
     document.getElementById('noteview').style.display = 'flex';
     renderTree(); updateTopbar();
     setStatus('', false);
@@ -1214,6 +1218,7 @@ document.getElementById('new-note-btn').addEventListener('click', () => {
   meta.sheets.push({ id, name: '제목 없음', folder: selectedFolderId || null, type: 'note', ord: frontOrd(selectedFolderId), dirty: true, updated: Date.now() });
   saveSheetData(id, { type: 'note', html: '' });
   saveMeta(); renderTree();
+  _openNoteEdit = true;
   openSheet(id);
   // 제목 입력란에 바로 포커스
   setTimeout(() => {
@@ -1222,6 +1227,42 @@ document.getElementById('new-note-btn').addEventListener('click', () => {
     ti.focus();
   }, 60);
 });
+
+/* ── 노트 보기/수정 모드 ── */
+let noteEditMode = false;
+let _openNoteEdit = false; // 다음 openSheet(note) 를 수정 모드로 열지
+function setNoteMode(edit) {
+  noteEditMode = edit;
+  document.getElementById('note-edit').contentEditable = edit ? 'true' : 'false';
+  document.getElementById('note-title').readOnly = !edit;
+  document.querySelectorAll('.note-toolbar > *').forEach(el => {
+    if (el.id === 'note-edit-btn') el.style.display = edit ? 'none' : '';
+    else if (el.id === 'note-done-btn') el.style.display = edit ? '' : 'none';
+    else el.style.display = edit ? '' : 'none';
+  });
+  hideImgDel();
+}
+document.getElementById('note-edit-btn').addEventListener('click', () => {
+  setNoteMode(true);
+  document.getElementById('note-edit').focus();
+});
+
+/* 제목·내용 모두 빈 초안인지 (기본 제목 + 텍스트/이미지 없음) */
+function isEmptyNoteDraft(s) {
+  if (!s || s.type !== 'note') return false;
+  if (s.name && s.name !== '제목 없음') return false;
+  const ed = document.getElementById('note-edit');
+  if ((ed.innerText || '').trim()) return false;
+  if (ed.querySelector('img')) return false;
+  return true;
+}
+function discardNoteDraft(s) {
+  meta.sheets = meta.sheets.filter(x => x.id !== s.id);
+  localStorage.removeItem(DATA_PREF + s.id);
+  if (currentId === s.id) currentId = null;
+  noteChanged = false;
+  saveMeta(); renderTree();
+}
 
 // 제목 입력 → 트리 이름과 실시간 동기화
 let noteTitleTimer = null;
@@ -1240,15 +1281,20 @@ document.getElementById('note-title').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); document.getElementById('note-edit').focus(); }
 });
 
-// 완료 — 저장 후 소속 폴더의 미리보기 카드로
+// 완료 — 저장 후 소속 폴더의 미리보기 카드로. 제목·내용 모두 비었으면 카드 생성 취소
 document.getElementById('note-done-btn').addEventListener('click', () => {
   const s = meta.sheets.find(x => x.id === currentId);
   clearTimeout(noteSaveTimer);
   clearTimeout(noteTitleTimer);
-  // 제목 즉시 반영
   if (s && s.type === 'note') {
     const tv = document.getElementById('note-title').value.trim();
     s.name = tv || '제목 없음';
+    if (isEmptyNoteDraft(s)) {
+      const fid = s.folder || null;
+      discardNoteDraft(s);
+      openFolderView(fid);
+      return; // 빈 초안 — 카드 안 만듦
+    }
   }
   noteChanged = true;
   persistCurrent();
@@ -1344,6 +1390,7 @@ function hideImgDel() {
 }
 
 document.getElementById('note-edit').addEventListener('click', (e) => {
+  if (!noteEditMode) return; // 보기 모드에선 이미지 선택/삭제 비활성
   if (e.target && e.target.tagName === 'IMG') {
     hideImgDel();
     _imgTarget = e.target;
