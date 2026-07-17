@@ -416,6 +416,17 @@
   </div>
 </div>
 
+<!-- 삭제 확인 모달 (confirm 대체 — iOS iframe 에서 시스템 confirm 이 무시되는 경우 대비) -->
+<div id="cf-modal" class="rs-modal" style="display:none; z-index:600;">
+  <div class="rs-box" style="max-width:380px;">
+    <div id="cf-msg" style="font-size:14.5px; line-height:1.7; color:var(--text); white-space:pre-wrap; padding:4px 2px;"></div>
+    <div style="display:flex; gap:8px;">
+      <button id="cf-cancel" class="sb-btn" style="flex:1; padding:10px; font-size:14px;">취소</button>
+      <button id="cf-ok" class="rs-import-btn" style="flex:1; background:var(--red);">삭제</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/expendPlugins/chart/chartmix.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js"></script>
@@ -467,6 +478,27 @@ function toast(msg, type = 'ok', ms = 2600) {
   clearTimeout(t._tm);
   t._tm = setTimeout(() => t.classList.remove('show'), ms);
 }
+/* 시스템 confirm 대체 (iOS iframe 억제 대비) — 콜백 스타일 */
+let _cfCb = null;
+function svConfirm(msg, onOk) {
+  _cfCb = onOk;
+  document.getElementById('cf-msg').textContent = msg;
+  document.getElementById('cf-modal').style.display = 'flex';
+}
+document.getElementById('cf-cancel').addEventListener('click', () => {
+  document.getElementById('cf-modal').style.display = 'none'; _cfCb = null;
+});
+document.getElementById('cf-modal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('cf-modal')) {
+    document.getElementById('cf-modal').style.display = 'none'; _cfCb = null;
+  }
+});
+document.getElementById('cf-ok').addEventListener('click', () => {
+  document.getElementById('cf-modal').style.display = 'none';
+  const cb = _cfCb; _cfCb = null;
+  if (cb) cb();
+});
+
 function setStatus(txt, saved) {
   const el = document.getElementById('save-status');
   el.textContent = txt;
@@ -582,15 +614,12 @@ function renderTree() {
         })(f.id);
         const subSheets = meta.sheets.filter(s => subFolderIds.includes(s.folder));
 
-        if (subSheets.length || subFolderIds.length > 1) {
-          const msg = `폴더 "${f.name}" 안에 ` +
+        const msg = (subSheets.length || subFolderIds.length > 1)
+          ? `폴더 "${f.name}" 안에 ` +
             `${subFolderIds.length - 1 ? `하위 폴더 ${subFolderIds.length - 1}개, ` : ''}` +
-            `시트 ${subSheets.length}개가 있습니다.\n\n전부 함께 삭제할까요?\n(커밋하면 GitHub 에서도 삭제됩니다)`;
-          if (!confirm(msg)) return;
-        } else {
-          if (!confirm(`폴더 "${f.name}" 를 삭제할까요?`)) return;
-        }
-
+            `시트 ${subSheets.length}개가 있습니다.\n\n전부 함께 삭제할까요?\n(커밋하면 GitHub 에서도 삭제됩니다)`
+          : `폴더 "${f.name}" 를 삭제할까요?`;
+        svConfirm(msg, () => {
         // 하위 시트 삭제 (localStorage 정리 + GitHub 삭제 예약)
         meta._deleted = meta._deleted || [];
         subSheets.forEach(s => {
@@ -603,6 +632,7 @@ function renderTree() {
         meta.folders = meta.folders.filter(x => !subFolderIds.includes(x.id));
         if (subFolderIds.includes(selectedFolderId)) selectedFolderId = null;
         saveMeta(); renderTree();
+        }); // svConfirm
       });
       attachDnD(div, 'folder', f.id, f.name);
       tree.appendChild(div);
@@ -630,14 +660,14 @@ function renderTree() {
       div.addEventListener('dblclick', renameSheet);
       div.querySelector('.ren').addEventListener('click', renameSheet);
       div.querySelector('.del').addEventListener('click', () => {
-        if (!confirm(`시트 "${s.name}" 를 삭제할까요?\n(커밋하면 GitHub 에서도 삭제됩니다)`)) return;
-        meta.sheets = meta.sheets.filter(x => x.id !== s.id);
-        localStorage.removeItem(DATA_PREF + s.id);
-        // 삭제 예약 목록에 넣어 커밋 시 GitHub 파일도 제거
-        meta._deleted = meta._deleted || [];
-        meta._deleted.push(s.id);
-        if (currentId === s.id) { currentId = null; showNoSheet(); }
-        saveMeta(); renderTree();
+        svConfirm(`"${s.name}" 를 삭제할까요?\n(커밋하면 GitHub 에서도 삭제됩니다)`, () => {
+          meta.sheets = meta.sheets.filter(x => x.id !== s.id);
+          localStorage.removeItem(DATA_PREF + s.id);
+          meta._deleted = meta._deleted || [];
+          meta._deleted.push(s.id);
+          if (currentId === s.id) { currentId = null; showNoSheet(); }
+          saveMeta(); renderTree();
+        });
       });
       attachDnD(div, 'sheet', s.id, s.name);
       tree.appendChild(div);
@@ -1960,18 +1990,19 @@ function buildItemCard(s) {
   delBtn.textContent = '✕';
   delBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (!confirm(`"${s.name}" 을(를) 삭제할까요?\n(커밋하면 GitHub 에서도 삭제됩니다)`)) return;
-    const folderId = s.folder || null;
-    meta.sheets = meta.sheets.filter(x => x.id !== s.id);
-    localStorage.removeItem(DATA_PREF + s.id);
-    if (!['gsheet', 'rcard', 'awake', 'index'].includes(s.type)) {
-      meta._deleted = meta._deleted || [];
-      meta._deleted.push(s.id);
-    }
-    if (currentId === s.id) currentId = null;
-    saveMeta();
-    openFolderView(folderId); // 현재 폴더 뷰 갱신 (내부에서 renderTree)
-    toast(`"${s.name}" 삭제됨`);
+    svConfirm(`"${s.name}" 을(를) 삭제할까요?\n(커밋하면 GitHub 에서도 삭제됩니다)`, () => {
+      const folderId = s.folder || null;
+      meta.sheets = meta.sheets.filter(x => x.id !== s.id);
+      localStorage.removeItem(DATA_PREF + s.id);
+      if (!['gsheet', 'rcard', 'awake', 'index'].includes(s.type)) {
+        meta._deleted = meta._deleted || [];
+        meta._deleted.push(s.id);
+      }
+      if (currentId === s.id) currentId = null;
+      saveMeta();
+      openFolderView(folderId); // 현재 폴더 뷰 갱신 (내부에서 renderTree)
+      toast(`"${s.name}" 삭제됨`);
+    });
   });
   card.appendChild(delBtn);
 
