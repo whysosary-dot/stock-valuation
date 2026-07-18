@@ -1147,7 +1147,7 @@ td input, td textarea{border-radius:8px}
   <!-- 자체 스프레드시트 (Luckysheet) — same-origin sheet.html, localStorage/PAT 공유 -->
   <iframe
     id="sheet-frame"
-    src="./sheet.html?v=20260717a"
+    data-dynamic-src="./sheet.html"
     style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
     loading="lazy"
     title="Sheets"
@@ -2201,6 +2201,12 @@ init();
 /* ═══════════════════════════════════
    탭 전환 (브라우저 히스토리 연동)
 ═══════════════════════════════════ */
+// sheet.html 은 자주 업데이트되므로 열 때마다 최신 버전 로드 (캐시 무력화)
+(function(){
+  const fr = document.getElementById('sheet-frame');
+  if (fr && fr.dataset.dynamicSrc) fr.src = fr.dataset.dynamicSrc + '?v=' + Date.now();
+})();
+
 const IFRAME_TAB_SRC = {
   calendar:  'https://whysosary-dot.github.io/investment-calendar/',
   index:     'https://whysosary-dot.github.io/invest-index/',
