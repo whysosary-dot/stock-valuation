@@ -2211,7 +2211,14 @@ function buildItemCard(s) {
       }
       if (currentId === s.id) currentId = null;
       saveMeta();
+      // 삭제 후에도 보던 스크롤 위치 유지 (비동기 콘텐츠 로드 대비 재보정 포함)
+      const fv = document.getElementById('folderview');
+      const keepScroll = fv.scrollTop;
       openFolderView(folderId); // 현재 폴더 뷰 갱신 (내부에서 renderTree)
+      const restore = () => { fv.scrollTop = keepScroll; };
+      requestAnimationFrame(restore);
+      setTimeout(restore, 700);
+      setTimeout(restore, 1600);
       toast(`"${s.name}" 삭제됨`);
     });
   });
