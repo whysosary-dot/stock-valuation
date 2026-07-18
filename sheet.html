@@ -1050,34 +1050,11 @@ function openSheet(id) {
 
   // ── 웹사이트 (임베드 차단): 큰 스크린샷 + 새 창 버튼 ──
   if (s.type === 'web' && isEmbedBlocked(s)) {
-    hideAllViews();
-    const view = document.getElementById('rcardview');
-    view.style.display = 'block';
-    view.innerHTML = '';
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'max-width:860px; margin:0 auto; text-align:center;';
-    const note = document.createElement('div');
-    note.style.cssText = 'font-size:13px; color:var(--text-dim); margin-bottom:12px;';
-    note.textContent = '이 사이트는 임베드를 차단해 스크린샷으로 표시합니다. 원문은 아래 버튼으로.';
-    wrap.appendChild(note);
-    const a = document.createElement('a');
-    a.href = s.wurl; a.target = '_blank'; a.rel = 'noopener';
-    a.className = 'rs-import-btn';
-    a.style.cssText = 'display:inline-block; text-decoration:none; margin-bottom:16px; padding:11px 26px;';
-    a.textContent = '↗ 새 창에서 원문 열기';
-    wrap.appendChild(a);
-    const img = document.createElement('img');
-    img.src = thumUrl(s.wurl, 1000);
-    img.style.cssText = 'max-width:100%; border:1px solid var(--border); border-radius:12px;';
-    wrap.appendChild(img);
-    view.appendChild(wrap);
-    renderTree(); updateTopbar();
-    setStatus('', false);
-    if (window.innerWidth < 900) document.querySelector('.app').classList.add('sb-hidden');
+    showWebScreenshotView(s);
     return;
   }
 
-  // ── 웹사이트: iframe 임베드 + 새 창 버튼 ──
+  // ── 웹사이트: iframe 임베드 + 새 창 버튼 (+ 차단 자동 감지) ──
   if (s.type === 'web') {
     hideAllViews();
     const gview = document.getElementById('gview');
@@ -1090,10 +1067,15 @@ function openSheet(id) {
     editLink.textContent = '↗ 새 창에서 열기';
     editLink.style.display = 'inline-block';
     renderTree(); updateTopbar();
-    setStatus('화면이 비어 보이면 해당 사이트가 임베드를 차단한 것 — ↗ 버튼 사용', false);
+    setStatus('', false);
     if (window.innerWidth < 900) document.querySelector('.app').classList.add('sb-hidden');
+    // 차단 자동 감지 → 스크린샷 뷰로 전환 (+도메인 학습)
+    watchIframeBlocked(frame, emb, () => {
+      if (currentId === s.id) showWebScreenshotView(s);
+    });
     return;
   }
+  // (임베드 차단 웹 뷰는 openSheet 아래 showWebScreenshotView 로 분리)
 
   // ── 블로그형 노트 ──
   if (s.type === 'note') {
@@ -1155,6 +1137,34 @@ function openSheet(id) {
   }
 }
 
+/* 임베드 차단 웹사이트 — 큰 스크린샷 + 새 창 버튼 */
+function showWebScreenshotView(s) {
+  hideAllViews();
+  const view = document.getElementById('rcardview');
+  view.style.display = 'block';
+  view.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'max-width:860px; margin:0 auto; text-align:center;';
+  const note = document.createElement('div');
+  note.style.cssText = 'font-size:13px; color:var(--text-dim); margin-bottom:12px;';
+  note.textContent = '이 사이트는 임베드를 차단해 스크린샷으로 표시합니다. 원문은 아래 버튼으로.';
+  wrap.appendChild(note);
+  const a = document.createElement('a');
+  a.href = s.wurl; a.target = '_blank'; a.rel = 'noopener';
+  a.className = 'rs-import-btn';
+  a.style.cssText = 'display:inline-block; text-decoration:none; margin-bottom:16px; padding:11px 26px;';
+  a.textContent = '↗ 새 창에서 원문 열기';
+  wrap.appendChild(a);
+  const img = document.createElement('img');
+  img.src = thumUrl(s.wurl, 1000);
+  img.style.cssText = 'max-width:100%; border:1px solid var(--border); border-radius:12px;';
+  wrap.appendChild(img);
+  view.appendChild(wrap);
+  renderTree(); updateTopbar();
+  setStatus('', false);
+  if (window.innerWidth < 900) document.querySelector('.app').classList.add('sb-hidden');
+}
+
 function defaultWorkbook() {
   return [{ name: 'Sheet1', index: 0, order: 0, status: 1, row: 84, column: 26, celldata: [] }];
 }
@@ -1201,14 +1211,41 @@ function thumUrl(url, w) {
 }
 
 /* 임베드를 차단하는 것으로 알려진 도메인 (X-Frame-Options 등) */
-const EMBED_BLOCKED_HOSTS = ['news.naver.com', 'n.news.naver.com', 'brunch.co.kr', 'www.youtube.com', 'youtube.com'];
+const EMBED_BLOCKED_HOSTS = ['news.naver.com', 'n.news.naver.com', 'brunch.co.kr', 'www.youtube.com', 'youtube.com', 'yakup.com'];
+/* 자동 감지로 학습한 차단 도메인 (기기별 캐시) */
+let _learnedBlocked = new Set();
+try { _learnedBlocked = new Set(JSON.parse(localStorage.getItem('sv_web_blocked_v1') || '[]')); } catch(_) {}
+function markHostBlocked(host) {
+  if (!host || _learnedBlocked.has(host)) return;
+  _learnedBlocked.add(host);
+  try { localStorage.setItem('sv_web_blocked_v1', JSON.stringify([..._learnedBlocked])); } catch(_) {}
+}
 function isEmbedBlocked(s) {
   try {
     const h = new URL(webEmbedOf(s)).hostname;
     // 유튜브 embed 주소는 허용 (변환된 경우)
     if (h.includes('youtube.com') && webEmbedOf(s).includes('/embed/')) return false;
+    if (_learnedBlocked.has(h)) return true;
     return EMBED_BLOCKED_HOSTS.some(b => h === b || h.endsWith('.' + b));
   } catch(_) { return false; }
+}
+
+/* 임베드 차단 자동 감지:
+   차단되면 iframe 이 초기 빈 문서(about:blank)에 머묾 → contentDocument 접근 가능.
+   정상 로드된 외부 페이지는 cross-origin 이라 접근 불가(null/throw). */
+function watchIframeBlocked(frame, url, onBlocked) {
+  let done = false;
+  const check = () => {
+    if (done) return; done = true;
+    let blank = false;
+    try { blank = !!frame.contentDocument; } catch(_) { blank = false; }
+    if (blank) {
+      try { markHostBlocked(new URL(url).hostname); } catch(_) {}
+      onBlocked();
+    }
+  };
+  frame.addEventListener('load', () => setTimeout(check, 400), { once: true });
+  setTimeout(check, 3500); // load 이벤트가 안 오는 경우 대비
 }
 
 /* 저장된 항목도 항상 최신 변환 규칙 적용 (기존 카드 자동 마이그레이션) */
@@ -2386,6 +2423,15 @@ function buildItemCard(s) {
       frame.style.transform = `scale(${scale})`;
     };
     requestAnimationFrame(applyScale);
+    // 차단 자동 감지 → 스크린샷으로 교체 (+도메인 학습 → 다음부턴 처음부터 스크린샷)
+    watchIframeBlocked(frame, webEmbedOf(s), () => {
+      frameWrap.innerHTML = '';
+      const shot = document.createElement('img');
+      shot.src = thumUrl(s.wurl, 600);
+      shot.loading = 'lazy';
+      shot.style.cssText = 'width:100%; height:100%; object-fit:cover; object-position:top;';
+      frameWrap.appendChild(shot);
+    });
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:absolute; inset:0;';
     overlay.addEventListener('click', () => openSheet(s.id));
