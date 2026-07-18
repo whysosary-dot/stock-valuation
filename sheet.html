@@ -2877,17 +2877,24 @@ function fvPerform(info) {
   else reorderItem(info.kind, movedId, info.ref, info.pos);
   openFolderView(fid); // 폴더 뷰 갱신
   // 옮겨진 카드로 화면 이동 + 잠깐 강조
-  requestAnimationFrame(() => {
-    const sel = movedKind === 'folder'
-      ? `#folderview .fv-card[data-fid="${movedId}"]`
-      : `#folderview .fv-card[data-sid="${movedId}"]`;
+  // (차트·이미지가 늦게 로드되며 레이아웃이 밀리므로 시간차로 여러 번 재보정)
+  const sel = movedKind === 'folder'
+    ? `#folderview .fv-card[data-fid="${movedId}"]`
+    : `#folderview .fv-card[data-sid="${movedId}"]`;
+  const scrollToMoved = (smooth) => {
     const el = document.querySelector(sel);
+    if (el) el.scrollIntoView({ block: 'center', behavior: smooth ? 'smooth' : 'auto' });
+    return el;
+  };
+  requestAnimationFrame(() => {
+    const el = scrollToMoved(true);
     if (el) {
-      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
       el.style.boxShadow = 'inset 0 0 0 2.5px var(--accent)';
-      setTimeout(() => { el.style.boxShadow = ''; }, 1600);
+      setTimeout(() => { el.style.boxShadow = ''; }, 2400);
     }
   });
+  setTimeout(() => scrollToMoved(false), 700);   // 콘텐츠 로드 후 재보정
+  setTimeout(() => scrollToMoved(false), 1600);  // 최종 보정
 }
 function fvEndTouchDrag() {
   _fvTouchDragging = false; _fvDrag = null;
