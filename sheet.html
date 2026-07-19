@@ -576,6 +576,7 @@ function itemIcon(s) {
   if (s.type === 'awake')  return '⭐';
   if (s.type === 'index')  return '📈';
   if (s.type === 'web')    return '🔗';
+  if (s.type === 'webdoc') return '📑';
   return '📄'; // 구글시트 포함 — 📄+ 버튼과 동일 아이콘
 }
 
@@ -1039,6 +1040,7 @@ function openSheet(id) {
     hideAllViews();
     const gview = document.getElementById('gview');
     const frame = document.getElementById('gview-frame');
+    frame.removeAttribute('srcdoc');
     const previewUrl = `https://docs.google.com/spreadsheets/d/${s.gid}/preview` + (s.ggid ? `?gid=${s.ggid}` : '');
     const editUrl    = `https://docs.google.com/spreadsheets/d/${s.gid}/edit`    + (s.ggid ? `#gid=${s.ggid}` : '');
     if (frame.src !== previewUrl) frame.src = previewUrl;
@@ -1049,6 +1051,27 @@ function openSheet(id) {
     editLink.style.display = 'inline-block';
     renderTree(); updateTopbar();
     setStatus('읽기 전용 미리보기 — 편집은 ✏️ 버튼', false);
+    if (window.innerWidth < 900) document.querySelector('.app').classList.add('sb-hidden');
+    return;
+  }
+
+  // ── 공시 스크랩 (독립 문서, srcdoc 렌더) ──
+  if (s.type === 'webdoc') {
+    hideAllViews();
+    const data = loadSheetData(id);
+    const frame = document.getElementById('gview-frame');
+    frame.removeAttribute('src');
+    frame.srcdoc = (data && data.html) ||
+      '<p style="font-family:sans-serif;color:#888;padding:24px;">내용이 아직 이 기기에 없습니다. 보관한 기기에서 ☁️ 커밋하면 동기화됩니다.</p>';
+    document.getElementById('gview').style.display = 'flex';
+    const editLink = document.getElementById('gedit-link');
+    if (s.wurl) {
+      editLink.href = s.wurl;
+      editLink.textContent = '↗ 원본 리포트';
+      editLink.style.display = 'inline-block';
+    }
+    renderTree(); updateTopbar();
+    setStatus('', false);
     if (window.innerWidth < 900) document.querySelector('.app').classList.add('sb-hidden');
     return;
   }
@@ -1064,6 +1087,7 @@ function openSheet(id) {
     hideAllViews();
     const gview = document.getElementById('gview');
     const frame = document.getElementById('gview-frame');
+    frame.removeAttribute('srcdoc');
     const emb = webEmbedOf(s);
     if (frame.src !== emb) frame.src = emb;
     gview.style.display = 'flex';
@@ -2403,6 +2427,36 @@ function buildItemCard(s) {
     card.appendChild(frameWrap);
     const sub = document.createElement('div'); sub.className = 'fv-sub';
     sub.textContent = '📄 구글 스프레드시트 — 누르면 전체 보기';
+    card.appendChild(sub);
+  }
+  else if (s.type === 'webdoc') {
+    const data = loadSheetData(s.id);
+    const frameWrap = document.createElement('div');
+    frameWrap.style.cssText = 'position:relative; height:220px; border:1px solid var(--border); border-radius:8px; overflow:hidden; cursor:pointer; background:#fff;';
+    if (data && data.html) {
+      const frame = document.createElement('iframe');
+      frame.srcdoc = data.html;
+      frame.loading = 'lazy';
+      frame.style.cssText = 'border:none; pointer-events:none; transform-origin:0 0;';
+      frameWrap.appendChild(frame);
+      requestAnimationFrame(() => {
+        const VIEW_W = 900;
+        const cw = frameWrap.clientWidth || 320;
+        const scale = cw / VIEW_W;
+        frame.style.width = VIEW_W + 'px';
+        frame.style.height = Math.ceil(220 / scale) + 'px';
+        frame.style.transform = `scale(${scale})`;
+      });
+    } else {
+      frameWrap.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-dim);font-size:13px;">📑 내용 동기화 대기 (보관 기기에서 커밋 필요)</div>';
+    }
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:absolute; inset:0;';
+    overlay.addEventListener('click', () => openSheet(s.id));
+    frameWrap.appendChild(overlay);
+    card.appendChild(frameWrap);
+    const sub = document.createElement('div'); sub.className = 'fv-sub';
+    sub.textContent = '📑 공시 스크랩';
     card.appendChild(sub);
   }
   else if (s.type === 'web' && isEmbedBlocked(s)) {
