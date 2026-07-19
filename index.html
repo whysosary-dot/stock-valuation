@@ -1106,7 +1106,7 @@ td input, td textarea{border-radius:8px}
 <div id="page-earning" class="page">
   <iframe
     id="earning-frame"
-    src="https://whysosary-dot.github.io/kospi-kosdaq-dashboard/?v=2"
+    src="https://whysosary-dot.github.io/kospi-kosdaq-dashboard/?v=3"
     style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
     loading="lazy"
     title="Earning Dashboard"
@@ -2209,7 +2209,7 @@ const IFRAME_TAB_SRC = {
   usmarket:  'https://whysosary-dot.github.io/us-market-briefing/',
   krmarket:  'https://whysosary-dot.github.io/kr-market-briefing/',
   awake:     'https://whysosary-dot.github.io/awake-disclosure/',
-  earning:   'https://whysosary-dot.github.io/kospi-kosdaq-dashboard/?v=2',
+  earning:   'https://whysosary-dot.github.io/kospi-kosdaq-dashboard/?v=3',
   interest:  'https://whysosary-dot.github.io/watchlist-briefing/',
   research:  'https://whysosary-dot.github.io/investment-notes/',
   // sheet 은 X-Frame-Options 로 iframe 차단되어 안내 페이지로 대체 (IFRAME_TAB_SRC 등록 X)
@@ -3578,6 +3578,29 @@ async function ghCommitAllRun(pat) {
         localStorage.setItem('sv_sheets_meta_v1', JSON.stringify(sheetsMeta));
       }
     } catch (e) { console.warn('[commit] sheets 커밋 스킵:', e); }
+
+    // ── 4. Earning 즐겨찾기·공부함 : kospi-kosdaq-dashboard repo (same-origin localStorage 공유) ──
+    try {
+      const eRepo = 'kospi-kosdaq-dashboard';
+      const ePut = async (path, arr) => {
+        const getRes = await fetch(`https://api.github.com/repos/${GH.OWNER}/${eRepo}/contents/${path}?ref=main`, {
+          headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'User-Agent': 'sv-browser' }
+        });
+        const sha = getRes.ok ? (await getRes.json()).sha : null;
+        const body = { message: `sync: Earning ${path} 업데이트 ${today}`, branch: 'main',
+          content: btoa(unescape(encodeURIComponent(JSON.stringify(arr)))) };
+        if (sha) body.sha = sha;
+        await fetch(`https://api.github.com/repos/${GH.OWNER}/${eRepo}/contents/${path}`, {
+          method: 'PUT',
+          headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+      };
+      const eFavs = JSON.parse(localStorage.getItem('dart_favs') || 'null');
+      const eStudied = JSON.parse(localStorage.getItem('dart_studied') || 'null');
+      if (Array.isArray(eFavs)) await ePut('favs.json', eFavs);
+      if (Array.isArray(eStudied)) await ePut('studied.json', eStudied);
+    } catch (e) { console.warn('[commit] earning favs 커밋 스킵:', e); }
 
     toast('✅ GitHub 커밋 완료!', 'ok', 3500);
   } catch (e) {
