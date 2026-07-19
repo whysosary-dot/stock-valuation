@@ -980,7 +980,7 @@ td input, td textarea{border-radius:8px}
   <button class="page-tab-btn" data-page="etfmonitor">📡 ETF Monitor</button>
   <button class="page-tab-btn" data-page="earning">💰 Earning</button>
   <button class="page-tab-btn" data-page="interest">👀 Interest</button>
-  <button class="page-tab-btn" data-page="fnguide">📑 FNguide</button>
+  <button class="page-tab-btn" id="npay-tab-btn" type="button" title="네이버페이 증권 새 창으로">🟢 Npay</button>
   <button class="page-tab-btn" data-page="research">🔬 Research</button>
   <button class="page-tab-btn" data-page="sheet">📁 Folder</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
@@ -1123,15 +1123,7 @@ td input, td textarea{border-radius:8px}
   ></iframe>
 </div><!-- /page-interest -->
 
-<div id="page-fnguide" class="page">
-  <iframe
-    id="fnguide-frame"
-    src="https://comp.fnguide.com/SVO2/ASP/SVD_Report_Summary.asp?pGB=1&gicode=A005930&cID=&MenuYn=Y&ReportGB=&NewMenuID=901&stkGb=701"
-    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
-    loading="lazy"
-    title="FNguide Report"
-  ></iframe>
-</div><!-- /page-fnguide -->
+<!-- Npay 탭은 새 창으로 열림 — 임베드 페이지 없음 -->
 
 <div id="page-research" class="page">
   <iframe
@@ -2219,7 +2211,6 @@ const IFRAME_TAB_SRC = {
   awake:     'https://whysosary-dot.github.io/awake-disclosure/',
   earning:   'https://whysosary-dot.github.io/kospi-kosdaq-dashboard/',
   interest:  'https://whysosary-dot.github.io/watchlist-briefing/',
-  fnguide:   'https://comp.fnguide.com/SVO2/ASP/SVD_Report_Summary.asp?pGB=1&gicode=A005930&cID=&MenuYn=Y&ReportGB=&NewMenuID=901&stkGb=701',
   research:  'https://whysosary-dot.github.io/investment-notes/',
   // sheet 은 X-Frame-Options 로 iframe 차단되어 안내 페이지로 대체 (IFRAME_TAB_SRC 등록 X)
 };
@@ -2249,6 +2240,10 @@ function activatePage(page, opts = {}) {
 // 탭 클릭
 document.querySelectorAll('.page-tab-btn').forEach(btn => {
   btn.addEventListener('click', () => activatePage(btn.dataset.page));
+});
+// Npay — 네이버페이 증권 새 창
+document.getElementById('npay-tab-btn')?.addEventListener('click', () => {
+  window.open('https://m.stock.naver.com', '_blank', 'noopener');
 });
 
 // 탭 접기/펼치기
