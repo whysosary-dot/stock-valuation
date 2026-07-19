@@ -1311,8 +1311,9 @@ function watchIframeBlocked(frame, url, onBlocked) {
     const h = new URL(url).hostname;
     if (EMBED_ALLOWED_HOSTS.some(b => h === b || h.endsWith('.' + b))) { done = true; return; }
   } catch(_) {}
-  // WebKit 은 차단 시 load 이벤트조차 안 줄 수 있음 → 8초 내 load 없으면 차단으로 간주
-  setTimeout(() => { if (!done && !loaded) fire(); else if (!done) docCheck(); }, 8000);
+  // WebKit 은 차단 시 load 이벤트조차 안 줄 수 있음 → 60초 내 load 없으면 차단으로 간주
+  // (오탐 최소화 우선 — 진짜 차단 사이트는 첫 1회만 늦게 전환되고 이후 학습으로 즉시 처리)
+  setTimeout(() => { if (!done && !loaded) fire(); else if (!done) docCheck(); }, 60000);
 }
 
 /* 저장된 항목도 항상 최신 변환 규칙 적용 (기존 카드 자동 마이그레이션) */
