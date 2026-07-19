@@ -1216,7 +1216,13 @@ function thumUrl(url, w) {
 }
 
 /* 임베드를 차단하는 것으로 알려진 도메인 (X-Frame-Options 등) */
-const EMBED_BLOCKED_HOSTS = ['news.naver.com', 'n.news.naver.com', 'brunch.co.kr', 'www.youtube.com', 'youtube.com', 'yakup.com'];
+const EMBED_BLOCKED_HOSTS = [
+  'news.naver.com', 'n.news.naver.com', 'brunch.co.kr', 'www.youtube.com', 'youtube.com', 'yakup.com',
+  // 주요 언론사 (X-Frame-Options 차단 확인/추정)
+  'zdnet.co.kr', 'chosun.com', 'joongang.co.kr', 'donga.com', 'hankyung.com', 'mk.co.kr',
+  'edaily.co.kr', 'yna.co.kr', 'sedaily.com', 'newspim.com', 'mt.co.kr', 'fnnews.com',
+  'hankookilbo.com', 'khan.co.kr', 'hani.co.kr', 'etnews.com', 'thebell.co.kr', 'dealsite.co.kr',
+];
 /* 자동 감지로 학습한 차단 도메인 (기기별 캐시) */
 let _learnedBlocked = new Set();
 try { _learnedBlocked = new Set(JSON.parse(localStorage.getItem('sv_web_blocked_v1') || '[]')); } catch(_) {}
@@ -1239,18 +1245,22 @@ function isEmbedBlocked(s) {
    차단되면 iframe 이 초기 빈 문서(about:blank)에 머묾 → contentDocument 접근 가능.
    정상 로드된 외부 페이지는 cross-origin 이라 접근 불가(null/throw). */
 function watchIframeBlocked(frame, url, onBlocked) {
-  let done = false;
-  const check = () => {
+  let done = false, loaded = false;
+  const fire = () => {
     if (done) return; done = true;
+    try { markHostBlocked(new URL(url).hostname); } catch(_) {}
+    onBlocked();
+  };
+  const docCheck = () => {
+    if (done) return;
     let blank = false;
     try { blank = !!frame.contentDocument; } catch(_) { blank = false; }
-    if (blank) {
-      try { markHostBlocked(new URL(url).hostname); } catch(_) {}
-      onBlocked();
-    }
+    if (blank) fire(); // 빈 문서에 머묾 = 차단
+    else done = true;  // cross-origin 문서 로드됨 = 성공
   };
-  frame.addEventListener('load', () => setTimeout(check, 400), { once: true });
-  setTimeout(check, 3500); // load 이벤트가 안 오는 경우 대비
+  frame.addEventListener('load', () => { loaded = true; setTimeout(docCheck, 400); }, { once: true });
+  // WebKit 은 차단 시 load 이벤트조차 안 줄 수 있음 → 5초 내 load 없으면 차단으로 간주
+  setTimeout(() => { if (!done && !loaded) fire(); else if (!done) docCheck(); }, 5000);
 }
 
 /* 저장된 항목도 항상 최신 변환 규칙 적용 (기존 카드 자동 마이그레이션) */
