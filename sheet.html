@@ -1184,6 +1184,19 @@ function showWebScreenshotView(s) {
   a.style.cssText = 'display:inline-block; text-decoration:none; margin-bottom:16px; padding:11px 26px;';
   a.textContent = '↗ 새 창에서 원문 열기';
   wrap.appendChild(a);
+  // 자동 감지 오탐일 수 있으니 임베드 재시도 버튼 제공
+  const retry = document.createElement('button');
+  retry.className = 'sb-btn';
+  retry.style.cssText = 'margin-left:8px; padding:11px 18px; font-size:13.5px;';
+  retry.textContent = '🖼 임베드로 시도';
+  retry.title = '이 사이트를 다시 임베드로 표시해봅니다 (성공하면 계속 임베드 사용)';
+  retry.addEventListener('click', () => {
+    unlearnHost(webEmbedOf(s));
+    s.wforce = true; s.dirty = true; saveMeta();
+    const id = s.id; currentId = null;
+    openSheet(id);
+  });
+  wrap.appendChild(retry);
   const img = document.createElement('img');
   img.src = thumUrl(s.wurl, 1000);
   img.style.cssText = 'max-width:100%; border:1px solid var(--border); border-radius:12px;';
@@ -1255,14 +1268,24 @@ function markHostBlocked(host) {
   _learnedBlocked.add(host);
   try { localStorage.setItem('sv_web_blocked_v1', JSON.stringify([..._learnedBlocked])); } catch(_) {}
 }
+/* 임베드 확실히 허용 (자동 감지 오탐 무시) */
+const EMBED_ALLOWED_HOSTS = ['m.stock.naver.com', 'stock.naver.com', 'm.blog.naver.com', 'blog.naver.com'];
 function isEmbedBlocked(s) {
   try {
+    if (s.wforce) return false; // 사용자가 임베드 강제 지정
     const h = new URL(webEmbedOf(s)).hostname;
+    if (EMBED_ALLOWED_HOSTS.some(b => h === b || h.endsWith('.' + b))) return false;
     // 유튜브 embed 주소는 허용 (변환된 경우)
     if (h.includes('youtube.com') && webEmbedOf(s).includes('/embed/')) return false;
     if (_learnedBlocked.has(h)) return true;
     return EMBED_BLOCKED_HOSTS.some(b => h === b || h.endsWith('.' + b));
   } catch(_) { return false; }
+}
+function unlearnHost(url) {
+  try {
+    const h = new URL(url).hostname;
+    if (_learnedBlocked.delete(h)) localStorage.setItem('sv_web_blocked_v1', JSON.stringify([..._learnedBlocked]));
+  } catch(_) {}
 }
 
 /* 임베드 차단 자동 감지:
@@ -1283,8 +1306,13 @@ function watchIframeBlocked(frame, url, onBlocked) {
     else done = true;  // cross-origin 문서 로드됨 = 성공
   };
   frame.addEventListener('load', () => { loaded = true; setTimeout(docCheck, 400); }, { once: true });
-  // WebKit 은 차단 시 load 이벤트조차 안 줄 수 있음 → 5초 내 load 없으면 차단으로 간주
-  setTimeout(() => { if (!done && !loaded) fire(); else if (!done) docCheck(); }, 5000);
+  // 허용 목록 호스트는 감지 자체를 건너뜀 (오탐 방지)
+  try {
+    const h = new URL(url).hostname;
+    if (EMBED_ALLOWED_HOSTS.some(b => h === b || h.endsWith('.' + b))) { done = true; return; }
+  } catch(_) {}
+  // WebKit 은 차단 시 load 이벤트조차 안 줄 수 있음 → 8초 내 load 없으면 차단으로 간주
+  setTimeout(() => { if (!done && !loaded) fire(); else if (!done) docCheck(); }, 8000);
 }
 
 /* 저장된 항목도 항상 최신 변환 규칙 적용 (기존 카드 자동 마이그레이션) */
