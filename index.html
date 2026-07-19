@@ -3561,11 +3561,12 @@ async function ghCommitAllRun(pat) {
         if (dirtySheets.length || (sheetsMeta._deleted||[]).length === 0) {
           const idxData = {
             folders: sheetsMeta.folders || [],
-            sheets: (sheetsMeta.sheets || []).map(({ id, name, folder, updated, ord, pinned, type, gid, ggid, rid, cid, adate, code, iid, wurl, wembed, wpc }) =>
+            sheets: (sheetsMeta.sheets || []).map(({ id, name, folder, updated, ord, pinned, type, gid, ggid, rid, cid, adate, code, iid, wurl, wembed, wpc, wforce }) =>
               ({ id, name, folder, updated,
                  ...(ord !== undefined ? { ord } : {}),
                  ...(pinned ? { pinned: true } : {}),
                  ...(wpc ? { wpc: true } : {}),
+                 ...(wforce ? { wforce: true } : {}),
                  ...(type ? { type, gid, ggid, rid, cid, adate, code, iid, wurl, wembed } : {}) })),
           };
           const idxFile = await ghApiGet(pat, 'sv/sheets/index.json');
