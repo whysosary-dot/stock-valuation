@@ -3486,20 +3486,24 @@ async function ghCommitAllRun(pat) {
   btn.disabled = true;
   btn.textContent = '커밋 중...';
 
+  const errs = [];  // 단계별 실패 수집 — 한 단계 실패해도 나머지는 계속 커밋
+  // 일시적 네트워크 오류(iOS Safari "Load failed" 등) 1회 재시도
+  const withRetry = async (fn) => { try { return await fn(); } catch (e) { await new Promise(r => setTimeout(r, 800)); return fn(); } };
   try {
     const today = new Date().toISOString().slice(0, 10);
 
+    try {
     // ── 1. stocks.json : raw URL(직접 JSON) + Trees API(SHA) 병렬 조회 ──
     // Contents API는 556KB 파일을 base64 래핑해 응답이 750KB+ → Safari iOS 파싱 실패
-    const treeRes = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/git/trees/${GH.BRANCH}?recursive=1`, {
+    const treeRes = await withRetry(() => fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/git/trees/${GH.BRANCH}?recursive=1`, {
       headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'User-Agent': 'sv-browser' }
-    });
+    }));
     if (!treeRes.ok) throw new Error(`GET tree: ${treeRes.status}`);
     const treeData  = await treeRes.json();
     const treeEntry = treeData.tree.find(e => e.path === GH.PATH);
     if (!treeEntry) throw new Error('stocks.json을 트리에서 찾을 수 없음');
     const stocksSha = treeEntry.sha;
-    const stocksData = await ghPrivateRaw(GH.PATH);
+    const stocksData = await withRetry(() => ghPrivateRaw(GH.PATH));
     // localStorage 대신 현재 메모리 state에서 직접 읽기 (즐겨찾기 등 미저장 변경 포함)
     const liveInputs = {};
     for (const s of state.stocks) {
@@ -3521,7 +3525,9 @@ async function ghCommitAllRun(pat) {
       `sync: 밸류에이션 입력값 업데이트 ${today}`);
     const newStocksSha = stocksPutRes && stocksPutRes.content && stocksPutRes.content.sha;
     if (newStocksSha) localStorage.setItem(STOCKS_GH_SHA_KEY, String(newStocksSha));
+    } catch (e) { errs.push('밸류에이션: ' + e.message); }
 
+    try {
     // ── 2. diary.json : localStorage 다이어리 전체 커밋 ──
     const diaryFile = await ghApiGet(pat, 'sv/diary.json');
     const diaryPutRes = await ghApiPut(pat, 'sv/diary.json', JSON.stringify(diary.data, null, 2),
@@ -3530,6 +3536,7 @@ async function ghCommitAllRun(pat) {
     // 새 blob SHA 저장 → 같은 기기에서 커밋 직후 새로고침해도 머지 스킵 (미커밋 변경 보존)
     const newDiarySha = diaryPutRes && diaryPutRes.content && diaryPutRes.content.sha;
     if (newDiarySha) localStorage.setItem(DIARY_GH_SHA_KEY, String(newDiarySha));
+    } catch (e) { errs.push('다이어리: ' + e.message); }
 
     // ── 3. sheets : 시트 탭 (sheet.html) 의 dirty 시트 커밋 (same-origin localStorage 공유) ──
     try {
@@ -3577,7 +3584,7 @@ async function ghCommitAllRun(pat) {
         }
         localStorage.setItem('sv_sheets_meta_v1', JSON.stringify(sheetsMeta));
       }
-    } catch (e) { console.warn('[commit] sheets 커밋 스킵:', e); }
+    } catch (e) { console.warn('[commit] sheets 커밋 스킵:', e); errs.push('폴더: ' + e.message); }
 
     // ── 4. Earning 즐겨찾기·공부함 : kospi-kosdaq-dashboard repo (same-origin localStorage 공유) ──
     try {
@@ -3590,19 +3597,26 @@ async function ghCommitAllRun(pat) {
         const body = { message: `sync: Earning ${path} 업데이트 ${today}`, branch: 'main',
           content: btoa(unescape(encodeURIComponent(JSON.stringify(arr)))) };
         if (sha) body.sha = sha;
-        await fetch(`https://api.github.com/repos/${GH.OWNER}/${eRepo}/contents/${path}`, {
+        const putRes = await fetch(`https://api.github.com/repos/${GH.OWNER}/${eRepo}/contents/${path}`, {
           method: 'PUT',
           headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
         });
+        if (!putRes.ok) throw new Error(`PUT ${path}: ${putRes.status}`);
       };
       const eFavs = JSON.parse(localStorage.getItem('dart_favs') || 'null');
       const eStudied = JSON.parse(localStorage.getItem('dart_studied') || 'null');
       if (Array.isArray(eFavs)) await ePut('favs.json', eFavs);
       if (Array.isArray(eStudied)) await ePut('studied.json', eStudied);
-    } catch (e) { console.warn('[commit] earning favs 커밋 스킵:', e); }
+    } catch (e) { console.warn('[commit] earning favs 커밋 스킵:', e); errs.push('Earning: ' + e.message); }
 
-    toast('✅ GitHub 커밋 완료!', 'ok', 3500);
+    if (!errs.length) {
+      toast('✅ GitHub 커밋 완료!', 'ok', 3500);
+    } else if (errs.some(m => m.includes('401') || m.includes('403'))) {
+      toast('❌ 토큰 오류 — ⚙️ 버튼에서 토큰을 확인하세요', 'err', 5000);
+    } else {
+      toast('⚠️ 일부 커밋 실패 — ' + errs.join(' / '), 'err', 6000);
+    }
   } catch (e) {
     if (e.message.includes('401') || e.message.includes('403')) {
       toast('❌ 토큰 오류 — ⚙️ 버튼에서 토큰을 확인하세요', 'err', 5000);
