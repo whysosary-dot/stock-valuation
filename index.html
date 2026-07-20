@@ -3611,7 +3611,7 @@ async function ghCommitAllRun(pat) {
     } catch (e) { console.warn('[commit] earning favs 커밋 스킵:', e); errs.push('Earning: ' + e.message); }
 
     if (!errs.length) {
-      toast('✅ GitHub 커밋 완료!', 'ok', 3500);
+      toast('✅ GitHub 커밋 완료! (밸류·일기·폴더·Earning)', 'ok', 3500);
     } else if (errs.some(m => m.includes('401') || m.includes('403'))) {
       toast('❌ 토큰 오류 — ⚙️ 버튼에서 토큰을 확인하세요', 'err', 5000);
     } else {
