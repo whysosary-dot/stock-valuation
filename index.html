@@ -607,7 +607,7 @@
   .pf-body { display: flex; gap: 18px; padding: 14px 16px; align-items: center; flex-wrap: wrap; }
   .pf-chart { flex: 0 0 170px; }
   .pf-rows { flex: 1; min-width: 230px; }
-  .pf-row { display: flex; align-items: center; gap: 8px; padding: 3.5px 0; }
+  .pf-row { display: flex; align-items: center; gap: 8px; padding: 6px 0 4px; }
   .pf-dot { flex: 0 0 10px; width: 10px; height: 10px; border-radius: 50%; }
   .pf-nm { flex: 1; font-size: 13.5px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pf-amt {
@@ -620,9 +620,10 @@
   .pf-px { font-size: 11.5px; color: var(--text-dim); white-space: nowrap; }
   .pf-amt-view { width: 100px; text-align: right; font-size: 13.5px; font-weight: 600; color: var(--text); white-space: nowrap; }
   .pf-info {
-    display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
-    margin: 0 0 6px 18px; font-size: 11.5px; color: var(--text-dim);
+    display: flex; align-items: center; gap: 0; flex-wrap: wrap;
+    margin: 2px 0 12px 18px; font-size: 11.5px; color: var(--text-dim);
   }
+  .pf-info > span { flex: 0 0 auto; white-space: nowrap; }
   .pf-info svg { flex: 0 0 auto; }
   .pf-info .up { color: #dc2626; font-weight: 700; }
   .pf-info .dn { color: #2563eb; font-weight: 700; }
@@ -3622,23 +3623,25 @@ function makePortfolioCard(activeItems) {
         const pl = hArr.map((v, j) => `${(j / (hArr.length - 1) * 68 + 1).toFixed(1)},${(19 - (v - mn) / sp * 16).toFixed(1)}`).join(' ');
         sparkSvg = `<svg width="70" height="21" viewBox="0 0 70 21"><polyline fill="none" stroke="${up ? '#dc2626' : '#2563eb'}" stroke-width="1.4" points="${pl}"/></svg>`;
       }
-      const parts = [];
-      if (sparkSvg) parts.push(sparkSvg);
+      // 고정폭 컬럼 — 행끼리 카테고리 세로 정렬
+      const dash = '<span style="opacity:.4;">–</span>';
+      const pv = v => (v == null || isNaN(v)) ? dash : `<span class="${v >= 0 ? 'up' : 'dn'}">${v >= 0 ? '+' : ''}${v.toFixed(1)}%</span>`;
+      const cell = (w, html) => `<span style="width:${w}px;">${html}</span>`;
       const mc = Number(stk.market_cap_oku);
-      if (mc) parts.push(`시총 <b>${Math.round(mc).toLocaleString('ko-KR')}억</b>`);
-      const chg = Number(stk.price_change_pct);
-      if (!isNaN(chg) && stk.price_change_pct != null) parts.push('등락 ' + pcts(chg));
+      const chg = (stk.price_change_pct == null) ? null : Number(stk.price_change_pct);
+      let u = null, dnV = null;
       try {
-        const u = (typeof upside === 'function') ? upside(stk) : null;
-        const dn = (typeof downside === 'function') ? downside(stk) : null;
-        if (u != null) parts.push('상방 ' + pcts(u));
-        if (dn != null) parts.push('하방 ' + pcts(dn));
+        u = (typeof upside === 'function') ? upside(stk) : null;
+        dnV = (typeof downside === 'function') ? downside(stk) : null;
       } catch (_) {}
-      if (parts.length) {
-        infoDiv = document.createElement('div');
-        infoDiv.className = 'pf-info';
-        infoDiv.innerHTML = parts.join('<span style="opacity:.4;">·</span>');
-      }
+      infoDiv = document.createElement('div');
+      infoDiv.className = 'pf-info';
+      infoDiv.innerHTML =
+        cell(84, sparkSvg || '') +
+        cell(118, '시총 ' + (mc ? `<b>${Math.round(mc).toLocaleString('ko-KR')}억</b>` : dash)) +
+        cell(96, '등락 ' + pv(chg)) +
+        cell(96, '상방 ' + pv(u)) +
+        cell(96, '하방 ' + pv(dnV));
     }
     if (stk && Number(stk.price_native) > 0) {
       // 주가 자동 연동: 수량 입력 → 현재가 × 수량
