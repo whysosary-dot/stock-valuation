@@ -580,7 +580,9 @@
     cursor: pointer; user-select: none; padding: 6px 2px;
   }
   .sc-arch-head:hover { color: var(--text); }
-  .sc-card.archived { opacity: .65; }
+  /* 보관 카드: 내용만 흐리게 — 복원 등 버튼은 선명하게 유지 */
+  .sc-card.archived .sc-body, .sc-card.archived .sc-name, .sc-card.archived .sc-upd { opacity: .55; }
+  .sc-card.archived .sc-btn { opacity: 1; color: #6d28d9; font-weight: 700; }
 
   /* ── 포트 비중 카드 (시나리오 상단 고정) ── */
   .pf-card { border-color: #ddd6fe !important; margin-bottom: 16px; }
