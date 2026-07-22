@@ -562,6 +562,12 @@
     color: var(--text-dim); padding: 3px 6px; border-radius: 8px; opacity: .6;
   }
   .sc-btn:hover { opacity: 1; background: var(--panel-2); color: var(--text); }
+  .sc-held {
+    font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--text-dim); background: none;
+    cursor: pointer; white-space: nowrap;
+  }
+  .sc-held.on { background: #d1fae5; color: #047857; border-color: #6ee7b7; }
   .sc-hist { margin-top: 12px; border-top: 1px dashed #ddd6fe; padding-top: 4px; display: none; }
   .sc-hist.show { display: block; }
   .sc-hist-item {
@@ -3341,6 +3347,16 @@ function makeScenarioCard(item) {
     header.appendChild(histBtn);
   }
 
+  const heldBtn = document.createElement('button');
+  heldBtn.className = 'sc-held' + (item.held ? ' on' : '');
+  heldBtn.textContent = item.held ? '✓ 보유중' : '보유';
+  heldBtn.title = '보유중으로 표시하면 상단 포트 비중 카드에 나타나요';
+  heldBtn.addEventListener('click', () => {
+    item.held = !item.held;
+    saveDiaryData(diary.data); renderFeedScenario();
+  });
+  header.appendChild(heldBtn);
+
   const archBtn = document.createElement('button'); archBtn.className = 'sc-btn';
   archBtn.title = item.archived ? '복원' : '보관 (목록에서 숨기고 보관됨으로 이동)';
   archBtn.textContent = item.archived ? '↩ 복원' : '📦';
@@ -3424,7 +3440,7 @@ function makePortfolioCard(activeItems) {
   if (!activeItems.length) {
     chartWrap.remove();
     const e = document.createElement('div'); e.className = 'pf-empty';
-    e.textContent = '아래에서 종목 시나리오를 추가하면 여기서 금액을 입력할 수 있어요.';
+    e.textContent = '종목 카드에서 [보유] 버튼을 켜면 여기에 나타나 금액을 입력할 수 있어요.';
     rows.appendChild(e);
     return card;
   }
@@ -3493,8 +3509,8 @@ function renderFeedScenario() {
   const active = list.filter(s => s && !s.archived);
   const archived = list.filter(s => s && s.archived);
 
-  // 포트 비중 카드 — 항상 최상단 고정
-  feed.appendChild(makePortfolioCard(active));
+  // 포트 비중 카드 — 항상 최상단 고정 (보유중으로 표시한 종목만)
+  feed.appendChild(makePortfolioCard(active.filter(s => s.held)));
 
   const newBtn = document.createElement('button');
   newBtn.className = 'diary-new-card-btn'; newBtn.textContent = '+ 종목 시나리오 추가';
