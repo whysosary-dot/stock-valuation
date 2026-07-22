@@ -581,6 +581,12 @@
     cursor: pointer; user-select: none; padding: 6px 2px;
   }
   .sc-arch-head:hover { color: var(--text); }
+  .sc-search {
+    width: 100%; box-sizing: border-box; margin: 0 0 12px; padding: 9px 14px;
+    border: 1px solid var(--border); border-radius: 12px; font-size: 14px;
+    background: var(--panel); color: var(--text); outline: none;
+  }
+  .sc-search:focus { border-color: #a78bfa; box-shadow: 0 0 0 3px #ede9fe; }
   /* 보관 카드: 내용만 흐리게 — 복원 등 버튼은 선명하게 유지 */
   .sc-card.archived .sc-body, .sc-card.archived .sc-name, .sc-card.archived .sc-upd { opacity: .55; }
   .sc-card.archived .sc-btn { opacity: 1; color: #6d28d9; font-weight: 700; }
@@ -3794,7 +3800,25 @@ function renderFeedScenario() {
     return;
   }
 
-  active.forEach(item => feed.appendChild(makeScenarioCard(item)));
+  // 종목 검색 (종목명·내용) — 컨테이너 안의 카드만 필터
+  const mkSearch = (placeholder, container) => {
+    const inp = document.createElement('input');
+    inp.type = 'search'; inp.className = 'sc-search'; inp.placeholder = placeholder;
+    inp.autocomplete = 'off';
+    inp.addEventListener('input', () => {
+      const q = inp.value.trim().toLowerCase();
+      container.querySelectorAll('.sc-card').forEach(c => {
+        const txt = (c.innerText || '').toLowerCase();
+        c.style.display = !q || txt.includes(q) ? '' : 'none';
+      });
+    });
+    return inp;
+  };
+
+  const activeWrap = document.createElement('div');
+  if (active.length > 1) feed.appendChild(mkSearch('🔍 종목 검색...', activeWrap));
+  active.forEach(item => activeWrap.appendChild(makeScenarioCard(item)));
+  feed.appendChild(activeWrap);
 
   if (archived.length) {
     const head = document.createElement('div'); head.className = 'sc-arch-head';
@@ -3803,6 +3827,7 @@ function renderFeedScenario() {
     const label = () => `📦 보관됨 ${archived.length}개 ${open ? '접기 ▴' : '보기 ▾'}`;
     head.textContent = label();
     head.addEventListener('click', () => { open = !open; wrap.style.display = open ? 'block' : 'none'; head.textContent = label(); });
+    if (archived.length > 1) wrap.appendChild(mkSearch('🔍 보관함 검색...', wrap));
     archived.forEach(item => wrap.appendChild(makeScenarioCard(item)));
     feed.appendChild(head);
     feed.appendChild(wrap);
