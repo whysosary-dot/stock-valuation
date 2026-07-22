@@ -619,6 +619,13 @@
   .pf-qty { width: 68px !important; }
   .pf-px { font-size: 11.5px; color: var(--text-dim); white-space: nowrap; }
   .pf-amt-view { width: 100px; text-align: right; font-size: 13.5px; font-weight: 600; color: var(--text); white-space: nowrap; }
+  .pf-info {
+    display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+    margin: 0 0 6px 18px; font-size: 11.5px; color: var(--text-dim);
+  }
+  .pf-info svg { flex: 0 0 auto; }
+  .pf-info .up { color: #dc2626; font-weight: 700; }
+  .pf-info .dn { color: #2563eb; font-weight: 700; }
   .pf-total { font-size: 12.5px; color: var(--text-dim); font-weight: 600; margin-left: auto; }
   .pf-empty { font-size: 13px; color: var(--text-dim); padding: 4px 0; }
   .pf-memo {
@@ -3603,6 +3610,36 @@ function makePortfolioCard(activeItems) {
     };
 
     const stk = scFindStock(it.name);
+    let infoDiv = null;
+    if (stk) {
+      // Stock Valuation 데이터 스트립: 스파크라인 · 시총 · 등락률 · 상방/하방
+      const pcts = (v, suffix) => v == null ? '' : `<span class="${v >= 0 ? 'up' : 'dn'}">${v >= 0 ? '+' : ''}${v.toFixed(1)}%</span>${suffix ? ' ' + suffix : ''}`;
+      const hArr = (stk.price_history || []).map(Number).filter(v => v > 0).slice(-40);
+      let sparkSvg = '';
+      if (hArr.length > 1) {
+        const mn = Math.min(...hArr), mx = Math.max(...hArr), sp = (mx - mn) || 1;
+        const up = hArr[hArr.length - 1] >= hArr[0];
+        const pl = hArr.map((v, j) => `${(j / (hArr.length - 1) * 68 + 1).toFixed(1)},${(19 - (v - mn) / sp * 16).toFixed(1)}`).join(' ');
+        sparkSvg = `<svg width="70" height="21" viewBox="0 0 70 21"><polyline fill="none" stroke="${up ? '#dc2626' : '#2563eb'}" stroke-width="1.4" points="${pl}"/></svg>`;
+      }
+      const parts = [];
+      if (sparkSvg) parts.push(sparkSvg);
+      const mc = Number(stk.market_cap_oku);
+      if (mc) parts.push(`시총 <b>${Math.round(mc).toLocaleString('ko-KR')}억</b>`);
+      const chg = Number(stk.price_change_pct);
+      if (!isNaN(chg) && stk.price_change_pct != null) parts.push('등락 ' + pcts(chg));
+      try {
+        const u = (typeof upside === 'function') ? upside(stk) : null;
+        const dn = (typeof downside === 'function') ? downside(stk) : null;
+        if (u != null) parts.push('상방 ' + pcts(u));
+        if (dn != null) parts.push('하방 ' + pcts(dn));
+      } catch (_) {}
+      if (parts.length) {
+        infoDiv = document.createElement('div');
+        infoDiv.className = 'pf-info';
+        infoDiv.innerHTML = parts.join('<span style="opacity:.4;">·</span>');
+      }
+    }
     if (stk && Number(stk.price_native) > 0) {
       // 주가 자동 연동: 수량 입력 → 현재가 × 수량
       const px = Number(stk.price_native);
@@ -3643,6 +3680,7 @@ function makePortfolioCard(activeItems) {
     }
     row.appendChild(pct);
     rows.appendChild(row);
+    if (infoDiv) rows.appendChild(infoDiv);
   });
 
   updatePie();
