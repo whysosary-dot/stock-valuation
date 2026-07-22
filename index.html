@@ -587,6 +587,12 @@
     background: var(--panel); color: var(--text); outline: none;
   }
   .sc-search:focus { border-color: #a78bfa; box-shadow: 0 0 0 3px #ede9fe; }
+  .sc-filter-bar { display: flex; gap: 6px; margin: 0 0 12px; }
+  .sc-fbtn {
+    font-size: 12.5px; font-weight: 700; padding: 5px 13px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--panel); color: var(--text-dim); cursor: pointer;
+  }
+  .sc-fbtn.on { background: #ede9fe; color: #6d28d9; border-color: #c4b5fd; }
   /* 보관 카드: 내용만 흐리게 — 복원 등 버튼은 선명하게 유지 */
   .sc-card.archived .sc-body, .sc-card.archived .sc-name, .sc-card.archived .sc-upd { opacity: .55; }
   .sc-card.archived .sc-btn { opacity: 1; color: #6d28d9; font-weight: 700; }
@@ -3829,9 +3835,30 @@ function renderFeedScenario() {
     return inp;
   };
 
+  // 보유중/미보유 필터
+  const scFilt = localStorage.getItem('sv_sc_filter') || 'all';
+  if (active.length) {
+    const bar = document.createElement('div'); bar.className = 'sc-filter-bar';
+    const heldN = active.filter(s => s.held).length;
+    [['all', `전체 ${active.length}`], ['held', `✓ 보유중 ${heldN}`], ['unheld', `미보유 ${active.length - heldN}`]].forEach(([key, lab]) => {
+      const b = document.createElement('button');
+      b.className = 'sc-fbtn' + (scFilt === key ? ' on' : '');
+      b.textContent = lab;
+      b.addEventListener('click', () => { localStorage.setItem('sv_sc_filter', key); renderFeedScenario(); });
+      bar.appendChild(b);
+    });
+    feed.appendChild(bar);
+  }
+  const shown = active.filter(s => scFilt === 'held' ? s.held : scFilt === 'unheld' ? !s.held : true);
+
   const activeWrap = document.createElement('div');
   if (active.length) feed.appendChild(mkSearch('🔍 종목 검색...', activeWrap));
-  active.forEach(item => activeWrap.appendChild(makeScenarioCard(item)));
+  shown.forEach(item => activeWrap.appendChild(makeScenarioCard(item)));
+  if (active.length && !shown.length) {
+    const e = document.createElement('div'); e.className = 'pf-empty';
+    e.textContent = scFilt === 'held' ? '보유중으로 표시한 종목이 없어요.' : '미보유 종목이 없어요.';
+    activeWrap.appendChild(e);
+  }
   feed.appendChild(activeWrap);
 
   if (archived.length) {
