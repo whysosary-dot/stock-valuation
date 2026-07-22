@@ -583,6 +583,11 @@
   /* 보관 카드: 내용만 흐리게 — 복원 등 버튼은 선명하게 유지 */
   .sc-card.archived .sc-body, .sc-card.archived .sc-name, .sc-card.archived .sc-upd { opacity: .55; }
   .sc-card.archived .sc-btn { opacity: 1; color: #6d28d9; font-weight: 700; }
+  .sc-card.archived .dcard-del { opacity: 1; }
+  .pf-hist { width: 100%; border-top: 1px dashed #ddd6fe; margin-top: 8px; padding-top: 4px; display: none; }
+  .pf-hist.show { display: block; }
+  .pf-hist-del { border: none; background: none; cursor: pointer; color: var(--text-dim); font-size: 13px; float: right; padding: 0 2px; }
+  .pf-hist-del:hover { color: var(--red); }
 
   /* ── 포트 비중 카드 (시나리오 상단 고정) ── */
   .pf-card { border-color: #ddd6fe !important; margin-bottom: 16px; }
@@ -3431,12 +3436,61 @@ function makePortfolioCard(activeItems) {
   header.appendChild(title);
   const total = document.createElement('span'); total.className = 'pf-total';
   header.appendChild(total);
+
+  // 비중 스냅샷 보관 — 오늘 비중을 날짜별로 저장해두고 나중에 비교
+  const pfHist = () => { if (!Array.isArray(diary.data.pfHist)) diary.data.pfHist = []; return diary.data.pfHist; };
+  const histBox = document.createElement('div'); histBox.className = 'pf-hist';
+  if (pfHist().length) {
+    const histBtn = document.createElement('button'); histBtn.className = 'sc-btn';
+    histBtn.title = '보관된 비중 기록 보기'; histBtn.textContent = `🕘 ${pfHist().length}`;
+    histBtn.addEventListener('click', () => histBox.classList.toggle('show'));
+    header.appendChild(histBtn);
+  }
+  const snapBtn = document.createElement('button'); snapBtn.className = 'sc-btn';
+  snapBtn.title = '현재 비중을 날짜 스냅샷으로 보관'; snapBtn.textContent = '📦';
+  snapBtn.addEventListener('click', () => {
+    const items = activeItems.map(it => ({ name: it.name || '(이름 없음)', amt: Number(it.amt) || 0 })).filter(x => x.amt > 0);
+    if (!items.length) { toast('금액이 입력된 보유 종목이 없어요', 'err', 2500); return; }
+    const today = todayDateStr();
+    const h = pfHist().filter(x => x.d !== today); // 같은 날은 최신으로 교체
+    h.unshift({ d: today, items });
+    if (h.length > 30) h.length = 30;
+    diary.data.pfHist = h;
+    saveDiaryData(diary.data);
+    toast('📦 오늘 비중을 보관했어요', 'ok', 2500);
+    renderFeedScenario();
+  });
+  header.appendChild(snapBtn);
   card.appendChild(header);
 
   const body = document.createElement('div'); body.className = 'pf-body';
   const chartWrap = document.createElement('div'); chartWrap.className = 'pf-chart';
   const rows = document.createElement('div'); rows.className = 'pf-rows';
   body.appendChild(chartWrap); body.appendChild(rows);
+
+  // 보관된 비중 기록 목록
+  pfHist().forEach(h => {
+    const sum = h.items.reduce((a, b) => a + b.amt, 0);
+    const div = document.createElement('div'); div.className = 'sc-hist-item';
+    const del = document.createElement('button'); del.className = 'pf-hist-del'; del.title = '이 기록 삭제'; del.textContent = '×';
+    del.addEventListener('click', () => {
+      svConfirm(`${h.d} 비중 기록을 삭제할까요?`, () => {
+        diary.data.pfHist = pfHist().filter(x => x !== h);
+        saveDiaryData(diary.data); renderFeedScenario();
+      });
+    });
+    div.appendChild(del);
+    const title = document.createElement('div');
+    const b = document.createElement('b'); b.textContent = h.d;
+    title.appendChild(b);
+    title.appendChild(document.createTextNode(' · 합계 ' + fmtWon(sum) + '원'));
+    div.appendChild(title);
+    const line = document.createElement('div');
+    line.textContent = h.items.map(x => `${x.name} ${sum ? (x.amt / sum * 100).toFixed(1) : 0}%`).join(' · ');
+    div.appendChild(line);
+    histBox.appendChild(div);
+  });
+  body.appendChild(histBox);
   card.appendChild(body);
 
   if (!activeItems.length) {
@@ -3556,6 +3610,7 @@ function initDiary() {
   document.querySelectorAll('.dtab').forEach(btn => {
     btn.addEventListener('click', () => {
       diary.activeTab = btn.dataset.tab;
+      try { localStorage.setItem('sv_diary_tab', diary.activeTab); } catch(_) {}
       document.querySelectorAll('.dtab').forEach(b => b.classList.toggle('active', b === btn));
       document.querySelectorAll('.diary-feed').forEach(f => f.classList.toggle('active', f.id === `feed-${diary.activeTab}`));
       // 강조·시나리오 탭은 들어올 때마다 최신 상태로 새로 그림
@@ -3570,6 +3625,15 @@ function initDiary() {
       });
     });
   });
+
+  // 새로고침해도 마지막 하위 탭 유지
+  try {
+    const savedTab = localStorage.getItem('sv_diary_tab');
+    if (savedTab && savedTab !== 'daily') {
+      const b = document.querySelector(`.dtab[data-tab="${savedTab}"]`);
+      if (b) b.click();
+    }
+  } catch(_) {}
 
   /* ── 검색 기능 ── */
 
