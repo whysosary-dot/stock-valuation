@@ -781,6 +781,7 @@
   .highlight-tag.daily   { background: #e0f0ff; color: #1e6fb8; }
   .highlight-tag.weekly  { background: #e8f4e0; color: #4d8c2c; }
   .highlight-tag.trades  { background: #fff0e0; color: #b86b1e; }
+  .highlight-tag.scenario { background: #ede9fe; color: #6d28d9; }
   .highlight-body {
     font-size: 15px; line-height: 1.7; color: var(--text);
     white-space: pre-wrap; word-break: break-word;
@@ -2849,6 +2850,8 @@ function updateTabCounts() {
   const countIn = (html) => { hi += _extractHighlights(html).length; };
   Object.values(d.daily  || {}).forEach(countIn);
   Object.values(d.weekly || {}).forEach(countIn);
+  (d.scenario || []).forEach(it => { if (it) [it.buy, it.hold, it.sell, it.cmt].forEach(countIn); });
+  countIn(d.pfMemo || '');
   const elHi = document.getElementById('cnt-highlights');
   if (elHi) elHi.textContent = hi;
   const elSc = document.getElementById('cnt-scenario');
@@ -3246,6 +3249,17 @@ function renderFeedHighlights() {
     _extractHighlights(v).forEach(snippet => {
       items.push({ date: k, sortKey: _diaryDateSortKey(k), sectionKey: 'weekly', sectionLabel: '주간', extraTag: '', htmlSnippet: snippet });
     });
+  });
+  (diary.data.scenario || []).forEach(it => {
+    if (!it) return;
+    [['매수', it.buy], ['보유', it.hold], ['매도', it.sell], ['코멘트', it.cmt]].forEach(([lab, v]) => {
+      _extractHighlights(v).forEach(snippet => {
+        items.push({ date: it.updated || '', sortKey: _diaryDateSortKey(it.updated || ''), sectionKey: 'scenario', sectionLabel: '시나리오', extraTag: `${it.name || ''} ${lab}`.trim(), htmlSnippet: snippet });
+      });
+    });
+  });
+  _extractHighlights(diary.data.pfMemo || '').forEach(snippet => {
+    items.push({ date: '', sortKey: '9999-99-99', sectionKey: 'scenario', sectionLabel: '시나리오', extraTag: '포트 메모', htmlSnippet: snippet });
   });
 
   // 최신순
