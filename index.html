@@ -444,6 +444,8 @@
   .dtab[data-tab="trades"].active { background: var(--tab-trades-bg); color: var(--tab-trades-color); border-color: var(--tab-trades-border); box-shadow: 0 1px 4px rgba(217,119,6,.12); }
   /* 강조 탭 활성 */
   .dtab[data-tab="highlights"].active { background: #fde7e7; color: #e23a3a; border-color: #f5b5b5; box-shadow: 0 1px 4px rgba(226,58,58,.12); }
+  .dtab[data-tab="scenario"].active { background: #ede9fe; color: #7c3aed; border-color: #c4b5fd; box-shadow: 0 1px 4px rgba(124,58,237,.12); }
+  .dtab[data-tab="scenario"].active .dtab-cnt { background: #ddd6fe; }
 
   /* ── 모바일 반응형 (max-width: 700px) ──
      iOS Safari 에서 flex + overflow-x:auto 가 가끔 작동하지 않는다.
@@ -527,6 +529,69 @@
     transition: opacity .15s, color .15s;
   }
   .dcard-del:hover { opacity: 1; color: var(--red); }
+
+  /* ── 매매 시나리오 카드 ── */
+  #feed-scenario .dcard { border-color: #ddd6fe; }
+  #feed-scenario .dcard-header { background: #f7f5ff; border-bottom-color: #ddd6fe; }
+  .sc-name {
+    font-size: 16px; font-weight: 700; color: #6d28d9; outline: none;
+    min-width: 90px; padding: 2px 6px; border-radius: 8px; flex: 1;
+  }
+  .sc-name:focus { background: #fff; box-shadow: 0 0 0 2px #c4b5fd; }
+  .sc-name:empty::before { content: attr(data-placeholder); color: var(--text-dim); font-weight: 500; }
+  .sc-upd { font-size: 12px; color: var(--text-dim); font-weight: 500; white-space: nowrap; }
+  .sc-body { padding: 12px 16px 16px; }
+  .sc-row { display: flex; gap: 10px; margin-top: 10px; align-items: flex-start; }
+  .sc-row:first-child { margin-top: 0; }
+  .sc-tag {
+    flex: 0 0 46px; text-align: center; font-size: 12.5px; font-weight: 700;
+    border-radius: 8px; padding: 6px 0; margin-top: 3px;
+  }
+  .sc-tag.buy  { background: #fde7e7; color: #dc2626; }
+  .sc-tag.hold { background: #fef3c7; color: #b45309; }
+  .sc-tag.sell { background: #dbeafe; color: #2563eb; }
+  .sc-edit {
+    flex: 1; min-height: 36px; min-width: 0; border: 1px solid var(--border); border-radius: 10px;
+    padding: 8px 11px; font-size: 14.5px; line-height: 1.6; background: var(--panel);
+    outline: none; color: var(--text); overflow-wrap: break-word;
+  }
+  .sc-edit:focus { border-color: #a78bfa; box-shadow: 0 0 0 3px #ede9fe; }
+  .sc-edit:empty::before { content: attr(data-placeholder); color: var(--text-dim); }
+  .sc-btn {
+    border: none; background: none; cursor: pointer; font-size: 14px;
+    color: var(--text-dim); padding: 3px 6px; border-radius: 8px; opacity: .6;
+  }
+  .sc-btn:hover { opacity: 1; background: var(--panel-2); color: var(--text); }
+  .sc-hist { margin-top: 12px; border-top: 1px dashed #ddd6fe; padding-top: 4px; display: none; }
+  .sc-hist.show { display: block; }
+  .sc-hist-item {
+    font-size: 12.5px; color: var(--text-dim); background: var(--panel-2);
+    border-radius: 10px; padding: 8px 11px; margin-top: 7px; line-height: 1.6;
+  }
+  .sc-hist-item b { color: #6d28d9; }
+  .sc-arch-head {
+    margin-top: 22px; font-size: 13.5px; font-weight: 700; color: var(--text-dim);
+    cursor: pointer; user-select: none; padding: 6px 2px;
+  }
+  .sc-arch-head:hover { color: var(--text); }
+  .sc-card.archived { opacity: .65; }
+
+  /* ── 포트 비중 카드 (시나리오 상단 고정) ── */
+  .pf-card { border-color: #ddd6fe !important; margin-bottom: 16px; }
+  .pf-body { display: flex; gap: 18px; padding: 14px 16px; align-items: center; flex-wrap: wrap; }
+  .pf-chart { flex: 0 0 170px; }
+  .pf-rows { flex: 1; min-width: 230px; }
+  .pf-row { display: flex; align-items: center; gap: 8px; padding: 3.5px 0; }
+  .pf-dot { flex: 0 0 10px; width: 10px; height: 10px; border-radius: 50%; }
+  .pf-nm { flex: 1; font-size: 13.5px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pf-amt {
+    width: 110px; text-align: right; font-size: 13.5px; padding: 4px 8px;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text);
+  }
+  .pf-amt:focus { outline: none; border-color: #a78bfa; box-shadow: 0 0 0 2px #ede9fe; }
+  .pf-pct { flex: 0 0 48px; text-align: right; font-size: 13px; font-weight: 700; color: #6d28d9; }
+  .pf-total { font-size: 12.5px; color: var(--text-dim); font-weight: 600; margin-left: auto; }
+  .pf-empty { font-size: 13px; color: var(--text-dim); padding: 4px 0; }
   /* 일기·주간 textarea + contenteditable div 공용 */
   textarea.dcard-ta,
   .dcard-edit {
@@ -1160,6 +1225,7 @@ td input, td textarea{border-radius:8px}
   <div class="diary-topbar">
     <div class="diary-tabs">
       <button class="dtab active" data-tab="daily">📔 일기<span class="dtab-cnt" id="cnt-daily">0</span></button>
+      <button class="dtab" data-tab="scenario">🎯 시나리오<span class="dtab-cnt" id="cnt-scenario">0</span></button>
       <button class="dtab" data-tab="weekly">📅 주간 전략<span class="dtab-cnt" id="cnt-weekly">0</span></button>
       <button class="dtab" data-tab="trades">📊 매매일지<span class="dtab-cnt" id="cnt-trades">0</span></button>
       <button class="dtab" data-tab="highlights">🔴 강조<span class="dtab-cnt" id="cnt-highlights">0</span></button>
@@ -1171,6 +1237,7 @@ td input, td textarea{border-radius:8px}
   </div>
   <div class="diary-feed-wrap">
     <div id="feed-daily"  class="diary-feed active"></div>
+    <div id="feed-scenario" class="diary-feed"></div>
     <div id="feed-weekly" class="diary-feed"></div>
     <div id="feed-trades" class="diary-feed"></div>
     <div id="feed-highlights" class="diary-feed"></div>
@@ -2759,6 +2826,8 @@ function updateTabCounts() {
   Object.values(d.trades || {}).forEach(arr => (arr || []).forEach(t => countIn(t.memo)));
   const elHi = document.getElementById('cnt-highlights');
   if (elHi) elHi.textContent = hi;
+  const elSc = document.getElementById('cnt-scenario');
+  if (elSc) elSc.textContent = Array.isArray(d.scenario) ? d.scenario.filter(s => s && !s.archived).length : 0;
 }
 
 /* ── 저장 (디바운스) — value 는 HTML 일 수도 plain text 일 수도 있음 ── */
@@ -3204,9 +3273,264 @@ function renderFeedHighlights() {
   });
 }
 
+/* ── 매매 시나리오 (종목별 살아있는 문서) ──
+   날짜별 반복 작성 대신 종목당 카드 하나를 계속 다듬는 방식.
+   - 다른 날 수정하면 직전 버전이 자동으로 이력에 보관 (하루 1개, 최대 20개) → 생각의 변화 추적
+   - 정리한 종목은 삭제 대신 '보관' → 아래 보관됨에서 복원 가능 (사라지지 않음)
+   - diary.data.scenario 에 저장 → 기존 ☁️ 커밋&푸시/동기화에 자동 포함 */
+function scList() {
+  if (!Array.isArray(diary.data.scenario)) diary.data.scenario = [];
+  return diary.data.scenario;
+}
+
+function scSave(item, field, value) {
+  const today = todayDateStr();
+  // 다른 날짜에 수정 시작 → 수정 전 내용을 이력으로 스냅샷
+  if (item.updated && item.updated !== today) {
+    if (!Array.isArray(item.hist)) item.hist = [];
+    if (!item.hist.length || item.hist[0].d !== item.updated) {
+      const probe = document.createElement('div');
+      probe.innerHTML = (item.buy || '') + (item.hold || '') + (item.sell || '');
+      if ((probe.innerText || '').trim()) {
+        item.hist.unshift({ d: item.updated, buy: item.buy || '', hold: item.hold || '', sell: item.sell || '' });
+        if (item.hist.length > 20) item.hist.length = 20;
+      }
+    }
+  }
+  item[field] = value;
+  item.updated = today;
+  clearTimeout(diary.saveTimers['sc_' + item.id]);
+  diary.saveTimers['sc_' + item.id] = setTimeout(() => {
+    saveDiaryData(diary.data); updateTabCounts();
+    const upd = document.querySelector(`.sc-card[data-key="${item.id}"] .sc-upd`);
+    if (upd) upd.textContent = '수정 ' + item.updated;
+    if (field === 'name') {
+      const nm = document.querySelector(`.pf-nm[data-pfid="${item.id}"]`);
+      if (nm) nm.textContent = item.name || '(이름 없음)';
+    }
+  }, 500);
+}
+
+function makeScenarioCard(item) {
+  const card = document.createElement('div');
+  card.className = 'dcard sc-card' + (item.archived ? ' archived' : '');
+  card.dataset.key = item.id;
+
+  const header = document.createElement('div'); header.className = 'dcard-header';
+
+  const name = document.createElement('span');
+  name.className = 'sc-name'; name.contentEditable = 'true';
+  name.setAttribute('data-placeholder', '종목명');
+  name.textContent = item.name || '';
+  name.addEventListener('input', () => scSave(item, 'name', name.textContent.trim()));
+  name.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); const f = card.querySelector('.sc-edit'); if (f) f.focus(); }
+  });
+  header.appendChild(name);
+
+  const upd = document.createElement('span'); upd.className = 'sc-upd';
+  upd.textContent = item.updated ? '수정 ' + item.updated : '';
+  header.appendChild(upd);
+
+  const histBox = document.createElement('div'); histBox.className = 'sc-hist';
+  const histCnt = (item.hist || []).length;
+  if (histCnt) {
+    const histBtn = document.createElement('button'); histBtn.className = 'sc-btn';
+    histBtn.title = '이전 버전 보기'; histBtn.textContent = `🕘 ${histCnt}`;
+    histBtn.addEventListener('click', () => histBox.classList.toggle('show'));
+    header.appendChild(histBtn);
+  }
+
+  const archBtn = document.createElement('button'); archBtn.className = 'sc-btn';
+  archBtn.title = item.archived ? '복원' : '보관 (목록에서 숨기고 보관됨으로 이동)';
+  archBtn.textContent = item.archived ? '↩ 복원' : '📦';
+  archBtn.addEventListener('click', () => {
+    item.archived = !item.archived;
+    saveDiaryData(diary.data); updateTabCounts(); renderFeedScenario();
+  });
+  header.appendChild(archBtn);
+
+  const delBtn = document.createElement('button'); delBtn.className = 'dcard-del';
+  delBtn.title = '삭제'; delBtn.textContent = '×';
+  delBtn.addEventListener('click', () => {
+    svConfirm(`'${item.name || '(이름 없음)'}' 시나리오를 완전히 삭제할까요? 이력도 함께 사라져요. (남기려면 📦 보관 추천)`, () => {
+      const list = scList();
+      const i = list.indexOf(item);
+      if (i >= 0) list.splice(i, 1);
+      saveDiaryData(diary.data); updateTabCounts(); renderFeedScenario();
+    });
+  });
+  header.appendChild(delBtn);
+  card.appendChild(header);
+
+  const body = document.createElement('div'); body.className = 'sc-body';
+  const mkRow = (lab, cls, field, ph) => {
+    const row = document.createElement('div'); row.className = 'sc-row';
+    const tag = document.createElement('span'); tag.className = 'sc-tag ' + cls; tag.textContent = lab;
+    const ed = document.createElement('div'); ed.className = 'sc-edit';
+    ed.contentEditable = 'true';
+    ed.setAttribute('data-placeholder', ph);
+    ed.innerHTML = normalizeDiaryValue(item[field] || '');
+    attachEditable(ed);
+    ed.addEventListener('input', () => scSave(item, field, sanitizeDiaryHTML(ed.innerHTML)));
+    row.appendChild(tag); row.appendChild(ed);
+    return row;
+  };
+  body.appendChild(mkRow('매수', 'buy',  'buy',  '어떤 조건이면 사는가? (가격대 · 실적 · 이벤트)'));
+  body.appendChild(mkRow('보유', 'hold', 'hold', '들고 가는 근거는? 어떤 신호를 점검하는가?'));
+  body.appendChild(mkRow('매도', 'sell', 'sell', '언제 파는가? (목표가 · 손절 기준 · 논리 훼손 조건)'));
+
+  (item.hist || []).forEach(h => {
+    const div = document.createElement('div'); div.className = 'sc-hist-item';
+    const title = document.createElement('div');
+    const b = document.createElement('b'); b.textContent = h.d; title.appendChild(b);
+    div.appendChild(title);
+    const strip = s => { const p = document.createElement('div'); p.innerHTML = s || ''; return (p.innerText || '').trim(); };
+    [['매수', h.buy], ['보유', h.hold], ['매도', h.sell]].forEach(([lab, v]) => {
+      const t = strip(v); if (!t) return;
+      const line = document.createElement('div'); line.textContent = lab + ' · ' + t;
+      div.appendChild(line);
+    });
+    histBox.appendChild(div);
+  });
+  body.appendChild(histBox);
+  card.appendChild(body);
+  return card;
+}
+
+/* ── 포트 비중 카드: 종목별 금액 입력 → 원형 차트 (시나리오 상단 고정) ── */
+const PF_COLORS = ['#7c3aed','#dc2626','#2563eb','#059669','#d97706','#0891b2','#be185d','#65a30d','#9333ea','#e11d48','#0d9488','#a16207','#4f46e5','#c2410c'];
+
+function fmtWon(n) { return n ? Number(n).toLocaleString('ko-KR') : ''; }
+
+function makePortfolioCard(activeItems) {
+  const card = document.createElement('div');
+  card.className = 'dcard pf-card';
+
+  const header = document.createElement('div'); header.className = 'dcard-header';
+  const title = document.createElement('span'); title.className = 'dcard-date';
+  title.style.color = '#6d28d9'; title.textContent = '💼 포트 비중';
+  header.appendChild(title);
+  const total = document.createElement('span'); total.className = 'pf-total';
+  header.appendChild(total);
+  card.appendChild(header);
+
+  const body = document.createElement('div'); body.className = 'pf-body';
+  const chartWrap = document.createElement('div'); chartWrap.className = 'pf-chart';
+  const rows = document.createElement('div'); rows.className = 'pf-rows';
+  body.appendChild(chartWrap); body.appendChild(rows);
+  card.appendChild(body);
+
+  if (!activeItems.length) {
+    chartWrap.remove();
+    const e = document.createElement('div'); e.className = 'pf-empty';
+    e.textContent = '아래에서 종목 시나리오를 추가하면 여기서 금액을 입력할 수 있어요.';
+    rows.appendChild(e);
+    return card;
+  }
+
+  const pctEls = [], dotEls = [];
+
+  const updatePie = () => {
+    const data = activeItems.map((it, i) => ({ v: Number(it.amt) || 0, color: PF_COLORS[i % PF_COLORS.length] }));
+    const sum = data.reduce((a, b) => a + b.v, 0);
+    total.textContent = sum ? '합계 ' + fmtWon(sum) + '원' : '';
+    activeItems.forEach((it, i) => {
+      pctEls[i].textContent = sum && data[i].v ? (data[i].v / sum * 100).toFixed(1) + '%' : '';
+      dotEls[i].style.background = data[i].v ? data[i].color : 'var(--border)';
+    });
+    if (!sum) {
+      chartWrap.innerHTML = '<div class="pf-empty" style="text-align:center;padding-top:60px;">금액을 입력하면<br>차트가 나타나요</div>';
+      chartWrap.style.height = '170px';
+      return;
+    }
+    chartWrap.style.height = '';
+    const slices = data.filter(d => d.v > 0);
+    if (slices.length === 1) {
+      chartWrap.innerHTML = `<svg viewBox="0 0 160 160" width="170" height="170"><circle cx="80" cy="80" r="70" fill="${slices[0].color}" stroke="#fff" stroke-width="1.5"/></svg>`;
+      return;
+    }
+    let ang = -Math.PI / 2, paths = '';
+    for (const d of slices) {
+      const a0 = ang, a1 = ang + (d.v / sum) * Math.PI * 2; ang = a1;
+      const large = (a1 - a0) > Math.PI ? 1 : 0;
+      const x0 = (80 + 70 * Math.cos(a0)).toFixed(2), y0 = (80 + 70 * Math.sin(a0)).toFixed(2);
+      const x1 = (80 + 70 * Math.cos(a1)).toFixed(2), y1 = (80 + 70 * Math.sin(a1)).toFixed(2);
+      paths += `<path d="M80,80 L${x0},${y0} A70,70 0 ${large} 1 ${x1},${y1} Z" fill="${d.color}" stroke="#fff" stroke-width="1.5"/>`;
+    }
+    chartWrap.innerHTML = `<svg viewBox="0 0 160 160" width="170" height="170">${paths}</svg>`;
+  };
+
+  activeItems.forEach((it, i) => {
+    const row = document.createElement('div'); row.className = 'pf-row';
+    const dot = document.createElement('span'); dot.className = 'pf-dot'; dotEls.push(dot);
+    const nm = document.createElement('span'); nm.className = 'pf-nm'; nm.dataset.pfid = it.id; nm.textContent = it.name || '(이름 없음)';
+    const amt = document.createElement('input'); amt.className = 'pf-amt';
+    amt.type = 'text'; amt.inputMode = 'numeric'; amt.placeholder = '금액(원)';
+    amt.value = fmtWon(it.amt);
+    amt.addEventListener('input', () => {
+      const v = Number(String(amt.value).replace(/[^\d]/g, '')) || 0;
+      it.amt = v || undefined;
+      amt.value = fmtWon(v);
+      clearTimeout(diary.saveTimers['pf_' + it.id]);
+      diary.saveTimers['pf_' + it.id] = setTimeout(() => saveDiaryData(diary.data), 500);
+      updatePie();
+    });
+    const pct = document.createElement('span'); pct.className = 'pf-pct'; pctEls.push(pct);
+    row.appendChild(dot); row.appendChild(nm); row.appendChild(amt); row.appendChild(pct);
+    rows.appendChild(row);
+  });
+
+  updatePie();
+  return card;
+}
+
+function renderFeedScenario() {
+  const feed = document.getElementById('feed-scenario'); if (!feed) return;
+  feed.innerHTML = '';
+  const list = scList();
+
+  const active = list.filter(s => s && !s.archived);
+  const archived = list.filter(s => s && s.archived);
+
+  // 포트 비중 카드 — 항상 최상단 고정
+  feed.appendChild(makePortfolioCard(active));
+
+  const newBtn = document.createElement('button');
+  newBtn.className = 'diary-new-card-btn'; newBtn.textContent = '+ 종목 시나리오 추가';
+  newBtn.addEventListener('click', () => {
+    scList().unshift({ id: 'sc' + Date.now().toString(36), name: '', buy: '', hold: '', sell: '', archived: false, updated: todayDateStr(), hist: [] });
+    saveDiaryData(diary.data);
+    renderFeedScenario();
+    setTimeout(() => { const el = feed.querySelector('.sc-name'); if (el) el.focus(); }, 50);
+  });
+  feed.appendChild(newBtn);
+
+  if (!active.length && !archived.length) {
+    const e = document.createElement('div'); e.className = 'diary-empty-state';
+    e.textContent = '종목별로 매수·보유·매도 기준을 미리 정해두고, 흔들릴 때 꺼내보세요!';
+    feed.appendChild(e);
+    return;
+  }
+
+  active.forEach(item => feed.appendChild(makeScenarioCard(item)));
+
+  if (archived.length) {
+    const head = document.createElement('div'); head.className = 'sc-arch-head';
+    const wrap = document.createElement('div'); wrap.style.display = 'none';
+    let open = false;
+    const label = () => `📦 보관됨 ${archived.length}개 ${open ? '접기 ▴' : '보기 ▾'}`;
+    head.textContent = label();
+    head.addEventListener('click', () => { open = !open; wrap.style.display = open ? 'block' : 'none'; head.textContent = label(); });
+    archived.forEach(item => wrap.appendChild(makeScenarioCard(item)));
+    feed.appendChild(head);
+    feed.appendChild(wrap);
+  }
+}
+
 /* ── 전체 렌더 ── */
 function renderAllDiaryFeeds() {
-  renderFeedDaily(); renderFeedWeekly(); renderFeedTrades(); renderFeedHighlights(); updateTabCounts();
+  renderFeedDaily(); renderFeedScenario(); renderFeedWeekly(); renderFeedTrades(); renderFeedHighlights(); updateTabCounts();
 }
 
 /* ── 초기화 ── */
@@ -3216,8 +3540,9 @@ function initDiary() {
       diary.activeTab = btn.dataset.tab;
       document.querySelectorAll('.dtab').forEach(b => b.classList.toggle('active', b === btn));
       document.querySelectorAll('.diary-feed').forEach(f => f.classList.toggle('active', f.id === `feed-${diary.activeTab}`));
-      // 강조 탭은 들어올 때마다 최신 상태로 새로 그림
+      // 강조·시나리오 탭은 들어올 때마다 최신 상태로 새로 그림
       if (diary.activeTab === 'highlights') renderFeedHighlights();
+      if (diary.activeTab === 'scenario') renderFeedScenario();
       // 탭이 보여진 후 모든 textarea 높이 재계산 (display:none 상태에서 scrollHeight=0 문제 해결)
       requestAnimationFrame(() => {
         document.querySelectorAll(`#feed-${diary.activeTab} textarea`).forEach(ta => {
@@ -3271,7 +3596,7 @@ function initDiary() {
       }
       // 검색 대상 텍스트 수집 (contenteditable 은 innerText, textarea 는 value)
       const sources = [];
-      card.querySelectorAll('.dcard-edit, .memo-edit').forEach(el => {
+      card.querySelectorAll('.dcard-edit, .memo-edit, .sc-edit, .sc-name').forEach(el => {
         const t = el.innerText || '';
         if (t.trim()) sources.push(t);
       });
