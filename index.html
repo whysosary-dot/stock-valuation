@@ -1251,7 +1251,6 @@ td input, td textarea{border-radius:8px}
       <button class="dtab active" data-tab="daily">📔 일기<span class="dtab-cnt" id="cnt-daily">0</span></button>
       <button class="dtab" data-tab="scenario">🎯 시나리오<span class="dtab-cnt" id="cnt-scenario">0</span></button>
       <button class="dtab" data-tab="weekly">📅 주간 전략<span class="dtab-cnt" id="cnt-weekly">0</span></button>
-      <button class="dtab" data-tab="trades">📊 매매일지<span class="dtab-cnt" id="cnt-trades">0</span></button>
       <button class="dtab" data-tab="highlights">🔴 강조<span class="dtab-cnt" id="cnt-highlights">0</span></button>
     </div>
     <span class="spacer"></span>
@@ -1263,7 +1262,6 @@ td input, td textarea{border-radius:8px}
     <div id="feed-daily"  class="diary-feed active"></div>
     <div id="feed-scenario" class="diary-feed"></div>
     <div id="feed-weekly" class="diary-feed"></div>
-    <div id="feed-trades" class="diary-feed"></div>
     <div id="feed-highlights" class="diary-feed"></div>
   </div>
 </div><!-- /page-diary -->
@@ -2840,14 +2838,11 @@ function updateTabCounts() {
     Object.keys(d.daily || {}).filter(k => d.daily[k]).length;
   document.getElementById('cnt-weekly').textContent =
     Object.keys(d.weekly || {}).filter(k => d.weekly[k]).length;
-  document.getElementById('cnt-trades').textContent =
-    Object.keys(d.trades || {}).filter(k => (d.trades[k]||[]).length > 0).length;
   // 강조 — _extractHighlights 사용 (마커 + 스타일 fallback 모두 인식)
   let hi = 0;
   const countIn = (html) => { hi += _extractHighlights(html).length; };
   Object.values(d.daily  || {}).forEach(countIn);
   Object.values(d.weekly || {}).forEach(countIn);
-  Object.values(d.trades || {}).forEach(arr => (arr || []).forEach(t => countIn(t.memo)));
   const elHi = document.getElementById('cnt-highlights');
   if (elHi) elHi.textContent = hi;
   const elSc = document.getElementById('cnt-scenario');
@@ -3152,7 +3147,8 @@ function renderTradeSection(dateStr, container) {
 
 /* ── 매매일지 피드 렌더 ── */
 function renderFeedTrades() {
-  const feed = document.getElementById('feed-trades'); feed.innerHTML = '';
+  const feed = document.getElementById('feed-trades'); if (!feed) return; // 매매일지 탭 제거됨 (기록은 일기로 통합)
+  feed.innerHTML = '';
   const today = todayDateStr();
 
   const newBtn = document.createElement('button'); newBtn.className = 'diary-new-card-btn'; newBtn.textContent = '+ 오늘 매매 추가';
@@ -3243,13 +3239,6 @@ function renderFeedHighlights() {
   Object.entries(diary.data.weekly || {}).forEach(([k, v]) => {
     _extractHighlights(v).forEach(snippet => {
       items.push({ date: k, sortKey: _diaryDateSortKey(k), sectionKey: 'weekly', sectionLabel: '주간', extraTag: '', htmlSnippet: snippet });
-    });
-  });
-  Object.entries(diary.data.trades || {}).forEach(([dateStr, trades]) => {
-    (trades || []).forEach(t => {
-      _extractHighlights(t.memo).forEach(snippet => {
-        items.push({ date: dateStr, sortKey: _diaryDateSortKey(dateStr), sectionKey: 'trades', sectionLabel: '매매', extraTag: t.name || '', htmlSnippet: snippet });
-      });
     });
   });
 
@@ -3822,7 +3811,37 @@ function renderFeedScenario() {
 
 /* ── 전체 렌더 ── */
 function renderAllDiaryFeeds() {
-  renderFeedDaily(); renderFeedScenario(); renderFeedWeekly(); renderFeedTrades(); renderFeedHighlights(); updateTabCounts();
+  migrateTradesToDaily();
+  renderFeedDaily(); renderFeedScenario(); renderFeedWeekly(); renderFeedHighlights(); updateTabCounts();
+}
+
+/* ── (일회성) 매매일지 → 일기 통합 마이그레이션 ──
+   GitHub 데이터는 이미 이관 완료. 아직 동기화 전인 옛 로컬 데이터를 위한 안전장치. */
+function migrateTradesToDaily() {
+  const tr = diary.data.trades;
+  if (!tr || !Object.keys(tr).length) { if (tr) delete diary.data.trades; return; }
+  const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const fmtN = v => { const n = Number(String(v || '').replace(/[^\d.]/g, '')); return n ? n.toLocaleString('ko-KR') : ''; };
+  Object.keys(tr).sort().forEach(date => {
+    const rows = (tr[date] || []).filter(t => (t.name || '').trim() || (t.memo || '').trim());
+    if (!rows.length) return;
+    let html = '<div><br></div><div><b>📊 매매일지</b></div>';
+    rows.forEach(t => {
+      const color = t.type === '매도' ? '#dc2626' : '#2563eb';
+      let line = `<span style="color:${color};">${esc(t.type || '매매')}</span> ${esc((t.name || '').trim())}`;
+      const q = fmtN(t.qty), p = fmtN(t.price);
+      if (q) line += ` ${q}주`;
+      if (p) line += ` @${p}원`;
+      const memo = (t.memo || '').trim();
+      if (memo) line += ` — ${esc(memo)}`;
+      html += `<div>${line}</div>`;
+    });
+    if (!diary.data.daily) diary.data.daily = {};
+    diary.data.daily[date] = (diary.data.daily[date] || '') + html;
+  });
+  diary.data.trades_backup = tr;
+  delete diary.data.trades;
+  saveDiaryData(diary.data);
 }
 
 /* ── 초기화 ── */
