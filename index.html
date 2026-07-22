@@ -3638,7 +3638,7 @@ function makePortfolioCard(activeItems) {
       infoDiv.className = 'pf-info';
       infoDiv.innerHTML =
         cell(84, sparkSvg || '') +
-        cell(118, '시총 ' + (mc ? `<b>${Math.round(mc).toLocaleString('ko-KR')}억</b>` : dash)) +
+        cell(156, '시총 ' + (mc ? `<b>${Math.round(mc).toLocaleString('ko-KR')}억</b>` : dash)) +
         cell(96, '등락 ' + pv(chg)) +
         cell(96, '상방 ' + pv(u)) +
         cell(96, '하방 ' + pv(dnV));
