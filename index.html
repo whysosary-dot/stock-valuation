@@ -4033,15 +4033,12 @@ function initDiary() {
       // GitHub 데이터가 비어있으면 localStorage 보존 (네트워크 오류·빈 응답 방어)
       const ghHasData = Object.keys(ghDiary.daily||{}).length
                       + Object.keys(ghDiary.weekly||{}).length
-                      + Object.keys(ghDiary.trades||{}).length;
+                      + (Array.isArray(ghDiary.scenario) ? ghDiary.scenario.length : 0);
       if (!ghHasData) return;
 
       // 새 커밋 발견 → GitHub 상태로 통째 교체 (최신 푸시 = 진실, 모든 기기 미러링)
-      diary.data = {
-        daily:  ghDiary.daily  || {},
-        weekly: ghDiary.weekly || {},
-        trades: ghDiary.trades || {},
-      };
+      // 주의: 모든 필드 포함 — scenario / pfDeposits / pfMemo / pfHist / trades_backup 등
+      diary.data = { daily: {}, weekly: {}, ...ghDiary };
       saveDiaryData(diary.data);
       if (ghSha) localStorage.setItem(DIARY_GH_SHA_KEY, ghSha);
       renderAllDiaryFeeds();
