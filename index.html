@@ -3816,7 +3816,7 @@ function renderFeedScenario() {
   };
 
   const activeWrap = document.createElement('div');
-  if (active.length > 1) feed.appendChild(mkSearch('🔍 종목 검색...', activeWrap));
+  if (active.length) feed.appendChild(mkSearch('🔍 종목 검색...', activeWrap));
   active.forEach(item => activeWrap.appendChild(makeScenarioCard(item)));
   feed.appendChild(activeWrap);
 
@@ -3827,7 +3827,9 @@ function renderFeedScenario() {
     const label = () => `📦 보관됨 ${archived.length}개 ${open ? '접기 ▴' : '보기 ▾'}`;
     head.textContent = label();
     head.addEventListener('click', () => { open = !open; wrap.style.display = open ? 'block' : 'none'; head.textContent = label(); });
-    if (archived.length > 1) wrap.appendChild(mkSearch('🔍 보관함 검색...', wrap));
+    const archSearch = mkSearch('🔍 보관함 검색...', wrap);
+    archSearch.style.marginTop = '10px';
+    wrap.appendChild(archSearch);
     archived.forEach(item => wrap.appendChild(makeScenarioCard(item)));
     feed.appendChild(head);
     feed.appendChild(wrap);
