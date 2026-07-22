@@ -609,6 +609,13 @@
   .pf-amt-view { width: 100px; text-align: right; font-size: 13.5px; font-weight: 600; color: var(--text); white-space: nowrap; }
   .pf-total { font-size: 12.5px; color: var(--text-dim); font-weight: 600; margin-left: auto; }
   .pf-empty { font-size: 13px; color: var(--text-dim); padding: 4px 0; }
+  .pf-memo {
+    width: 100%; min-height: 38px; border: 1px solid var(--border); border-radius: 10px;
+    padding: 9px 12px; font-size: 14px; line-height: 1.6; background: var(--panel);
+    outline: none; color: var(--text); margin-top: 12px; overflow-wrap: break-word;
+  }
+  .pf-memo:focus { border-color: #a78bfa; box-shadow: 0 0 0 3px #ede9fe; }
+  .pf-memo:empty::before { content: attr(data-placeholder); color: var(--text-dim); }
   /* 일기·주간 textarea + contenteditable div 공용 */
   textarea.dcard-ta,
   .dcard-edit {
@@ -3471,7 +3478,7 @@ function makePortfolioCard(activeItems) {
     if (!items.length) { toast('금액이 입력된 보유 종목이 없어요', 'err', 2500); return; }
     const today = todayDateStr();
     const h = pfHist().filter(x => x.d !== today); // 같은 날은 최신으로 교체
-    h.unshift({ d: today, items });
+    h.unshift({ d: today, items, memo: diary.data.pfMemo || '' });
     if (h.length > 30) h.length = 30;
     diary.data.pfHist = h;
     saveDiaryData(diary.data);
@@ -3485,6 +3492,20 @@ function makePortfolioCard(activeItems) {
   const chartWrap = document.createElement('div'); chartWrap.className = 'pf-chart';
   const rows = document.createElement('div'); rows.className = 'pf-rows';
   body.appendChild(chartWrap); body.appendChild(rows);
+
+  // 포트 메모 — 왜 이런 구성이 됐는지 기록
+  const memo = document.createElement('div');
+  memo.className = 'pf-memo';
+  memo.contentEditable = 'true';
+  memo.setAttribute('data-placeholder', '📝 왜 이런 포트가 됐는지 메모 (비중 판단 근거 · 계획)');
+  memo.innerHTML = normalizeDiaryValue(diary.data.pfMemo || '');
+  attachEditable(memo);
+  memo.addEventListener('input', () => {
+    diary.data.pfMemo = sanitizeDiaryHTML(memo.innerHTML);
+    clearTimeout(diary.saveTimers['pfMemo']);
+    diary.saveTimers['pfMemo'] = setTimeout(() => saveDiaryData(diary.data), 500);
+  });
+  body.appendChild(memo);
 
   // 보관된 비중 기록 목록
   pfHist().forEach(h => {
@@ -3506,6 +3527,11 @@ function makePortfolioCard(activeItems) {
     const line = document.createElement('div');
     line.textContent = h.items.map(x => `${x.name} ${sum ? (x.amt / sum * 100).toFixed(1) : 0}%`).join(' · ');
     div.appendChild(line);
+    if (h.memo) {
+      const p = document.createElement('div'); p.innerHTML = h.memo;
+      const t = (p.innerText || '').trim();
+      if (t) { const ml = document.createElement('div'); ml.textContent = '📝 ' + t; div.appendChild(ml); }
+    }
     histBox.appendChild(div);
   });
   body.appendChild(histBox);
