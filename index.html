@@ -603,6 +603,9 @@
   }
   .pf-amt:focus { outline: none; border-color: #a78bfa; box-shadow: 0 0 0 2px #ede9fe; }
   .pf-pct { flex: 0 0 48px; text-align: right; font-size: 13px; font-weight: 700; color: #6d28d9; }
+  .pf-qty { width: 68px !important; }
+  .pf-px { font-size: 11.5px; color: var(--text-dim); white-space: nowrap; }
+  .pf-amt-view { width: 100px; text-align: right; font-size: 13.5px; font-weight: 600; color: var(--text); white-space: nowrap; }
   .pf-total { font-size: 12.5px; color: var(--text-dim); font-weight: 600; margin-left: auto; }
   .pf-empty { font-size: 13px; color: var(--text-dim); padding: 4px 0; }
   /* 일기·주간 textarea + contenteditable div 공용 */
@@ -3426,6 +3429,19 @@ const PF_COLORS = ['#7c3aed','#dc2626','#2563eb','#059669','#d97706','#0891b2','
 
 function fmtWon(n) { return n ? Number(n).toLocaleString('ko-KR') : ''; }
 
+/* 시나리오 종목명 → Stock Valuation 종목 매칭 (주가 자동 연동용) */
+function scFindStock(name) {
+  const norm = s => String(s || '').toLowerCase().replace(/\s+/g, '');
+  const n = norm(name);
+  if (!n || typeof state === 'undefined' || !Array.isArray(state.stocks)) return null;
+  let hit = state.stocks.find(s => norm(s.name) === n);
+  if (!hit) {
+    const cands = state.stocks.filter(s => norm(s.name).includes(n) || n.includes(norm(s.name)));
+    if (cands.length === 1) hit = cands[0];
+  }
+  return hit || null;
+}
+
 function makePortfolioCard(activeItems) {
   const card = document.createElement('div');
   card.className = 'dcard pf-card';
@@ -3537,19 +3553,52 @@ function makePortfolioCard(activeItems) {
     const row = document.createElement('div'); row.className = 'pf-row';
     const dot = document.createElement('span'); dot.className = 'pf-dot'; dotEls.push(dot);
     const nm = document.createElement('span'); nm.className = 'pf-nm'; nm.dataset.pfid = it.id; nm.textContent = it.name || '(이름 없음)';
-    const amt = document.createElement('input'); amt.className = 'pf-amt';
-    amt.type = 'text'; amt.inputMode = 'numeric'; amt.placeholder = '금액(원)';
-    amt.value = fmtWon(it.amt);
-    amt.addEventListener('input', () => {
-      const v = Number(String(amt.value).replace(/[^\d]/g, '')) || 0;
-      it.amt = v || undefined;
-      amt.value = fmtWon(v);
+    const pct = document.createElement('span'); pct.className = 'pf-pct'; pctEls.push(pct);
+    const saveDeb = () => {
       clearTimeout(diary.saveTimers['pf_' + it.id]);
       diary.saveTimers['pf_' + it.id] = setTimeout(() => saveDiaryData(diary.data), 500);
-      updatePie();
-    });
-    const pct = document.createElement('span'); pct.className = 'pf-pct'; pctEls.push(pct);
-    row.appendChild(dot); row.appendChild(nm); row.appendChild(amt); row.appendChild(pct);
+    };
+
+    const stk = scFindStock(it.name);
+    if (stk && Number(stk.price_native) > 0) {
+      // 주가 자동 연동: 수량 입력 → 현재가 × 수량
+      const px = Number(stk.price_native);
+      const pxKrw = (stk.currency && stk.currency !== 'KRW' && Number(state.usdkrw) > 0) ? px * Number(state.usdkrw) : px;
+      if (it.qty) { it.amt = Math.round(it.qty * pxKrw) || undefined; saveDeb(); } // 렌더 시 최신 주가로 재계산
+
+      const qty = document.createElement('input'); qty.className = 'pf-amt pf-qty';
+      qty.type = 'text'; qty.inputMode = 'numeric'; qty.placeholder = '수량';
+      qty.value = it.qty ? Number(it.qty).toLocaleString('ko-KR') : '';
+      const pxLab = document.createElement('span'); pxLab.className = 'pf-px';
+      pxLab.textContent = '@' + (stk.currency === 'USD' ? '$' + px.toLocaleString('en-US') : px.toLocaleString('ko-KR'));
+      pxLab.title = '현재가 자동 연동 (Stock Valuation)';
+      const amtView = document.createElement('span'); amtView.className = 'pf-amt-view';
+      amtView.textContent = fmtWon(it.amt);
+      qty.addEventListener('input', () => {
+        const v = Number(String(qty.value).replace(/[^\d]/g, '')) || 0;
+        it.qty = v || undefined;
+        it.amt = v ? Math.round(v * pxKrw) : undefined;
+        qty.value = v ? v.toLocaleString('ko-KR') : '';
+        amtView.textContent = fmtWon(it.amt);
+        saveDeb();
+        updatePie();
+      });
+      row.appendChild(dot); row.appendChild(nm); row.appendChild(qty); row.appendChild(pxLab); row.appendChild(amtView);
+    } else {
+      // 매칭 안 됨 → 금액 직접 입력
+      const amt = document.createElement('input'); amt.className = 'pf-amt';
+      amt.type = 'text'; amt.inputMode = 'numeric'; amt.placeholder = '금액(원)';
+      amt.value = fmtWon(it.amt);
+      amt.addEventListener('input', () => {
+        const v = Number(String(amt.value).replace(/[^\d]/g, '')) || 0;
+        it.amt = v || undefined;
+        amt.value = fmtWon(v);
+        saveDeb();
+        updatePie();
+      });
+      row.appendChild(dot); row.appendChild(nm); row.appendChild(amt);
+    }
+    row.appendChild(pct);
     rows.appendChild(row);
   });
 
