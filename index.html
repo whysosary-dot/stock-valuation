@@ -550,6 +550,7 @@
   .sc-tag.buy  { background: #fde7e7; color: #dc2626; }
   .sc-tag.hold { background: #fef3c7; color: #b45309; }
   .sc-tag.sell { background: #dbeafe; color: #2563eb; }
+  .sc-tag.cmt  { background: #ede9fe; color: #6d28d9; }
   .sc-edit {
     flex: 1; min-height: 36px; min-width: 0; border: 1px solid var(--border); border-radius: 10px;
     padding: 8px 11px; font-size: 14.5px; line-height: 1.6; background: var(--panel);
@@ -3306,9 +3307,9 @@ function scSave(item, field, value) {
     if (!Array.isArray(item.hist)) item.hist = [];
     if (!item.hist.length || item.hist[0].d !== item.updated) {
       const probe = document.createElement('div');
-      probe.innerHTML = (item.buy || '') + (item.hold || '') + (item.sell || '');
+      probe.innerHTML = (item.buy || '') + (item.hold || '') + (item.sell || '') + (item.cmt || '');
       if ((probe.innerText || '').trim()) {
-        item.hist.unshift({ d: item.updated, buy: item.buy || '', hold: item.hold || '', sell: item.sell || '' });
+        item.hist.unshift({ d: item.updated, buy: item.buy || '', hold: item.hold || '', sell: item.sell || '', cmt: item.cmt || '' });
         if (item.hist.length > 20) item.hist.length = 20;
       }
     }
@@ -3405,6 +3406,7 @@ function makeScenarioCard(item) {
   body.appendChild(mkRow('매수', 'buy',  'buy',  '어떤 조건이면 사는가? (가격대 · 실적 · 이벤트)'));
   body.appendChild(mkRow('보유', 'hold', 'hold', '들고 가는 근거는? 어떤 신호를 점검하는가?'));
   body.appendChild(mkRow('매도', 'sell', 'sell', '언제 파는가? (목표가 · 손절 기준 · 논리 훼손 조건)'));
+  body.appendChild(mkRow('코멘트', 'cmt', 'cmt', '자유 메모 (근황 · 고민 · 체크할 것)'));
 
   (item.hist || []).forEach(h => {
     const div = document.createElement('div'); div.className = 'sc-hist-item';
@@ -3412,7 +3414,7 @@ function makeScenarioCard(item) {
     const b = document.createElement('b'); b.textContent = h.d; title.appendChild(b);
     div.appendChild(title);
     const strip = s => { const p = document.createElement('div'); p.innerHTML = s || ''; return (p.innerText || '').trim(); };
-    [['매수', h.buy], ['보유', h.hold], ['매도', h.sell]].forEach(([lab, v]) => {
+    [['매수', h.buy], ['보유', h.hold], ['매도', h.sell], ['코멘트', h.cmt]].forEach(([lab, v]) => {
       const t = strip(v); if (!t) return;
       const line = document.createElement('div'); line.textContent = lab + ' · ' + t;
       div.appendChild(line);
@@ -3630,11 +3632,74 @@ function makePfReturnCard() {
   const title = document.createElement('span'); title.className = 'dcard-date';
   title.style.color = '#6d28d9'; title.textContent = '📈 월간 수익률 (누적)';
   header.appendChild(title);
+
+  // ── 추가 입금/출금 기록 — 수익률 계산에서 제외해 왜곡 방지 ──
+  const deps = () => { if (!Array.isArray(diary.data.pfDeposits)) diary.data.pfDeposits = []; return diary.data.pfDeposits; };
+  const depForm = document.createElement('div');
+  depForm.style.cssText = 'display:none; padding:10px 16px; border-bottom:1px solid #ddd6fe; background:#faf9ff; gap:8px; align-items:center; flex-wrap:wrap;';
+  const depBtn = document.createElement('button'); depBtn.className = 'sc-btn';
+  depBtn.title = '추가 입금/출금 기록 (수익률 계산에서 제외됨)'; depBtn.textContent = '➕ 입금';
+  depBtn.addEventListener('click', () => {
+    depForm.style.display = depForm.style.display === 'none' ? 'flex' : 'none';
+  });
+  header.appendChild(depBtn);
   card.appendChild(header);
+
+  const depDate = document.createElement('input'); depDate.type = 'date'; depDate.value = todayDateStr();
+  depDate.className = 'pf-amt'; depDate.style.width = '135px'; depDate.style.textAlign = 'left';
+  const depAmt = document.createElement('input'); depAmt.className = 'pf-amt';
+  depAmt.type = 'text'; depAmt.inputMode = 'numeric'; depAmt.placeholder = '입금(+) 출금(-)';
+  depAmt.style.width = '130px';
+  depAmt.addEventListener('input', () => {
+    const neg = depAmt.value.trim().startsWith('-');
+    const v = Number(String(depAmt.value).replace(/[^\d]/g, '')) || 0;
+    depAmt.value = v ? (neg ? '-' : '') + v.toLocaleString('ko-KR') : (neg ? '-' : '');
+  });
+  const depSave = document.createElement('button'); depSave.className = 'diary-new-card-btn';
+  depSave.style.cssText = 'margin:0; padding:6px 14px; width:auto;'; depSave.textContent = '저장';
+  depSave.addEventListener('click', () => {
+    const neg = depAmt.value.trim().startsWith('-');
+    const v = Number(String(depAmt.value).replace(/[^\d]/g, '')) || 0;
+    if (!v || !depDate.value) { toast('날짜와 금액을 입력하세요', 'err', 2200); return; }
+    deps().push({ d: depDate.value, amt: neg ? -v : v });
+    deps().sort((a, b) => (a.d < b.d ? -1 : 1));
+    saveDiaryData(diary.data);
+    toast((neg ? '출금 -' : '입금 +') + fmtWon(v) + '원 기록됨', 'ok', 2500);
+    renderFeedScenario();
+  });
+  depForm.appendChild(depDate); depForm.appendChild(depAmt); depForm.appendChild(depSave);
+  card.appendChild(depForm);
 
   const body = document.createElement('div');
   body.style.cssText = 'padding:14px 16px;';
   card.appendChild(body);
+
+  // 입금 내역 목록 (토글)
+  const depListWrap = document.createElement('div');
+  if (deps().length) {
+    const t = document.createElement('div'); t.className = 'sc-arch-head'; t.style.marginTop = '10px';
+    const listBox = document.createElement('div'); listBox.style.display = 'none';
+    let open = false;
+    const label = () => `💰 입금·출금 내역 ${deps().length}건 ${open ? '접기 ▴' : '보기 ▾'}`;
+    t.textContent = label();
+    t.addEventListener('click', () => { open = !open; listBox.style.display = open ? 'block' : 'none'; t.textContent = label(); });
+    deps().forEach(dp => {
+      const div = document.createElement('div'); div.className = 'sc-hist-item';
+      const del = document.createElement('button'); del.className = 'pf-hist-del'; del.title = '삭제'; del.textContent = '×';
+      del.addEventListener('click', () => {
+        svConfirm(`${dp.d} ${dp.amt >= 0 ? '입금 +' : '출금 -'}${fmtWon(Math.abs(dp.amt))}원 기록을 삭제할까요?`, () => {
+          diary.data.pfDeposits = deps().filter(x => x !== dp);
+          saveDiaryData(diary.data); renderFeedScenario();
+        });
+      });
+      div.appendChild(del);
+      const b = document.createElement('b'); b.textContent = dp.d;
+      div.appendChild(b);
+      div.appendChild(document.createTextNode(' · ' + (dp.amt >= 0 ? '입금 +' : '출금 -') + fmtWon(Math.abs(dp.amt)) + '원'));
+      listBox.appendChild(div);
+    });
+    depListWrap.appendChild(t); depListWrap.appendChild(listBox);
+  }
 
   const hist = pfMonthlyData().slice().sort((a, b) => (a.ym < b.ym ? -1 : 1));
 
@@ -3644,11 +3709,21 @@ function makePfReturnCard() {
       ? `기준점 ${hist[0].ym} (${fmtWon(hist[0].total)}원) 기록 완료 — 다음 달 말부터 수익률이 그려져요.`
       : '매월 마지막 평일 저녁 9시에 포트 합계가 자동 기록돼요. 두 달치가 쌓이면 그래프가 나타납니다.';
     body.appendChild(e);
+    body.appendChild(depListWrap);
     return card;
   }
 
-  const base = hist[0].total;
-  const pts = hist.map(h => ({ ym: h.ym, total: h.total, cum: (h.total / base - 1) * 100 }));
+  // 월간 수익률: 그 달 입금/출금을 차감해 계산 → 누적은 월간수익률의 복리 곱
+  const allDeps = deps();
+  const depBetween = (d0, d1) => allDeps.reduce((a, x) => (x.d > d0 && x.d <= d1 ? a + x.amt : a), 0);
+  const pts = [{ ym: hist[0].ym, total: hist[0].total, cum: 0, mom: 0, dep: 0 }];
+  let cumMul = 1;
+  for (let i = 1; i < hist.length; i++) {
+    const D = depBetween(hist[i - 1].d || '', hist[i].d || '');
+    const r = hist[i - 1].total > 0 ? (hist[i].total - D) / hist[i - 1].total - 1 : 0;
+    cumMul *= (1 + r);
+    pts.push({ ym: hist[i].ym, total: hist[i].total, cum: (cumMul - 1) * 100, mom: r * 100, dep: D });
+  }
   const W = 620, H = 210, padL = 46, padR = 16, padT = 26, padB = 30;
   let mn = Math.min(0, ...pts.map(p => p.cum)), mx = Math.max(0, ...pts.map(p => p.cum));
   const span = (mx - mn) || 1; mn -= span * 0.12; mx += span * 0.12;
@@ -3662,13 +3737,14 @@ function makePfReturnCard() {
   pts.forEach((p, i) => {
     const x = X(i), y = Y(p.cum);
     const up = p.cum >= 0;
-    const mom = i > 0 ? (p.total / pts[i - 1].total - 1) * 100 : 0;
-    svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${up ? '#dc2626' : '#2563eb'}" stroke="#fff" stroke-width="1.5"><title>${p.ym} · 합계 ${fmtWon(p.total)}원 · 월간 ${i ? (mom >= 0 ? '+' : '') + mom.toFixed(1) + '%' : '기준'}</title></circle>`;
+    const depTxt = p.dep ? ` · ${p.dep > 0 ? '입금 +' : '출금 -'}${fmtWon(Math.abs(p.dep))}원 제외` : '';
+    svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${up ? '#dc2626' : '#2563eb'}" stroke="#fff" stroke-width="1.5"><title>${p.ym} · 합계 ${fmtWon(p.total)}원 · 월간 ${i ? (p.mom >= 0 ? '+' : '') + p.mom.toFixed(1) + '%' : '기준'}${depTxt}</title></circle>`;
     svg += `<text x="${x.toFixed(1)}" y="${(y - 9).toFixed(1)}" text-anchor="middle" font-size="11.5" font-weight="700" fill="${up ? '#dc2626' : '#2563eb'}">${i ? (p.cum >= 0 ? '+' : '') + p.cum.toFixed(1) + '%' : '기준'}</text>`;
     svg += `<text x="${x.toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="#6b7280">${p.ym.slice(2).replace('-', '.')}</text>`;
   });
   svg += '</svg>';
   body.innerHTML = svg;
+  body.appendChild(depListWrap);
   return card;
 }
 
