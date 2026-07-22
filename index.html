@@ -3606,16 +3606,85 @@ function makePortfolioCard(activeItems) {
   return card;
 }
 
+/* ── 월간 수익률 누적 그래프 (마지막 주 평일 21시 자동 스냅샷 기반) ── */
+let _pfMonthlyFetched = false;
+function pfMonthlyData() {
+  try { return JSON.parse(localStorage.getItem('sv_pf_monthly_v1') || '[]'); } catch (_) { return []; }
+}
+async function refreshPfMonthly() {
+  if (_pfMonthlyFetched) return;
+  _pfMonthlyFetched = true;
+  try {
+    const d = await ghPrivateRaw('sv/pf_monthly.json');
+    if (Array.isArray(d)) {
+      localStorage.setItem('sv_pf_monthly_v1', JSON.stringify(d));
+      if (diary.activeTab === 'scenario') renderFeedScenario();
+    }
+  } catch (_) {}
+}
+
+function makePfReturnCard() {
+  const card = document.createElement('div');
+  card.className = 'dcard pf-card';
+  const header = document.createElement('div'); header.className = 'dcard-header';
+  const title = document.createElement('span'); title.className = 'dcard-date';
+  title.style.color = '#6d28d9'; title.textContent = '📈 월간 수익률 (누적)';
+  header.appendChild(title);
+  card.appendChild(header);
+
+  const body = document.createElement('div');
+  body.style.cssText = 'padding:14px 16px;';
+  card.appendChild(body);
+
+  const hist = pfMonthlyData().slice().sort((a, b) => (a.ym < b.ym ? -1 : 1));
+
+  if (hist.length < 2) {
+    const e = document.createElement('div'); e.className = 'pf-empty';
+    e.textContent = hist.length === 1
+      ? `기준점 ${hist[0].ym} (${fmtWon(hist[0].total)}원) 기록 완료 — 다음 달 말부터 수익률이 그려져요.`
+      : '매월 마지막 평일 저녁 9시에 포트 합계가 자동 기록돼요. 두 달치가 쌓이면 그래프가 나타납니다.';
+    body.appendChild(e);
+    return card;
+  }
+
+  const base = hist[0].total;
+  const pts = hist.map(h => ({ ym: h.ym, total: h.total, cum: (h.total / base - 1) * 100 }));
+  const W = 620, H = 210, padL = 46, padR = 16, padT = 26, padB = 30;
+  let mn = Math.min(0, ...pts.map(p => p.cum)), mx = Math.max(0, ...pts.map(p => p.cum));
+  const span = (mx - mn) || 1; mn -= span * 0.12; mx += span * 0.12;
+  const X = i => padL + (W - padL - padR) * (pts.length === 1 ? 0.5 : i / (pts.length - 1));
+  const Y = v => padT + (H - padT - padB) * (1 - (v - mn) / (mx - mn));
+  const y0 = Y(0);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;display:block;">`;
+  svg += `<line x1="${padL}" y1="${y0.toFixed(1)}" x2="${W - padR}" y2="${y0.toFixed(1)}" stroke="#d1d5db" stroke-dasharray="4 3"/>`;
+  svg += `<text x="${padL - 6}" y="${(y0 + 4).toFixed(1)}" text-anchor="end" font-size="11" fill="#9ca3af">0%</text>`;
+  svg += `<polyline fill="none" stroke="#7c3aed" stroke-width="2.5" points="${pts.map((p, i) => X(i).toFixed(1) + ',' + Y(p.cum).toFixed(1)).join(' ')}"/>`;
+  pts.forEach((p, i) => {
+    const x = X(i), y = Y(p.cum);
+    const up = p.cum >= 0;
+    const mom = i > 0 ? (p.total / pts[i - 1].total - 1) * 100 : 0;
+    svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${up ? '#dc2626' : '#2563eb'}" stroke="#fff" stroke-width="1.5"><title>${p.ym} · 합계 ${fmtWon(p.total)}원 · 월간 ${i ? (mom >= 0 ? '+' : '') + mom.toFixed(1) + '%' : '기준'}</title></circle>`;
+    svg += `<text x="${x.toFixed(1)}" y="${(y - 9).toFixed(1)}" text-anchor="middle" font-size="11.5" font-weight="700" fill="${up ? '#dc2626' : '#2563eb'}">${i ? (p.cum >= 0 ? '+' : '') + p.cum.toFixed(1) + '%' : '기준'}</text>`;
+    svg += `<text x="${x.toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="#6b7280">${p.ym.slice(2).replace('-', '.')}</text>`;
+  });
+  svg += '</svg>';
+  body.innerHTML = svg;
+  return card;
+}
+
 function renderFeedScenario() {
   const feed = document.getElementById('feed-scenario'); if (!feed) return;
   feed.innerHTML = '';
   const list = scList();
+  refreshPfMonthly();
 
   const active = list.filter(s => s && !s.archived);
   const archived = list.filter(s => s && s.archived);
 
   // 포트 비중 카드 — 항상 최상단 고정 (보유중으로 표시한 종목만)
   feed.appendChild(makePortfolioCard(active.filter(s => s.held)));
+  // 월간 수익률 누적 그래프 — 포트 비중 바로 아래
+  feed.appendChild(makePfReturnCard());
 
   const newBtn = document.createElement('button');
   newBtn.className = 'diary-new-card-btn'; newBtn.textContent = '+ 종목 시나리오 추가';
