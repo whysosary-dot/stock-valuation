@@ -65,13 +65,16 @@ print(f"[{datetime.datetime.now():%H:%M:%S}] Phase 1 시작 (FX + 시총 — bul
 token = get_token()
 
 FX_SYMS = {"USD": "KRW=X", "JPY": "JPYKRW=X", "HKD": "HKDKRW=X",
-           "CNY": "CNYKRW=X", "TWD": "TWDKRW=X", "EUR": "EURKRW=X"}
-FX_DEFAULTS = {"USD": 1400.0, "JPY": 9.0, "HKD": 180.0, "CNY": 195.0, "TWD": 46.0, "EUR": 1700.0}
+           "CNY": "CNYKRW=X", "TWD": "TWDKRW=X", "EUR": "EURKRW=X",
+           "SGD": "SGDKRW=X", "AUD": "AUDKRW=X"}
+FX_DEFAULTS = {"USD": 1400.0, "JPY": 9.0, "HKD": 180.0, "CNY": 195.0, "TWD": 46.0, "EUR": 1700.0,
+               "SGD": 1140.0, "AUD": 1030.0, "NOK": 140.0}
+FX_EXTRA_SYMS = ["NOK=X"]  # NOKKRW=X 미지원 → USD/NOK 로 우회 계산
 
 # Parallel: GitHub blob fetch + FX rates + stock quotes
 with ThreadPoolExecutor(max_workers=3) as ex:
     f_gh  = ex.submit(gh_get_file, token)
-    f_fx  = ex.submit(fetch_fx_bulk, list(FX_SYMS.values()))
+    f_fx  = ex.submit(fetch_fx_bulk, list(FX_SYMS.values()) + FX_EXTRA_SYMS)
     data, gh_sha = f_gh.result()
     fx_raw = f_fx.result()
 
@@ -80,6 +83,9 @@ for cur, sym in FX_SYMS.items():
     v = fx_raw.get(sym)
     fx[cur] = float(v) if v and float(v) > 0 else FX_DEFAULTS[cur]
 fx["RMB"] = fx["CNY"]
+# NOK: NOKKRW=X 미지원 → NOKKRW = USDKRW / USDNOK
+usdnok = fx_raw.get("NOK=X")
+fx["NOK"] = (fx["USD"] / float(usdnok)) if usdnok and float(usdnok) > 0 else FX_DEFAULTS["NOK"]
 
 stocks = data.get("stocks", [])
 print(f"  ↓ GitHub {len(stocks)}개 (sha={gh_sha[:7]}) | USD={fx['USD']:.0f} JPY={fx['JPY']:.2f} TWD={fx['TWD']:.2f}")

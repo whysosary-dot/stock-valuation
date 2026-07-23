@@ -309,6 +309,54 @@
     background: var(--accent-soft); border-color: var(--accent); color: var(--accent);
   }
 
+  /* ── 섹터 다중 선택 드롭다운 ── */
+  .sector-filter-wrap { position: relative; min-width: 0; }
+  .sector-filter-btn {
+    background: var(--panel); border: 1px solid var(--border-strong); color: var(--text);
+    padding: 9px 30px 9px 12px; border-radius: 6px; font-size: 14px;
+    appearance: none; -webkit-appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%),
+                      linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
+    background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+    background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+    cursor: pointer; white-space: nowrap; max-width: 260px;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .sector-filter-btn:focus {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus);
+  }
+  .sector-filter-btn.active {
+    background-color: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600;
+  }
+  .sector-filter-panel {
+    position: absolute; top: calc(100% + 6px); left: 0; z-index: 60;
+    background: var(--panel); border: 1px solid var(--border-strong); border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(15,23,42,0.18);
+    min-width: 240px; max-height: min(60vh, 480px); overflow: auto;
+    padding: 6px;
+  }
+  .sfp-actions {
+    display: flex; gap: 6px; padding: 4px 6px 8px;
+    border-bottom: 1px solid var(--border-strong); margin-bottom: 6px;
+    position: sticky; top: 0; background: var(--panel); z-index: 1;
+  }
+  .sfp-actions button {
+    flex: 1; background: var(--panel-2); border: 1px solid var(--border-strong);
+    color: var(--text); font-size: 12.5px; padding: 6px 8px; border-radius: 6px; cursor: pointer;
+  }
+  .sfp-actions button:hover { border-color: var(--accent); color: var(--accent); }
+  .sfp-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; border-radius: 6px; cursor: pointer;
+    font-size: 13.5px; user-select: none;
+  }
+  .sfp-item:hover { background: var(--panel-2); }
+  .sfp-item input { accent-color: var(--accent); cursor: pointer; margin: 0; flex: none; }
+  .sfp-item .sfp-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .sfp-item .sfp-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sfp-item .sfp-cnt { color: var(--text-dim); font-size: 12px; flex: none; }
+  .sfp-item.checked .sfp-name { color: var(--accent); font-weight: 600; }
+
   /* ── 열 고정 (기업명 · 섹터) ── */
   th.col-sticky, td.col-sticky {
     position: sticky;
@@ -916,7 +964,7 @@
     .topbar { padding: 11px 13px; gap: 9px; }
     .topbar h1 { font-size: 16px; }
     .topbar input.filter { width: 150px; font-size: 15px; padding: 9px 11px; }
-    .topbar select.sector-filter { font-size: 13px; padding: 9px 28px 9px 11px; }
+    .topbar select.sector-filter, .topbar .sector-filter-btn { font-size: 13px; padding: 9px 28px 9px 11px; }
     .topbar .meta { font-size: 13px; }
     .topbar .btn { font-size: 13px; padding: 8px 12px; }
     th, td { padding: 11px 10px; font-size: 15px; }
@@ -982,7 +1030,9 @@ body{
   padding:9px 14px;font-size:14px;
 }
 .topbar input.filter:focus{background:#fff;border-color:var(--accent);box-shadow:0 0 0 3px var(--focus)}
-select.sector-filter{border-radius:12px !important;background:var(--panel-2) !important;border-color:transparent !important;font-weight:600}
+select.sector-filter,.sector-filter-btn{border-radius:12px !important;border-color:transparent !important;font-weight:600}
+.sector-filter-btn{background-color:var(--panel-2) !important}
+.sector-filter-btn.active{background-color:var(--accent-soft) !important}
 .btn{
   border-radius:12px;font-weight:600;font-size:13.5px;
   border-color:var(--border);box-shadow:0 1px 2px rgba(20,27,45,.04);
@@ -1103,9 +1153,16 @@ td input, td textarea{border-radius:8px}
 <div class="topbar">
   <h1><span class="dot"></span> Stock Valuation</h1>
   <input id="filter" class="filter" type="search" placeholder="기업명 검색..." />
-  <select id="sector-filter" class="sector-filter" title="섹터로 필터">
-    <option value="">전체 섹터</option>
-  </select>
+  <div class="sector-filter-wrap" id="sector-filter-wrap">
+    <button id="sector-filter-btn" class="sector-filter-btn" type="button" title="섹터 필터 (다중 선택 가능)">전체 섹터</button>
+    <div id="sector-filter-panel" class="sector-filter-panel" hidden>
+      <div class="sfp-actions">
+        <button id="sfp-all" type="button">전체 선택</button>
+        <button id="sfp-clear" type="button">전체 해제</button>
+      </div>
+      <div id="sfp-list"></div>
+    </div>
+  </div>
   <button id="group-toggle" class="btn" type="button" title="섹터별로 묶어서 보기">섹터별 그룹</button>
   <button id="collapse-all-btn" class="btn" type="button" style="display:none">접기</button>
   <button id="fav-filter-btn" class="btn" type="button" title="매수 리스트 종목만 보기">📋 매수 리스트</button>
@@ -1425,7 +1482,7 @@ let state = {
   usdkrw: 0,
   updated_at: '',
   filter: '',
-  sectorFilter: '',
+  sectorFilters: [],  // 다중 선택 (빈 배열 = 전체)
   groupBySector: false,
   favoriteOnly: false,
   sortKey: '_upside',
@@ -1440,7 +1497,7 @@ function loadUi() {
 function saveUi() {
   localStorage.setItem(LS_UI_KEY, JSON.stringify({
     showQuarterly: state.showQuarterly,
-    sectorFilter: state.sectorFilter,
+    sectorFilters: state.sectorFilters,
     groupBySector: state.groupBySector,
     favoriteOnly: state.favoriteOnly,
     collapsedSectors: [...state.collapsedSectors],
@@ -1980,8 +2037,9 @@ function render() {
       (s.name || '').toLowerCase().includes(q) ||
       (s.ticker || '').toLowerCase().includes(q));
   }
-  if (state.sectorFilter) {
-    list = list.filter(s => normSector(s.sector) === state.sectorFilter);
+  if (state.sectorFilters.length) {
+    const sel = new Set(state.sectorFilters);
+    list = list.filter(s => sel.has(normSector(s.sector)));
   }
 
   const dirSign = state.sortDir === 'asc' ? 1 : -1;
@@ -1994,7 +2052,7 @@ function render() {
     const td = document.createElement('td');
     td.colSpan = COLS.length;
     td.className = 'empty';
-    td.textContent = (state.filter || state.sectorFilter) ? '검색 결과 없음' : '데이터 없음';
+    td.textContent = (state.filter || state.sectorFilters.length) ? '검색 결과 없음' : '데이터 없음';
     tr.appendChild(td);
     tbody.appendChild(tr);
   } else if (state.groupBySector) {
@@ -2058,13 +2116,14 @@ function render() {
   if (state.usdkrw) parts.push(`USDKRW ${Number(state.usdkrw).toFixed(1)}`);
   parts.push(`${state.stocks.length}개 종목`);
   if (state.favoriteOnly) parts.push(`📋 매수 리스트 ${state.stocks.filter(s=>s.favorite).length}개`);
-  if (state.sectorFilter) parts.push(`섹터: ${state.sectorFilter}`);
+  if (state.sectorFilters.length) parts.push(`섹터: ${state.sectorFilters.join(', ')}`);
   m.textContent = parts.join(' · ');
 }
 
 function updateSectorFilterOptions() {
-  const sel = document.getElementById('sector-filter');
-  if (!sel) return;
+  const listEl = document.getElementById('sfp-list');
+  const btn = document.getElementById('sector-filter-btn');
+  if (!listEl || !btn) return;
   const counts = new Map();
   for (const s of state.stocks) {
     const k = normSector(s.sector);
@@ -2080,21 +2139,50 @@ function updateSectorFilterOptions() {
   });
   if (counts.has(SECTOR_UNCATEGORIZED)) order.push(SECTOR_UNCATEGORIZED);
 
-  const prev = state.sectorFilter;
-  // 옵션이 동일하면 재구성 생략
-  const sig = order.map(k => `${k}:${counts.get(k)}`).join('|');
-  if (sel.dataset.sig === sig) { sel.value = prev; return; }
-  sel.dataset.sig = sig;
-  sel.innerHTML = '';
-  const all = document.createElement('option');
-  all.value = ''; all.textContent = `전체 섹터 (${state.stocks.length})`;
-  sel.appendChild(all);
-  order.forEach(name => {
-    const o = document.createElement('option');
-    o.value = name; o.textContent = `${name} (${counts.get(name)})`;
-    sel.appendChild(o);
-  });
-  sel.value = prev;
+  // 존재하지 않는 섹터 선택값 정리
+  state.sectorFilters = state.sectorFilters.filter(k => counts.has(k));
+  const selSet = new Set(state.sectorFilters);
+
+  // 체크박스 목록 재구성 (옵션+선택 상태가 동일하면 생략)
+  const sig = order.map(k => `${k}:${counts.get(k)}:${selSet.has(k)?1:0}`).join('|');
+  if (listEl.dataset.sig !== sig) {
+    listEl.dataset.sig = sig;
+    listEl.innerHTML = '';
+    order.forEach(name => {
+      const lb = document.createElement('label');
+      lb.className = 'sfp-item' + (selSet.has(name) ? ' checked' : '');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = selSet.has(name); cb.value = name;
+      cb.addEventListener('change', () => {
+        if (cb.checked) { if (!state.sectorFilters.includes(name)) state.sectorFilters.push(name); }
+        else state.sectorFilters = state.sectorFilters.filter(k => k !== name);
+        saveUi();
+        render();
+      });
+      const dot = document.createElement('span');
+      dot.className = 'sfp-dot';
+      dot.style.background = sectorColors(name).bar;
+      const nm = document.createElement('span');
+      nm.className = 'sfp-name'; nm.textContent = name;
+      const cnt = document.createElement('span');
+      cnt.className = 'sfp-cnt'; cnt.textContent = counts.get(name);
+      lb.append(cb, dot, nm, cnt);
+      listEl.appendChild(lb);
+    });
+  }
+
+  // 버튼 라벨
+  const n = state.sectorFilters.length;
+  if (!n) {
+    btn.textContent = `전체 섹터 (${state.stocks.length})`;
+    btn.classList.remove('active');
+  } else {
+    const shown = state.sectorFilters.reduce((a, k) => a + (counts.get(k) || 0), 0);
+    btn.textContent = n === 1
+      ? `${state.sectorFilters[0]} (${shown})`
+      : `섹터 ${n}개 · ${shown}종목`;
+    btn.classList.add('active');
+  }
 }
 
 function syncToggleButton() {
@@ -2231,7 +2319,8 @@ async function silentRefresh() {
 async function init() {
   const ui = loadUi();
   state.showQuarterly = !!ui.showQuarterly;
-  state.sectorFilter = ui.sectorFilter || '';
+  state.sectorFilters = Array.isArray(ui.sectorFilters) ? ui.sectorFilters
+    : (ui.sectorFilter ? [ui.sectorFilter] : []);  // 구버전(단일 선택) 마이그레이션
   state.groupBySector = !!ui.groupBySector;
   state.favoriteOnly = !!ui.favoriteOnly;
   state.collapsedSectors = new Set(Array.isArray(ui.collapsedSectors) ? ui.collapsedSectors : []);
@@ -2253,8 +2342,25 @@ async function init() {
     render();
   });
 
-  document.getElementById('sector-filter').addEventListener('change', e => {
-    state.sectorFilter = e.target.value || '';
+  // 섹터 다중 선택 드롭다운
+  const sfBtn = document.getElementById('sector-filter-btn');
+  const sfPanel = document.getElementById('sector-filter-panel');
+  sfBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    sfPanel.hidden = !sfPanel.hidden;
+  });
+  sfPanel.addEventListener('click', e => e.stopPropagation());
+  document.addEventListener('click', () => { if (!sfPanel.hidden) sfPanel.hidden = true; });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !sfPanel.hidden) sfPanel.hidden = true;
+  });
+  document.getElementById('sfp-all').addEventListener('click', () => {
+    state.sectorFilters = [...new Set(state.stocks.map(s => normSector(s.sector)))];
+    saveUi();
+    render();
+  });
+  document.getElementById('sfp-clear').addEventListener('click', () => {
+    state.sectorFilters = [];
     saveUi();
     render();
   });
