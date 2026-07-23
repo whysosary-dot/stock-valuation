@@ -4420,6 +4420,7 @@ async function ghCommitAllRun(pat) {
     try {
       const sheetsMeta = JSON.parse(localStorage.getItem('sv_sheets_meta_v1') || 'null');
       if (sheetsMeta && (sheetsMeta.sheets || []).length) {
+        const _delIds = new Set(sheetsMeta._deleted || []); // 병합 가드에서 사용 (아래에서 비워지기 전에 캡처)
         // 삭제 예약 처리
         for (const delId of (sheetsMeta._deleted || [])) {
           const f = await ghApiGet(pat, `sv/sheets/data/${delId}.json`);
@@ -4456,6 +4457,19 @@ async function ghCommitAllRun(pat) {
                  ...(type ? { type, gid, ggid, rid, cid, adate, code, iid, wurl, wembed } : {}) })),
           };
           const idxFile = await ghApiGet(pat, 'sv/sheets/index.json');
+          // ── 병합 가드: 다른 기기가 마지막 동기화 이후에 커밋했다면(SHA 불일치)
+          //    로컬이 모르는 GitHub 항목을 합쳐서 유실 방지 (stale 덮어쓰기 사고 방지)
+          const lastSyncSha = localStorage.getItem('sv_sheets_gh_sha_v1') || '';
+          if (idxFile && idxFile.content && String(idxFile.sha) !== lastSyncSha) {
+            try {
+              const ghIdx = JSON.parse(new TextDecoder().decode(
+                Uint8Array.from(atob(String(idxFile.content).replace(/\n/g, '')), c => c.charCodeAt(0))));
+              const lf = new Set(idxData.folders.map(f => f.id));
+              (ghIdx.folders || []).forEach(f => { if (f && !lf.has(f.id)) idxData.folders.push(f); });
+              const ls = new Set(idxData.sheets.map(x => x.id));
+              (ghIdx.sheets || []).forEach(x => { if (x && !ls.has(x.id) && !_delIds.has(x.id)) idxData.sheets.push(x); });
+            } catch (e) { console.warn('[commit] index 병합 가드 실패:', e); }
+          }
           const idxPut = await ghApiPut(pat, 'sv/sheets/index.json', JSON.stringify(idxData, null, 2),
             idxFile ? idxFile.sha : null, `sheets: 인덱스 업데이트 ${today}`);
           const newIdxSha = idxPut && idxPut.content && idxPut.content.sha;
