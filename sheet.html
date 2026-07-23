@@ -1912,57 +1912,6 @@ document.getElementById('rs-import-btn').addEventListener('click', () => {
   toast(`🔬 카드 ${count}개 가져옴`);
 });
 
-/* 공용 리서치 차트 config (bar / bar-h / line / donut / bar-stack) */
-function rcChartConfig(def) {
-  const PALETTE = ['#378ADD','#85B7EB','#534AB7','#E2A93A','#3AB795','#E23A3A','#8898AA','#D67DC3'];
-  if (def.type === 'bar-stack') {
-    const series = def.series || [];
-    const totals = (def.labels || []).map((_, i) => series.reduce((t, s) => t + (Number(s.data[i]) || 0), 0));
-    return {
-      type: 'bar',
-      data: {
-        labels: def.labels,
-        datasets: series.map((s, i) => ({
-          label: s.label, data: s.data,
-          backgroundColor: s.color || PALETTE[i % PALETTE.length],
-        }))
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: true, position: 'top', labels: { boxWidth: 10, font: { size: 10 }, padding: 6 } },
-          tooltip: { callbacks: {
-            label: ctx => ' ' + ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString() + (def.unit ? ' ' + def.unit : ''),
-            afterBody: items => ' 합계: ' + (totals[items[0].dataIndex] || 0).toLocaleString() + (def.unit ? ' ' + def.unit : '')
-          } }
-        },
-        scales: {
-          x: { stacked: true, ticks: { font: { size: 9 } }, grid: { display: false } },
-          y: { stacked: true, beginAtZero: true, ticks: { font: { size: 9 }, callback: v => v.toLocaleString() } }
-        }
-      }
-    };
-  }
-  const type = def.type === 'donut' ? 'doughnut' : def.type === 'line' ? 'line' : 'bar';
-  return {
-    type,
-    data: {
-      labels: def.labels,
-      datasets: [{
-        data: def.data,
-        backgroundColor: def.colors || PALETTE,
-        borderWidth: type === 'line' ? 2 : 0,
-        borderColor: '#378ADD', fill: false,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      indexAxis: def.type === 'bar-h' ? 'y' : 'x',
-      plugins: { legend: { display: type === 'doughnut', labels: { boxWidth: 10, font: { size: 10 } } } },
-    }
-  };
-}
-
 /* 리서치 카드 렌더 (열람 시) */
 let _rcCharts = []; // Chart.js 인스턴스 정리용
 async function renderResearchCard(s) {
@@ -2006,7 +1955,7 @@ async function renderResearchCard(s) {
     // 차트 (chart 단일 / charts 배열)
     const chartDefs = cd.charts || (cd.chart ? [cd.chart] : []);
     chartDefs.forEach(def => {
-      if (!def || !def.labels || (!def.data && !def.series)) return;
+      if (!def || !def.labels || !def.data) return;
       const wrap = document.createElement('div'); wrap.className = 'rc-chart-wrap';
       if (def.title) {
         const t = document.createElement('div'); t.className = 'rc-chart-title';
@@ -2014,10 +1963,29 @@ async function renderResearchCard(s) {
         wrap.appendChild(t);
       }
       const cvBox = document.createElement('div');
-      cvBox.style.cssText = 'position:relative; height:' + (def.type === 'donut' ? '260px' : def.type === 'bar-stack' ? '280px' : '220px') + ';';
+      cvBox.style.cssText = 'position:relative; height:' + (def.type === 'donut' ? '260px' : '220px') + ';';
       const cv = document.createElement('canvas');
       cvBox.appendChild(cv); wrap.appendChild(cvBox); card.appendChild(wrap);
-      try { _rcCharts.push(new Chart(cv, rcChartConfig(def))); } catch(e) { console.warn('chart fail', e); }
+      const type = def.type === 'donut' ? 'doughnut' : def.type === 'line' ? 'line' : 'bar';
+      const cfg = {
+        type,
+        data: {
+          labels: def.labels,
+          datasets: [{
+            data: def.data,
+            backgroundColor: def.colors || ['#378ADD','#85B7EB','#534AB7','#E2A93A','#3AB795','#E23A3A','#8898AA','#D67DC3'],
+            borderWidth: type === 'line' ? 2 : 0,
+            borderColor: '#378ADD',
+            fill: false,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          indexAxis: def.type === 'bar-h' ? 'y' : 'x',
+          plugins: { legend: { display: type === 'doughnut' } },
+        }
+      };
+      try { _rcCharts.push(new Chart(cv, cfg)); } catch(e) { console.warn('chart fail', e); }
     });
 
     // 원본 페이지 링크
@@ -2436,7 +2404,7 @@ function buildItemCard(s) {
       // 리서치 탭과 동일 순서: 차트 먼저 → 요약 텍스트
       const chartDefs = cd.charts || (cd.chart ? [cd.chart] : []);
       chartDefs.forEach(def => {
-        if (!def || !def.labels || (!def.data && !def.series)) return;
+        if (!def || !def.labels || !def.data) return;
         if (def.title) {
           const t = document.createElement('div'); t.className = 'rc-chart-title';
           t.style.marginTop = '8px';
@@ -2444,11 +2412,28 @@ function buildItemCard(s) {
           bodyWrap.appendChild(t);
         }
         const cvBox = document.createElement('div');
-        cvBox.style.cssText = 'position:relative; height:' + (def.type === 'bar-stack' ? '200px' : '160px') + ';';
+        cvBox.style.cssText = 'position:relative; height:160px;';
         const cv = document.createElement('canvas');
         cvBox.appendChild(cv); bodyWrap.appendChild(cvBox);
+        const type = def.type === 'donut' ? 'doughnut' : def.type === 'line' ? 'line' : 'bar';
         try {
-          _fvCharts.push(new Chart(cv, rcChartConfig(def)));
+          _fvCharts.push(new Chart(cv, {
+            type,
+            data: {
+              labels: def.labels,
+              datasets: [{
+                data: def.data,
+                backgroundColor: def.colors || ['#378ADD','#85B7EB','#534AB7','#E2A93A','#3AB795','#E23A3A','#8898AA','#D67DC3'],
+                borderWidth: type === 'line' ? 2 : 0,
+                borderColor: '#378ADD', fill: false,
+              }]
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              indexAxis: def.type === 'bar-h' ? 'y' : 'x',
+              plugins: { legend: { display: type === 'doughnut', labels: { boxWidth: 10, font: { size: 10 } } } },
+            }
+          }));
         } catch(e) { console.warn('fv chart fail', e); }
       });
 
@@ -2562,7 +2547,7 @@ function buildItemCard(s) {
         frame.style.transform = `scale(${scale})`;
       });
     } else {
-      frameWrap.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-dim);font-size:13px;">📑 내용 동기화 대기 (보관 기기에서 커밋 필요)</div>';
+      frameWrap.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-dim);font-size:13px;">📑 내용 동기화 중… 잠시 후 자동 표시됩니다</div>';
     }
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:absolute; inset:0;';
@@ -2778,6 +2763,9 @@ async function ghDelete(path, sha, message, pat) {
       // (과거 동기화가 1MB 초과 파일을 스킵했던 버그의 잔여 복구용)
       await fetchMissingSheetData(pat);
       renderTree();
+      if (document.getElementById('folderview').style.display !== 'none') {
+        try { openFolderView(currentFolderViewId); } catch(_) {}
+      }
       return;
     }
 
@@ -2799,10 +2787,10 @@ async function ghDelete(path, sha, message, pat) {
       }
     }
 
-    // GitHub 시트 데이터 다운로드 (dirty 아닌 것만 덮어씀)
+    // GitHub 시트 데이터 다운로드 — 병렬 6개씩 (모바일에서 순차 다운로드가 1분+ 걸리던 문제)
     // ⚠️ Contents API 의 JSON 응답은 1MB 초과 파일의 content 를 비워서 반환한다
     //    (PDF 페이지가 든 노트 등). raw 미디어타입은 대용량도 원본 그대로 반환.
-    for (const s of ghSheets) {
+    const dlOne = async (s) => {
       try {
         const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/sv/sheets/data/${s.id}.json?ref=${GH.BRANCH}&t=${Date.now()}`, {
           cache: 'no-store',
@@ -2810,10 +2798,24 @@ async function ghDelete(path, sha, message, pat) {
         });
         if (r.ok) saveSheetData(s.id, await r.json());
       } catch(_) {}
+    };
+    // 현재 보고 있는 폴더의 카드부터 먼저 받기
+    const dlList = ghSheets.slice().sort((a, b) =>
+      ((a.folder || null) === currentFolderViewId ? 0 : 1) - ((b.folder || null) === currentFolderViewId ? 0 : 1));
+    for (let i = 0; i < dlList.length; i += 6) {
+      await Promise.all(dlList.slice(i, i + 6).map(dlOne));
+      // 열려있는 폴더 카드부터 받은 직후 화면 갱신 (placeholder → 실제 내용)
+      if (i === 0 && document.getElementById('folderview').style.display !== 'none') {
+        try { openFolderView(currentFolderViewId); } catch(_) {}
+      }
     }
     localStorage.setItem(SHA_KEY, ghSha);
     renderTree();
     _tryDeepLink();
+    // 다운로드 완료 후 열려있는 폴더 뷰 새로고침
+    if (document.getElementById('folderview').style.display !== 'none') {
+      try { openFolderView(currentFolderViewId); } catch(_) {}
+    }
     // 동기화는 조용히 (토스트 없음)
   } catch (e) {
     console.warn('sheet sync fail', e);
@@ -3005,7 +3007,7 @@ async function fetchMissingSheetData(pat) {
   const targets = (meta.sheets || []).filter(s =>
     !['gsheet', 'rcard', 'awake', 'index'].includes(s.type) &&
     !localStorage.getItem(DATA_PREF + s.id) && !_bigCache[s.id]);
-  for (const s of targets) {
+  const one = async (s) => {
     try {
       const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/sv/sheets/data/${s.id}.json?ref=${GH.BRANCH}&t=${Date.now()}`, {
         cache: 'no-store',
@@ -3016,6 +3018,9 @@ async function fetchMissingSheetData(pat) {
         console.log('[sheets] 누락 데이터 복구:', s.name);
       }
     } catch(_) {}
+  };
+  for (let i = 0; i < targets.length; i += 6) {
+    await Promise.all(targets.slice(i, i + 6).map(one));
   }
 }
 
