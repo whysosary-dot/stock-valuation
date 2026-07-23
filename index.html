@@ -4233,6 +4233,25 @@ async function ghCommitAll() {
   svConfirm('밸류에이션·다이어리·폴더를 GitHub에 커밋 & 푸시할까요?', () => ghCommitAllRun(pat));
 }
 
+/* 대용량 시트 데이터 (sheet.html 이 IndexedDB 'sv_big_v1' 에 저장) 읽기 — same-origin 공유 */
+function svBigGet(k) {
+  return new Promise((resolve) => {
+    try {
+      const rq = indexedDB.open('sv_big_v1', 1);
+      rq.onupgradeneeded = () => rq.result.createObjectStore('kv');
+      rq.onsuccess = () => {
+        try {
+          const tx = rq.result.transaction('kv', 'readonly');
+          const g = tx.objectStore('kv').get(k);
+          g.onsuccess = () => resolve(g.result || null);
+          g.onerror = () => resolve(null);
+        } catch(_) { resolve(null); }
+      };
+      rq.onerror = () => resolve(null);
+    } catch(_) { resolve(null); }
+  });
+}
+
 async function ghCommitAllRun(pat) {
   const btn = document.getElementById('gh-commit-btn');
   btn.disabled = true;
@@ -4310,7 +4329,8 @@ async function ghCommitAllRun(pat) {
         const dirtySheets = (sheetsMeta.sheets || []).filter(s => s.dirty);
         for (const s of dirtySheets) {
           if (['gsheet', 'rcard', 'awake', 'index', 'web'].includes(s.type)) { s.dirty = false; continue; }
-          const dataStr = localStorage.getItem('sv_sheet_data_' + s.id);
+          let dataStr = localStorage.getItem('sv_sheet_data_' + s.id);
+          if (!dataStr) dataStr = await svBigGet('sv_sheet_data_' + s.id); // 대용량(IndexedDB) 노트
           if (!dataStr) continue;
           const existing = await ghApiGet(pat, `sv/sheets/data/${s.id}.json`);
           await ghApiPut(pat, `sv/sheets/data/${s.id}.json`, dataStr,
