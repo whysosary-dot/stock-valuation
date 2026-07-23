@@ -1912,6 +1912,57 @@ document.getElementById('rs-import-btn').addEventListener('click', () => {
   toast(`🔬 카드 ${count}개 가져옴`);
 });
 
+/* 공용 리서치 차트 config (bar / bar-h / line / donut / bar-stack) */
+function rcChartConfig(def) {
+  const PALETTE = ['#378ADD','#85B7EB','#534AB7','#E2A93A','#3AB795','#E23A3A','#8898AA','#D67DC3'];
+  if (def.type === 'bar-stack') {
+    const series = def.series || [];
+    const totals = (def.labels || []).map((_, i) => series.reduce((t, s) => t + (Number(s.data[i]) || 0), 0));
+    return {
+      type: 'bar',
+      data: {
+        labels: def.labels,
+        datasets: series.map((s, i) => ({
+          label: s.label, data: s.data,
+          backgroundColor: s.color || PALETTE[i % PALETTE.length],
+        }))
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, position: 'top', labels: { boxWidth: 10, font: { size: 10 }, padding: 6 } },
+          tooltip: { callbacks: {
+            label: ctx => ' ' + ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString() + (def.unit ? ' ' + def.unit : ''),
+            afterBody: items => ' 합계: ' + (totals[items[0].dataIndex] || 0).toLocaleString() + (def.unit ? ' ' + def.unit : '')
+          } }
+        },
+        scales: {
+          x: { stacked: true, ticks: { font: { size: 9 } }, grid: { display: false } },
+          y: { stacked: true, beginAtZero: true, ticks: { font: { size: 9 }, callback: v => v.toLocaleString() } }
+        }
+      }
+    };
+  }
+  const type = def.type === 'donut' ? 'doughnut' : def.type === 'line' ? 'line' : 'bar';
+  return {
+    type,
+    data: {
+      labels: def.labels,
+      datasets: [{
+        data: def.data,
+        backgroundColor: def.colors || PALETTE,
+        borderWidth: type === 'line' ? 2 : 0,
+        borderColor: '#378ADD', fill: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      indexAxis: def.type === 'bar-h' ? 'y' : 'x',
+      plugins: { legend: { display: type === 'doughnut', labels: { boxWidth: 10, font: { size: 10 } } } },
+    }
+  };
+}
+
 /* 리서치 카드 렌더 (열람 시) */
 let _rcCharts = []; // Chart.js 인스턴스 정리용
 async function renderResearchCard(s) {
@@ -1955,7 +2006,7 @@ async function renderResearchCard(s) {
     // 차트 (chart 단일 / charts 배열)
     const chartDefs = cd.charts || (cd.chart ? [cd.chart] : []);
     chartDefs.forEach(def => {
-      if (!def || !def.labels || !def.data) return;
+      if (!def || !def.labels || (!def.data && !def.series)) return;
       const wrap = document.createElement('div'); wrap.className = 'rc-chart-wrap';
       if (def.title) {
         const t = document.createElement('div'); t.className = 'rc-chart-title';
@@ -1963,29 +2014,10 @@ async function renderResearchCard(s) {
         wrap.appendChild(t);
       }
       const cvBox = document.createElement('div');
-      cvBox.style.cssText = 'position:relative; height:' + (def.type === 'donut' ? '260px' : '220px') + ';';
+      cvBox.style.cssText = 'position:relative; height:' + (def.type === 'donut' ? '260px' : def.type === 'bar-stack' ? '280px' : '220px') + ';';
       const cv = document.createElement('canvas');
       cvBox.appendChild(cv); wrap.appendChild(cvBox); card.appendChild(wrap);
-      const type = def.type === 'donut' ? 'doughnut' : def.type === 'line' ? 'line' : 'bar';
-      const cfg = {
-        type,
-        data: {
-          labels: def.labels,
-          datasets: [{
-            data: def.data,
-            backgroundColor: def.colors || ['#378ADD','#85B7EB','#534AB7','#E2A93A','#3AB795','#E23A3A','#8898AA','#D67DC3'],
-            borderWidth: type === 'line' ? 2 : 0,
-            borderColor: '#378ADD',
-            fill: false,
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          indexAxis: def.type === 'bar-h' ? 'y' : 'x',
-          plugins: { legend: { display: type === 'doughnut' } },
-        }
-      };
-      try { _rcCharts.push(new Chart(cv, cfg)); } catch(e) { console.warn('chart fail', e); }
+      try { _rcCharts.push(new Chart(cv, rcChartConfig(def))); } catch(e) { console.warn('chart fail', e); }
     });
 
     // 원본 페이지 링크
@@ -2404,7 +2436,7 @@ function buildItemCard(s) {
       // 리서치 탭과 동일 순서: 차트 먼저 → 요약 텍스트
       const chartDefs = cd.charts || (cd.chart ? [cd.chart] : []);
       chartDefs.forEach(def => {
-        if (!def || !def.labels || !def.data) return;
+        if (!def || !def.labels || (!def.data && !def.series)) return;
         if (def.title) {
           const t = document.createElement('div'); t.className = 'rc-chart-title';
           t.style.marginTop = '8px';
@@ -2412,28 +2444,11 @@ function buildItemCard(s) {
           bodyWrap.appendChild(t);
         }
         const cvBox = document.createElement('div');
-        cvBox.style.cssText = 'position:relative; height:160px;';
+        cvBox.style.cssText = 'position:relative; height:' + (def.type === 'bar-stack' ? '200px' : '160px') + ';';
         const cv = document.createElement('canvas');
         cvBox.appendChild(cv); bodyWrap.appendChild(cvBox);
-        const type = def.type === 'donut' ? 'doughnut' : def.type === 'line' ? 'line' : 'bar';
         try {
-          _fvCharts.push(new Chart(cv, {
-            type,
-            data: {
-              labels: def.labels,
-              datasets: [{
-                data: def.data,
-                backgroundColor: def.colors || ['#378ADD','#85B7EB','#534AB7','#E2A93A','#3AB795','#E23A3A','#8898AA','#D67DC3'],
-                borderWidth: type === 'line' ? 2 : 0,
-                borderColor: '#378ADD', fill: false,
-              }]
-            },
-            options: {
-              responsive: true, maintainAspectRatio: false,
-              indexAxis: def.type === 'bar-h' ? 'y' : 'x',
-              plugins: { legend: { display: type === 'doughnut', labels: { boxWidth: 10, font: { size: 10 } } } },
-            }
-          }));
+          _fvCharts.push(new Chart(cv, rcChartConfig(def)));
         } catch(e) { console.warn('fv chart fail', e); }
       });
 
