@@ -485,11 +485,83 @@ function loadMeta() {
   catch { return { folders: [], sheets: [] }; }
 }
 function saveMeta() { localStorage.setItem(META_KEY, JSON.stringify(meta)); }
-function loadSheetData(id) {
-  try { return JSON.parse(localStorage.getItem(DATA_PREF + id) || 'null'); }
-  catch { return null; }
+/* ── 대용량 데이터 저장소 (IndexedDB) ──
+   localStorage 는 ~5MB 한도라 PDF 여러 장 넣은 노트가 저장 실패(QuotaExceeded)함.
+   용량 초과 시 IndexedDB(수백 MB)에 저장하고, 시작 시 메모리 캐시로 올려 동기 읽기 유지. */
+const _bigCache = Object.create(null);
+function _idbOpen() {
+  return new Promise((res, rej) => {
+    const rq = indexedDB.open('sv_big_v1', 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore('kv');
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
 }
-function saveSheetData(id, data) { localStorage.setItem(DATA_PREF + id, JSON.stringify(data)); }
+async function idbSetStr(k, str) {
+  const db = await _idbOpen();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('kv', 'readwrite');
+    tx.objectStore('kv').put(str, k);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+async function idbDelKey(k) {
+  try {
+    const db = await _idbOpen();
+    await new Promise(res => {
+      const tx = db.transaction('kv', 'readwrite');
+      tx.objectStore('kv').delete(k);
+      tx.oncomplete = res; tx.onerror = res;
+    });
+  } catch(_) {}
+}
+const _bigReady = (async () => {
+  try {
+    const db = await _idbOpen();
+    const entries = await new Promise((res, rej) => {
+      const out = [];
+      const tx = db.transaction('kv', 'readonly');
+      const rq = tx.objectStore('kv').openCursor();
+      rq.onsuccess = () => { const c = rq.result; if (c) { out.push([c.key, c.value]); c.continue(); } else res(out); };
+      rq.onerror = () => rej(rq.error);
+    });
+    let n = 0;
+    for (const [k, v] of entries) {
+      if (typeof k === 'string' && k.startsWith(DATA_PREF)) {
+        try { _bigCache[k.slice(DATA_PREF.length)] = JSON.parse(v); n++; } catch(_) {}
+      }
+    }
+    if (n) { try { renderTree(); } catch(_) {} }
+  } catch(_) {}
+})();
+
+function loadSheetData(id) {
+  try {
+    const s = localStorage.getItem(DATA_PREF + id);
+    if (s != null) return JSON.parse(s);
+  } catch(_) {}
+  return _bigCache[id] || null;
+}
+function saveSheetData(id, data) {
+  const str = JSON.stringify(data);
+  try {
+    localStorage.setItem(DATA_PREF + id, str);
+    if (_bigCache[id]) { delete _bigCache[id]; idbDelKey(DATA_PREF + id); }
+  } catch (e) {
+    // 용량 초과 → IndexedDB 로 저장 (기기 내 안전 보관, 커밋&푸시에도 포함됨)
+    try { localStorage.removeItem(DATA_PREF + id); } catch(_) {}
+    _bigCache[id] = data;
+    idbSetStr(DATA_PREF + id, str)
+      .then(() => { try { setStatus('저장됨 ✓ (대용량)', true); } catch(_) {} })
+      .catch(() => { try { toast('❌ 저장 실패 — 파일이 너무 큽니다', 'err', 5000); } catch(_) {} });
+  }
+}
+function removeSheetData(id) {
+  try { localStorage.removeItem(DATA_PREF + id); } catch(_) {}
+  delete _bigCache[id];
+  idbDelKey(DATA_PREF + id);
+}
 
 let meta = loadMeta();
 let currentId = null;       // 열려있는 시트 문서 id
@@ -685,7 +757,7 @@ function renderTree() {
         // 하위 시트 삭제 (localStorage 정리 + GitHub 삭제 예약)
         meta._deleted = meta._deleted || [];
         subSheets.forEach(s => {
-          localStorage.removeItem(DATA_PREF + s.id);
+          removeSheetData(s.id);
           if (s.type !== 'gsheet') meta._deleted.push(s.id);
           if (currentId === s.id) { currentId = null; showNoSheet(); }
         });
@@ -723,7 +795,7 @@ function renderTree() {
       div.querySelector('.del').addEventListener('click', () => {
         svConfirm(`"${s.name}" 를 삭제할까요?\n(커밋하면 GitHub 에서도 삭제됩니다)`, () => {
           meta.sheets = meta.sheets.filter(x => x.id !== s.id);
-          localStorage.removeItem(DATA_PREF + s.id);
+          removeSheetData(s.id);
           meta._deleted = meta._deleted || [];
           meta._deleted.push(s.id);
           if (currentId === s.id) { currentId = null; showNoSheet(); }
@@ -1413,7 +1485,7 @@ function isEmptyNoteDraft(s) {
 }
 function discardNoteDraft(s) {
   meta.sheets = meta.sheets.filter(x => x.id !== s.id);
-  localStorage.removeItem(DATA_PREF + s.id);
+  removeSheetData(s.id);
   if (currentId === s.id) currentId = null;
   noteChanged = false;
   saveMeta(); renderTree();
@@ -1607,9 +1679,7 @@ document.getElementById('note-pdf-input').addEventListener('change', async (e) =
     const buf = await file.arrayBuffer();
     const pdf = await pdfjs.getDocument({ data: buf }).promise;
     const total = pdf.numPages;
-    if (total > 15 && !confirm(`PDF 가 ${total}페이지입니다.\n전부 이미지로 변환하면 용량이 커질 수 있어요.\n계속할까요?`)) {
-      setStatus('', false); return;
-    }
+    if (total > 15) toast(`📎 ${total}페이지 — 변환에 시간이 걸릴 수 있어요`, 'ok', 3000);
     const ed = document.getElementById('note-edit');
     ed.focus();
     for (let p = 1; p <= total; p++) {
@@ -2267,7 +2337,7 @@ function buildItemCard(s) {
     svConfirm(`"${s.name}" 을(를) 삭제할까요?\n(커밋하면 GitHub 에서도 삭제됩니다)`, () => {
       const folderId = s.folder || null;
       meta.sheets = meta.sheets.filter(x => x.id !== s.id);
-      localStorage.removeItem(DATA_PREF + s.id);
+      removeSheetData(s.id);
       if (!['gsheet', 'rcard', 'awake', 'index'].includes(s.type)) {
         meta._deleted = meta._deleted || [];
         meta._deleted.push(s.id);
@@ -2916,9 +2986,10 @@ window.addEventListener('popstate', goBackToFolder);
 
 /* 인덱스엔 있는데 로컬 데이터가 없는 시트(note/자체시트) 를 raw 로 받아옴 */
 async function fetchMissingSheetData(pat) {
+  await _bigReady;
   const targets = (meta.sheets || []).filter(s =>
     !['gsheet', 'rcard', 'awake', 'index'].includes(s.type) &&
-    !localStorage.getItem(DATA_PREF + s.id));
+    !localStorage.getItem(DATA_PREF + s.id) && !_bigCache[s.id]);
   for (const s of targets) {
     try {
       const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/sv/sheets/data/${s.id}.json?ref=${GH.BRANCH}&t=${Date.now()}`, {
