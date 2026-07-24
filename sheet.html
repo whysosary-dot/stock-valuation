@@ -1425,8 +1425,44 @@ document.getElementById('um-name').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') document.getElementById('um-ok').click();
 });
 
+/* PDF URL → 페이지 이미지가 담긴 노트 카드 생성 (웹사이트 연결에서 PDF 감지 시) */
+async function createPdfNoteCard(pdfUrl, name, folderId) {
+  toast('📎 PDF 변환 중…', 'ok', 2500);
+  try {
+    const r = await fetch(pdfUrl, { mode: 'cors' });
+    if (!r.ok) throw new Error('다운로드 실패 ' + r.status);
+    const pdfjs = await ensurePdfJs();
+    const pdf = await pdfjs.getDocument({ data: await r.arrayBuffer() }).promise;
+    let html = '';
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const vp1 = page.getViewport({ scale: 1 });
+      const vp = page.getViewport({ scale: Math.min(2, 1100 / vp1.width) });
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+      await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+      html += `<img src="${cv.toDataURL('image/jpeg', 0.8)}"><br>`;
+    }
+    const id = uid();
+    meta.sheets.push({ id, name, folder: folderId || null, type: 'note',
+      ord: frontOrd(folderId), dirty: true, updated: Date.now() });
+    saveSheetData(id, { type: 'note', html });
+    saveMeta(); renderTree();
+    openFolderView(folderId || null);
+    toast(`📎 PDF ${pdf.numPages}페이지 → 카드 생성 ✓`, 'ok', 3000);
+    return true;
+  } catch (err) {
+    console.warn('pdf card fail', err);
+    toast('❌ PDF 변환 실패 — 웹 카드로 추가합니다', 'err', 3500);
+    return false;
+  }
+}
+
 document.getElementById('new-web-btn').addEventListener('click', () => {
-  openUrlModal('🔗 웹사이트 연결', '주소 붙여넣기 (블로그·유튜브 등)', (raw, nm) => {
+  openUrlModal('🔗 웹사이트 연결', '주소 붙여넣기 (블로그·유튜브 등)', async (raw, nm) => {
+    // PDF 링크(네이버 PDF 뷰어 포함)면 페이지 이미지 노트 카드로
+    const pdfUrl = resolvePdfUrl(raw);
+    if (pdfUrl && await createPdfNoteCard(pdfUrl, nm.trim(), selectedFolderId || null)) return;
     const { url, embed } = normalizeWebUrl(raw);
     meta.sheets.push({
       id: uid(), name: nm.trim(), folder: selectedFolderId || null,
