@@ -1669,14 +1669,11 @@ function ensurePdfJs() {
   return _pdfjsReady;
 }
 
-document.getElementById('note-pdf-input').addEventListener('change', async (e) => {
-  const file = (e.target.files || [])[0];
-  e.target.value = '';
-  if (!file) return;
+/* PDF ArrayBuffer → 페이지 이미지 삽입 (파일 첨부·URL 붙여넣기 공용) */
+async function insertPdfBuffer(buf) {
   setStatus('PDF 변환 중…', false);
   try {
     const pdfjs = await ensurePdfJs();
-    const buf = await file.arrayBuffer();
     const pdf = await pdfjs.getDocument({ data: buf }).promise;
     const total = pdf.numPages;
     if (total > 15) toast(`📎 ${total}페이지 — 변환에 시간이 걸릴 수 있어요`, 'ok', 3000);
@@ -1704,6 +1701,54 @@ document.getElementById('note-pdf-input').addEventListener('change', async (e) =
     console.warn('pdf insert fail', err);
     setStatus('', false);
     toast('❌ PDF 변환 실패: ' + err.message, 'err', 4500);
+  }
+}
+
+document.getElementById('note-pdf-input').addEventListener('change', async (e) => {
+  const file = (e.target.files || [])[0];
+  e.target.value = '';
+  if (!file) return;
+  insertPdfBuffer(await file.arrayBuffer());
+});
+
+/* ── PDF URL 붙여넣기 → 자동으로 페이지 이미지 변환 ──
+   지원: ...pdf 로 끝나는 링크, 네이버 PDF 뷰어(m.stock.naver.com/pdf?url=...) 링크 */
+function resolvePdfUrl(text) {
+  const t = String(text || '').trim();
+  if (!/^https?:\/\/\S+$/.test(t)) return null;
+  try {
+    const u = new URL(t);
+    if (/stock\.naver\.com$/.test(u.hostname) && u.pathname.startsWith('/pdf')) {
+      const inner = u.searchParams.get('url');
+      if (inner && /\.pdf(\?|$)/i.test(inner)) return inner;
+    }
+    if (/\.pdf(\?|$)/i.test(u.pathname)) return t;
+  } catch(_) {}
+  return null;
+}
+
+async function insertPdfFromUrl(url) {
+  setStatus('PDF 다운로드 중…', false);
+  try {
+    const r = await fetch(url, { mode: 'cors' });
+    if (!r.ok) throw new Error('다운로드 실패 ' + r.status);
+    insertPdfBuffer(await r.arrayBuffer());
+  } catch(err) {
+    console.warn('pdf url fail', err);
+    setStatus('', false);
+    // CORS 미허용 사이트 등 — 링크 텍스트로 대신 삽입
+    document.execCommand('insertHTML', false,
+      `<a href="${url.replace(/"/g, '&quot;')}" target="_blank">${url.replace(/</g, '&lt;')}</a>`);
+    toast('⚠️ 이 사이트는 직접 변환이 안 돼요 — 링크로 삽입했습니다', 'err', 4000);
+  }
+}
+
+document.getElementById('note-edit').addEventListener('paste', (e) => {
+  const txt = (e.clipboardData && e.clipboardData.getData('text/plain')) || '';
+  const pdfUrl = resolvePdfUrl(txt);
+  if (pdfUrl) {
+    e.preventDefault();
+    insertPdfFromUrl(pdfUrl);
   }
 });
 
