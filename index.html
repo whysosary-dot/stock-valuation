@@ -2298,6 +2298,8 @@ function mergeAndSetStocks(ghData, opts) {
   if (migrated) {
     saveUserInputs();
   }
+  // 주가 데이터 도착 → 시나리오 탭이 먼저 그려졌으면 다시 렌더 (포트 비중 주가 연동·밸류 스트립)
+  try { if (typeof renderFeedScenario === 'function' && diary.activeTab === 'scenario') renderFeedScenario(); } catch(_) {}
 }
 
 async function silentRefresh() {
