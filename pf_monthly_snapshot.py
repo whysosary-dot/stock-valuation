@@ -123,8 +123,18 @@ def main():
         print("  보유 종목 합계 0 — 기록 스킵")
         return 0
 
+    # KOSPI 종가 (벤치마크 오버레이용) — 실패해도 스냅샷은 진행
+    kospi = None
+    try:
+        req = urllib.request.Request("https://m.stock.naver.com/api/index/KOSPI/basic",
+                                     headers={"User-Agent": "Mozilla/5.0"})
+        j = json.loads(urllib.request.urlopen(req, timeout=15).read().decode())
+        kospi = float(str(j.get("closePrice", "")).replace(",", ""))
+    except Exception as e:
+        print(f"  KOSPI 조회 실패(무시): {e}")
+
     ym = f"{today.year}-{today.month:02d}"
-    print(f"  {ym} ({today}) 합계 {total:,}원  [{', '.join(detail)}]")
+    print(f"  {ym} ({today}) 합계 {total:,}원  KOSPI {kospi}  [{', '.join(detail)}]")
 
     if DRY:
         print("  (dry-run — 커밋 안 함)")
@@ -132,7 +142,10 @@ def main():
 
     hist = gh_raw(tok, "sv/pf_monthly.json") or []
     hist = [h for h in hist if h.get("ym") != ym]
-    hist.append({"ym": ym, "d": today.isoformat(), "total": total})
+    entry = {"ym": ym, "d": today.isoformat(), "total": total}
+    if kospi:
+        entry["kospi"] = kospi
+    hist.append(entry)
     hist.sort(key=lambda h: h["ym"])
     sha = gh_sha(tok, "sv/pf_monthly.json")
     res = gh_put(tok, "sv/pf_monthly.json", hist, sha, f"pf: {ym} 월말 스냅샷 {total:,}원")
