@@ -2975,6 +2975,7 @@ function updateTabCounts() {
   Object.values(d.weekly || {}).forEach(countIn);
   (d.scenario || []).forEach(it => { if (it) [it.buy, it.hold, it.sell, it.cmt].forEach(countIn); });
   countIn(d.pfMemo || '');
+  (d.pfHist || []).forEach(h => countIn(h && h.memo || ''));
   const elHi = document.getElementById('cnt-highlights');
   if (elHi) elHi.textContent = hi;
   const elSc = document.getElementById('cnt-scenario');
@@ -3383,6 +3384,13 @@ function renderFeedHighlights() {
   });
   _extractHighlights(diary.data.pfMemo || '').forEach(snippet => {
     items.push({ date: '', sortKey: '9999-99-99', sectionKey: 'scenario', sectionLabel: '시나리오', extraTag: '포트 메모', htmlSnippet: snippet });
+  });
+  // 보관된 포트 비중 스냅샷의 메모 강조도 포함
+  (diary.data.pfHist || []).forEach(h => {
+    if (!h) return;
+    _extractHighlights(h.memo || '').forEach(snippet => {
+      items.push({ date: h.d || '', sortKey: _diaryDateSortKey(h.d || ''), sectionKey: 'scenario', sectionLabel: '시나리오', extraTag: '포트 메모 보관', htmlSnippet: snippet });
+    });
   });
 
   // 최신순
