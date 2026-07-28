@@ -3660,9 +3660,13 @@ function makePortfolioCard(activeItems) {
     line.textContent = h.items.map(x => `${x.name} ${sum ? (x.amt / sum * 100).toFixed(1) : 0}%`).join(' · ');
     div.appendChild(line);
     if (h.memo) {
-      const p = document.createElement('div'); p.innerHTML = h.memo;
-      const t = (p.innerText || '').trim();
-      if (t) { const ml = document.createElement('div'); ml.textContent = '📝 ' + t; div.appendChild(ml); }
+      const probe = document.createElement('div'); probe.innerHTML = h.memo;
+      if ((probe.innerText || '').trim()) {
+        // 강조(볼드·색상) 서식 그대로 표시
+        const ml = document.createElement('div');
+        ml.innerHTML = '📝 ' + sanitizeDiaryHTML(h.memo);
+        div.appendChild(ml);
+      }
     }
     histBox.appendChild(div);
   });
