@@ -3966,7 +3966,7 @@ function makePfReturnCard() {
     svg += `<polyline fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="5 4" stroke-linecap="round" points="${kPts.map(p => X(p.i).toFixed(1) + ',' + Y(p.cum).toFixed(1)).join(' ')}"/>`;
     kPts.forEach((p, j) => {
       if (!j) return; // 기준점 마커 생략
-      svg += `<circle cx="${X(p.i).toFixed(1)}" cy="${Y(p.cum).toFixed(1)}" r="3" fill="#94a3b8" stroke="#fff" stroke-width="1.2"><title>KOSPI ${p.ym} · 누적 ${(p.cum >= 0 ? '+' : '') + p.cum.toFixed(1)}%</title></circle>`;
+      svg += `<circle cx="${X(p.i).toFixed(1)}" cy="${Y(p.cum).toFixed(1)}" r="3" fill="#94a3b8" stroke="#fff" stroke-width="1.2" data-tip="KOSPI ${p.ym}&#10;누적 ${(p.cum >= 0 ? '+' : '') + p.cum.toFixed(1)}%"/>`;
     });
   }
   // 내 포트: 영역 채움 + 라인
@@ -3977,9 +3977,9 @@ function makePfReturnCard() {
   pts.forEach((p, i) => {
     const x = X(i), y = Y(p.cum);
     const isLast = i === pts.length - 1;
-    const depTxt = p.dep ? ` · ${p.dep > 0 ? '입금 +' : '출금 -'}${fmtWon(Math.abs(p.dep))}원 제외` : '';
-    const tip = `${p.ym} · 합계 ${fmtWon(p.total)}원 · 월간 ${i ? (p.mom >= 0 ? '+' : '') + p.mom.toFixed(1) + '%' : '기준'} · 누적 ${i ? (p.cum >= 0 ? '+' : '') + p.cum.toFixed(1) + '%' : '—'}${depTxt}`;
-    svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${isLast ? 5 : 4}" fill="${isLast ? mainClr : '#fff'}" stroke="${isLast ? '#fff' : mainClr}" stroke-width="${isLast ? 2 : 2}"><title>${tip}</title></circle>`;
+    const depTxt = p.dep ? `&#10;${p.dep > 0 ? '입금 +' : '출금 -'}${fmtWon(Math.abs(p.dep))}원 제외` : '';
+    const tip = `${p.ym} · ${fmtWon(p.total)}원&#10;월간 ${i ? (p.mom >= 0 ? '+' : '') + p.mom.toFixed(1) + '%' : '기준'} · 누적 ${i ? (p.cum >= 0 ? '+' : '') + p.cum.toFixed(1) + '%' : '—'}${depTxt}`;
+    svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${isLast ? 5 : 4}" fill="${isLast ? mainClr : '#fff'}" stroke="${isLast ? '#fff' : mainClr}" stroke-width="2" data-tip="${tip}"/>`;
     svg += `<text x="${x.toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="#6b7280">${p.ym.slice(2).replace('-', '.')}</text>`;
   });
   // 최신 누적 수익률 배지 (마지막 포인트 위)
@@ -3999,6 +3999,39 @@ function makePfReturnCard() {
   }
   svg += '</svg>';
   body.innerHTML = svg;
+  // 커스텀 툴팁 — 마우스 호버 + 터치(아이패드) 모두 지원
+  {
+    body.style.position = 'relative';
+    const tipEl = document.createElement('div');
+    tipEl.style.cssText = 'position:absolute;pointer-events:none;background:rgba(17,24,39,.92);color:#fff;'
+      + 'font-size:12px;line-height:1.55;padding:7px 11px;border-radius:8px;white-space:pre;opacity:0;'
+      + 'transition:opacity .12s;z-index:5;box-shadow:0 4px 12px rgba(0,0,0,.18);';
+    body.appendChild(tipEl);
+    const showTip = (c) => {
+      tipEl.textContent = c.getAttribute('data-tip');
+      const cr = c.getBoundingClientRect(), br = body.getBoundingClientRect();
+      tipEl.style.opacity = '1';
+      const cx = cr.left - br.left + cr.width / 2;
+      const cy = cr.top - br.top;
+      // 일단 표시 후 크기 측정해 위치 보정 (좌우 넘침 방지)
+      const tw = tipEl.offsetWidth, th = tipEl.offsetHeight;
+      let lx = cx - tw / 2;
+      lx = Math.max(4, Math.min(lx, br.width - tw - 4));
+      let ly = cy - th - 10;
+      if (ly < 0) ly = cy + cr.height + 10;
+      tipEl.style.left = lx + 'px';
+      tipEl.style.top = ly + 'px';
+    };
+    const hideTip = () => { tipEl.style.opacity = '0'; };
+    body.querySelectorAll('circle[data-tip]').forEach(c => {
+      c.style.cursor = 'pointer';
+      c.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') showTip(c); });
+      c.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hideTip(); });
+      c.addEventListener('pointerdown', e => { e.stopPropagation(); showTip(c); });
+    });
+    body.addEventListener('pointerdown', hideTip);
+    document.addEventListener('pointerdown', e => { if (!body.contains(e.target)) hideTip(); });
+  }
   body.appendChild(depListWrap);
   return card;
 }
