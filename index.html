@@ -1392,6 +1392,7 @@ td input, td textarea{border-radius:8px}
         <button id="pat-clear" class="btn" style="flex:none; color:#b91c1c; border-color:#b91c1c;">삭제</button>
       </div>
       <div id="pat-status" style="font-size:13px; color:#16a34a; display:none;">✓ 저장됨</div>
+      <div style="font-size:11px; color:var(--text-dim); text-align:right;">build 2026.07.27-B</div>
     </div>
   </div>
 </div>
@@ -2531,7 +2532,7 @@ window.addEventListener('popstate', (e) => {
   });
   // 안전장치: 로드 직후 다른 코드/복원이 탭을 바꿔놓는 경우 한 번 더 확정
   if (!isDeepLink) {
-    [400, 1200].forEach(ms => setTimeout(() => {
+    [400, 1200, 2600].forEach(ms => setTimeout(() => {
       try {
         const cur = document.querySelector('.page-tab-btn.active');
         if (cur && cur.dataset.page !== 'diary') {
