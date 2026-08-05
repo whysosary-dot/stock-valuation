@@ -2820,12 +2820,25 @@ function clearBoldRedInRange() {
   const editable = startEl && startEl.closest('[contenteditable="true"]');
   if (!editable) return;
 
-  const isBoldRed = sp => sp.tagName === 'SPAN' &&
-    (sp.getAttribute('data-diary-br') === '1' || _looksLikeBoldRed(sp.getAttribute('style') || ''));
+  // 해제 대상: 강조 span 뿐 아니라 WebKit(iOS)이 쪼개놓은 <b>/<strong>/볼드 span/색상 span/font 까지
+  // (해제 버튼 = "선택 부분을 검정·기본 굵기로 원복" 이므로 굵기·색 지정 래퍼는 전부 제거)
+  const isBoldRed = el => {
+    if (!el || el.nodeType !== 1) return false;
+    const tag = el.tagName;
+    if (tag === 'B' || tag === 'STRONG') return true;
+    if (tag !== 'SPAN' && tag !== 'FONT') return false;
+    if (el.getAttribute('data-diary-br') === '1') return true;
+    const st = el.getAttribute('style') || '';
+    if (_looksLikeBoldRed(st)) return true;
+    if (/font-weight\s*:\s*(bold|[6-9]00)/i.test(st)) return true;
+    if (/(^|;)\s*color\s*:/i.test(st)) return true;
+    if (tag === 'FONT' && el.getAttribute('color')) return true;
+    return false;
+  };
 
-  // 대상 span 수집: ① editable 내 교차 span ② startContainer 조상 체인 (span이 range를 감싸는 경우)
+  // 대상 수집: ① editable 내 교차 요소 ② startContainer 조상 체인 (요소가 range를 감싸는 경우)
   const candidates = new Set();
-  editable.querySelectorAll('span').forEach(sp => {
+  editable.querySelectorAll('span, b, strong, font').forEach(sp => {
     if (!isBoldRed(sp)) return;
     try { if (range.intersectsNode(sp)) candidates.add(sp); } catch(_) {}
   });
@@ -2884,8 +2897,8 @@ function clearBoldRedInRange() {
     }
   });
 
-  // 빈 bold-red span 정리
-  editable.querySelectorAll('span').forEach(sp => {
+  // 빈 강조 요소 정리
+  editable.querySelectorAll('span, b, strong, font').forEach(sp => {
     if (isBoldRed(sp) && !sp.textContent) sp.remove();
   });
 
