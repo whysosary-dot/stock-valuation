@@ -2488,7 +2488,15 @@ document.getElementById('npay-tab-btn')?.addEventListener('click', () => {
 })();
 
 // 브라우저 뒤로/앞으로
+const _svLoadTime = Date.now();
 window.addEventListener('popstate', (e) => {
+  // iOS 세션 복원 시 이전 히스토리(#folder 등)가 로드 직후 popstate 로 재생되는 경우가 있다.
+  // 사용자의 실제 뒤로가기가 아니므로 무시하고 첫 화면(Diary) 유지.
+  if (Date.now() - _svLoadTime < 2500) {
+    try { history.replaceState({ page: 'diary' }, '', '#diary'); } catch (_) {}
+    activatePage('diary', { skipHistory: true });
+    return;
+  }
   const fromState = e.state && e.state.page;
   const fromHash  = (location.hash || '').replace(/^#/, '');
   const page = fromState || fromHash || 'valuation';
@@ -2521,6 +2529,18 @@ window.addEventListener('popstate', (e) => {
       console.error('[initFromHash] activatePage failed:', e);
     }
   });
+  // 안전장치: 로드 직후 다른 코드/복원이 탭을 바꿔놓는 경우 한 번 더 확정
+  if (!isDeepLink) {
+    [400, 1200].forEach(ms => setTimeout(() => {
+      try {
+        const cur = document.querySelector('.page-tab-btn.active');
+        if (cur && cur.dataset.page !== 'diary') {
+          activatePage('diary', { skipHistory: true });
+          history.replaceState({ page: 'diary' }, '', '#diary');
+        }
+      } catch (_) {}
+    }, ms));
+  }
 })();
 
 /* ═══════════════════════════════════
