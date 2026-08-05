@@ -4276,24 +4276,17 @@ function initDiary() {
     });
   });
 
-  // 볼드+빨강 토글 — 현재 선택 영역에 적용
-  const fmtBtn = document.getElementById('diary-fmt-bold-red');
-  if (fmtBtn) {
-    // mousedown 으로 처리 — click 직전에 contenteditable 의 selection 이 날아가는 걸 방지
-    fmtBtn.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      applyBoldRedToggle();
-    });
-  }
-
-  // 강조 해제 — 선택 영역의 모든 강조 span unwrap
-  const clearBtn = document.getElementById('diary-fmt-clear');
-  if (clearBtn) {
-    clearBtn.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      clearBoldRedInRange();
-    });
-  }
+  // 볼드+빨강 토글 / 해제 — 현재 선택 영역에 적용
+  // mousedown: click 직전 selection 소실 방지 (데스크톱)
+  // touchstart(preventDefault): iOS 에서 버튼 터치 순간 contenteditable 선택이 풀리는 문제 방지
+  //   (preventDefault 하면 합성 mousedown 이 발생하지 않아 이중 실행 없음)
+  const bindFmtBtn = (btn, fn) => {
+    if (!btn) return;
+    btn.addEventListener('mousedown', (e) => { e.preventDefault(); fn(); });
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); fn(); }, { passive: false });
+  };
+  bindFmtBtn(document.getElementById('diary-fmt-bold-red'), applyBoldRedToggle);
+  bindFmtBtn(document.getElementById('diary-fmt-clear'), clearBoldRedInRange);
 
 
   renderAllDiaryFeeds();
