@@ -2506,8 +2506,12 @@ window.addEventListener('popstate', (e) => {
 //    activatePage 호출은 queueMicrotask 로 현재 스크립트 본문 실행 이후로 미룬다.
 (function initFromHash() {
   history.replaceState({ page: 'valuation' }, '', location.pathname + location.search + location.hash);
-  // 해시 없이 열면 Diary 를 첫 화면으로
-  const initial = (location.hash || '').replace(/^#/, '') || 'diary';
+  // 첫 화면은 항상 Diary.
+  // (아이패드/홈화면 아이콘이 예전 주소 #folder 등을 기억해도 무시)
+  // 단, 딥링크(?open=…: 폴더 카드 바로 열기)로 들어온 경우엔 해시 그대로 존중.
+  const hash = (location.hash || '').replace(/^#/, '');
+  const isDeepLink = /(^|[?&])open=/.test(location.search || '');
+  const initial = isDeepLink ? (hash || 'diary') : 'diary';
   if (!document.querySelector(`.page-tab-btn[data-page="${initial}"]`)) return;
   queueMicrotask(() => {
     try {
