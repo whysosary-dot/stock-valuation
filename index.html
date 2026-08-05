@@ -4653,7 +4653,21 @@ window.addEventListener('pageshow', (e) => {
   // bfcache에서 복원됨 — localStorage에서 최신 상태 재로드 후 렌더
   diary.data = loadDiary();
   renderAllDiaryFeeds();
+  // 한동안 닫아뒀다가 다시 연 경우(앱 재실행처럼 느껴지는 상황) → 첫 화면인 Diary 로
+  try {
+    const last = Number(sessionStorage.getItem('sv_last_active') || 0);
+    if (!last || Date.now() - last > 10 * 60 * 1000) activatePage('diary');
+  } catch (_) {}
 });
+
+// 마지막 사용 시각 기록 (bfcache 복원 시 '오래됨' 판정용)
+(function trackActivity() {
+  const mark = () => { try { sessionStorage.setItem('sv_last_active', String(Date.now())); } catch(_) {} };
+  mark();
+  ['click', 'keydown', 'touchstart', 'visibilitychange'].forEach(ev =>
+    window.addEventListener(ev, mark, { passive: true }));
+  window.addEventListener('pagehide', mark);
+})();
 
 // 텔레그램 잔재 localStorage 한 번 정리 (탭 제거 후 1회 cleanup)
 try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
