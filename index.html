@@ -2506,8 +2506,8 @@ window.addEventListener('popstate', (e) => {
 //    activatePage 호출은 queueMicrotask 로 현재 스크립트 본문 실행 이후로 미룬다.
 (function initFromHash() {
   history.replaceState({ page: 'valuation' }, '', location.pathname + location.search + location.hash);
-  const initial = (location.hash || '').replace(/^#/, '');
-  if (!initial) return;
+  // 해시 없이 열면 Diary 를 첫 화면으로
+  const initial = (location.hash || '').replace(/^#/, '') || 'diary';
   if (!document.querySelector(`.page-tab-btn[data-page="${initial}"]`)) return;
   queueMicrotask(() => {
     try {
