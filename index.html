@@ -3516,7 +3516,7 @@ function scSave(item, field, value) {
       probe.innerHTML = (item.buy || '') + (item.sell || '') + (item.cmt || '');
       if ((probe.innerText || '').trim()) {
         item.hist.unshift({ d: item.updated, buy: item.buy || '', sell: item.sell || '', cmt: item.cmt || '',
-                            buyPx: item.buyPx || '', buyWhen: item.buyWhen || '',
+                            safePx: item.safePx || '', buyPx: item.buyPx || '', buyWhen: item.buyWhen || '',
                             sellPx: item.sellPx || '', sellWhen: item.sellWhen || '' });
         if (item.hist.length > 20) item.hist.length = 20;
       }
@@ -3628,10 +3628,10 @@ function makeScenarioCard(item) {
     if (!Array.isArray(item.hist)) item.hist = [];
     const today = todayDateStr();
     const snap = { d: today, buy: item.buy || '', sell: item.sell || '', cmt: item.cmt || '',
-                   buyPx: item.buyPx || '', buyWhen: item.buyWhen || '',
+                   safePx: item.safePx || '', buyPx: item.buyPx || '', buyWhen: item.buyWhen || '',
                    sellPx: item.sellPx || '', sellWhen: item.sellWhen || '' };
     const last = item.hist[0];
-    if (last && ['buy','sell','cmt','buyPx','buyWhen','sellPx','sellWhen'].every(k => (last[k] || '') === (snap[k] || ''))) {
+    if (last && ['buy','sell','cmt','safePx','buyPx','buyWhen','sellPx','sellWhen'].every(k => (last[k] || '') === (snap[k] || ''))) {
       toast('직전 기록과 같은 내용이에요', 'err', 2200); return;
     }
     item.hist = item.hist.filter(h => h.d !== today); // 같은 날은 최신으로 교체
@@ -3722,7 +3722,33 @@ function makeScenarioCard(item) {
   };
 
   body.appendChild(mkRow('매수', 'buy',  'buy',  '어떤 조건이면 사는가? (가격대 · 실적 · 이벤트)'));
-  body.appendChild(mkSub('매수 주가', 'buyPx', 'buyWhen', '매수가', '예: 조정 시 · 3Q 실적 확인 후'));
+  const buySub = mkSub('매수 주가', 'buyPx', 'buyWhen', '매수가', '예: 조정 시 · 3Q 실적 확인 후');
+  // 안전마진 — 매수 주가 왼쪽 (하방 기준가)
+  {
+    const safeLab = document.createElement('label'); safeLab.textContent = '안전마진';
+    const safeInp = document.createElement('input');
+    safeInp.className = 'sc-px'; safeInp.type = 'text'; safeInp.inputMode = 'numeric'; safeInp.placeholder = '하방가';
+    safeInp.value = item.safePx ? Number(item.safePx).toLocaleString('ko-KR') : '';
+    const safeUpDn = document.createElement('span'); safeUpDn.className = 'sc-updn';
+    const refreshSafe = () => {
+      const v = Number(item.safePx) || 0;
+      if (!v || !nowPx) { safeUpDn.textContent = ''; return; }
+      const pct = (v / nowPx - 1) * 100;
+      safeUpDn.textContent = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+      safeUpDn.className = 'sc-updn ' + (pct >= 0 ? 'up' : 'dn');
+    };
+    safeInp.addEventListener('input', () => {
+      const v = Number(String(safeInp.value).replace(/[^\d]/g, '')) || 0;
+      safeInp.value = v ? v.toLocaleString('ko-KR') : '';
+      scSave(item, 'safePx', v || '');
+      refreshSafe();
+    });
+    refreshSafe();
+    buySub.prepend(safeUpDn);
+    buySub.prepend(safeInp);
+    buySub.prepend(safeLab);
+  }
+  body.appendChild(buySub);
   body.appendChild(mkRow('매도', 'sell', 'sell', '언제 파는가? (목표가 · 손절 기준 · 논리 훼손 조건)'));
   body.appendChild(mkSub('매도 주가', 'sellPx', 'sellWhen', '목표가', '예: 2Q 실적 발표 후 · 2026년 말'));
   body.appendChild(mkRow('코멘트', 'cmt', 'cmt', '자유 메모 (근황 · 고민 · 체크할 것)'));
@@ -3749,9 +3775,10 @@ function makeScenarioCard(item) {
       line.innerHTML = `<span style="opacity:.75;">${lab} · </span>` + sanitizeDiaryHTML(v);
       div.appendChild(line);
     });
-    [['매수 계획', h.buyPx, h.buyWhen, '매수가'], ['매도 계획', h.sellPx, h.sellWhen, '목표']].forEach(([lab, px, when, pxLab]) => {
-      if (!px && !when) return;
+    [['매수 계획', h.buyPx, h.buyWhen, '매수가', h.safePx], ['매도 계획', h.sellPx, h.sellWhen, '목표', null]].forEach(([lab, px, when, pxLab, safe]) => {
+      if (!px && !when && !safe) return;
       const meta = [];
+      if (safe) meta.push('안전마진 ' + Number(safe).toLocaleString('ko-KR') + '원');
       if (px) meta.push(`${pxLab} ` + Number(px).toLocaleString('ko-KR') + '원');
       if (when) meta.push(String(when));
       const line = document.createElement('div');
@@ -3954,10 +3981,14 @@ function makePortfolioCard(activeItemsRaw) {
       const cell = (w, html) => `<span style="width:${w}px;">${html}</span>`;
       const mc = Number(stk.market_cap_oku);
       const chg = (stk.price_change_pct == null) ? null : Number(stk.price_change_pct);
+      // 상방 = 시나리오 매도 주가, 하방 = 시나리오 안전마진 (없으면 Stock Valuation 목표/안전 시총 기준)
       let u = null, dnV = null;
+      const px0 = Number(stk.price_native) || 0;
+      if (Number(it.sellPx) > 0 && px0) u = (Number(it.sellPx) / px0 - 1) * 100;
+      if (Number(it.safePx) > 0 && px0) dnV = (Number(it.safePx) / px0 - 1) * 100;
       try {
-        u = (typeof upside === 'function') ? upside(stk) : null;
-        dnV = (typeof downside === 'function') ? downside(stk) : null;
+        if (u == null && typeof upside === 'function') u = upside(stk);
+        if (dnV == null && typeof downside === 'function') dnV = downside(stk);
       } catch (_) {}
       infoDiv = document.createElement('div');
       infoDiv.className = 'pf-info';
