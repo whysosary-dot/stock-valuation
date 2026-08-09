@@ -4114,6 +4114,15 @@ function makePfReturnCard() {
 
 function renderFeedScenario() {
   const feed = document.getElementById('feed-scenario'); if (!feed) return;
+  // 재렌더 후 스크롤 위치 유지 (기록·보유·보관 버튼 눌렀을 때 맨 위로 튀지 않게)
+  const _scrollY = window.scrollY || window.pageYOffset || 0;
+  const _wrap = document.querySelector('.diary-feed-wrap');
+  const _wrapTop = _wrap ? _wrap.scrollTop : 0;
+  const _restore = () => {
+    if (_scrollY) window.scrollTo(0, _scrollY);
+    if (_wrap && _wrapTop) _wrap.scrollTop = _wrapTop;
+  };
+  requestAnimationFrame(() => { _restore(); requestAnimationFrame(_restore); });
   feed.innerHTML = '';
   const list = scList();
   refreshPfMonthly();
