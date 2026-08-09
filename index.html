@@ -612,6 +612,15 @@
   .sc-updn { font-size: 12px; font-weight: 700; white-space: nowrap; }
   .sc-updn.up { color: #dc2626; }
   .sc-updn.dn { color: #2563eb; }
+  /* 카드 드래그 정렬 */
+  .sc-card.sc-dragging { opacity: .5; }
+  .sc-card.sc-drop-before { box-shadow: 0 -3px 0 0 #7c3aed; }
+  .sc-card.sc-drop-after  { box-shadow: 0  3px 0 0 #7c3aed; }
+  .sc-grip {
+    cursor: grab; color: var(--text-dim); font-size: 15px; padding: 0 2px;
+    user-select: none; touch-action: none; opacity: .5;
+  }
+  .sc-grip:hover { opacity: 1; }
   .sc-edit {
     flex: 1; min-height: 36px; min-width: 0; border: 1px solid var(--border); border-radius: 10px;
     padding: 8px 11px; font-size: 14.5px; line-height: 1.6; background: var(--panel);
@@ -3527,12 +3536,60 @@ function scSave(item, field, value) {
   }, 500);
 }
 
+/* ── 시나리오 카드 드래그 정렬 (⠿ 핸들) ── */
+let _scDrag = null;
+function scDragStart(e, item, card) {
+  e.preventDefault();
+  _scDrag = { item, card, target: null, pos: null };
+  card.classList.add('sc-dragging');
+  try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+  const onMove = (ev) => {
+    if (!_scDrag) return;
+    document.querySelectorAll('.sc-card').forEach(c => c.classList.remove('sc-drop-before', 'sc-drop-after'));
+    const el = document.elementFromPoint(ev.clientX, ev.clientY);
+    const over = el && el.closest('.sc-card');
+    if (!over || over === card) { _scDrag.target = null; return; }
+    const r = over.getBoundingClientRect();
+    const pos = (ev.clientY < r.top + r.height / 2) ? 'before' : 'after';
+    over.classList.add(pos === 'before' ? 'sc-drop-before' : 'sc-drop-after');
+    _scDrag.target = over; _scDrag.pos = pos;
+  };
+  const onUp = () => {
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onUp);
+    document.querySelectorAll('.sc-card').forEach(c => c.classList.remove('sc-drop-before', 'sc-drop-after', 'sc-dragging'));
+    const d = _scDrag; _scDrag = null;
+    if (!d || !d.target) return;
+    const list = scList();
+    const refId = d.target.dataset.key;
+    const from = list.findIndex(x => x.id === d.item.id);
+    if (from < 0) return;
+    list.splice(from, 1);
+    let to = list.findIndex(x => x.id === refId);
+    if (to < 0) { list.splice(from, 0, d.item); return; }
+    if (d.pos === 'after') to++;
+    list.splice(to, 0, d.item);
+    saveDiaryData(diary.data);
+    renderFeedScenario();
+  };
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+  document.addEventListener('pointercancel', onUp);
+}
+
 function makeScenarioCard(item) {
   const card = document.createElement('div');
   card.className = 'dcard sc-card' + (item.archived ? ' archived' : '');
   card.dataset.key = item.id;
 
   const header = document.createElement('div'); header.className = 'dcard-header';
+
+  // 드래그 핸들 — 중요도 순으로 카드 순서 변경
+  const grip = document.createElement('span');
+  grip.className = 'sc-grip'; grip.textContent = '⠿'; grip.title = '드래그해서 순서 변경';
+  grip.addEventListener('pointerdown', (e) => scDragStart(e, item, card));
+  header.appendChild(grip);
 
   const name = document.createElement('span');
   name.className = 'sc-name'; name.contentEditable = 'true';
@@ -3726,7 +3783,8 @@ function scFindStock(name) {
   return hit || null;
 }
 
-function makePortfolioCard(activeItems) {
+function makePortfolioCard(activeItemsRaw) {
+  let activeItems = activeItemsRaw;
   const card = document.createElement('div');
   card.className = 'dcard pf-card';
 
@@ -3815,6 +3873,17 @@ function makePortfolioCard(activeItems) {
   });
   body.appendChild(histBox);
   card.appendChild(body);
+
+  // 수량 연동 종목은 최신 주가로 금액 먼저 계산 → 그 뒤 금액 큰 순 정렬
+  activeItems.forEach(it => {
+    const stk = scFindStock(it.name);
+    const px = stk ? Number(stk.price_native) : 0;
+    if (it.qty && px > 0) {
+      const krw = (stk.currency && stk.currency !== 'KRW' && Number(state.usdkrw) > 0) ? px * Number(state.usdkrw) : px;
+      it.amt = Math.round(it.qty * krw) || undefined;
+    }
+  });
+  activeItems = activeItems.slice().sort((a, b) => (Number(b.amt) || 0) - (Number(a.amt) || 0));
 
   if (!activeItems.length) {
     chartWrap.remove();
