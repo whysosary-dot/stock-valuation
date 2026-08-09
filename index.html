@@ -3538,10 +3538,37 @@ function makeScenarioCard(item) {
   const histCnt = (item.hist || []).length;
   if (histCnt) {
     const histBtn = document.createElement('button'); histBtn.className = 'sc-btn';
-    histBtn.title = '이전 버전 보기'; histBtn.textContent = `🕘 ${histCnt}`;
-    histBtn.addEventListener('click', () => histBox.classList.toggle('show'));
+    histBtn.title = '과거 기록 보기 (날짜별)'; histBtn.textContent = `🕘 ${histCnt}`;
+    histBtn.addEventListener('click', () => {
+      histBox.classList.toggle('show');
+      histBtn.style.color = histBox.classList.contains('show') ? '#6d28d9' : '';
+    });
     header.appendChild(histBtn);
   }
+
+  // 기록 남기기 — 현재 내용을 오늘 날짜 버전으로 이력에 보관 (이후 수정해도 과거본 유지)
+  const snapBtn = document.createElement('button'); snapBtn.className = 'sc-btn';
+  snapBtn.title = '지금 내용을 오늘 날짜 기록으로 남기기';
+  snapBtn.textContent = '🗂';
+  snapBtn.addEventListener('click', () => {
+    const probe = document.createElement('div');
+    probe.innerHTML = (item.buy || '') + (item.hold || '') + (item.sell || '') + (item.cmt || '');
+    if (!(probe.innerText || '').trim()) { toast('기록할 내용이 없어요', 'err', 2200); return; }
+    if (!Array.isArray(item.hist)) item.hist = [];
+    const today = todayDateStr();
+    const snap = { d: today, buy: item.buy || '', hold: item.hold || '', sell: item.sell || '', cmt: item.cmt || '' };
+    const last = item.hist[0];
+    if (last && ['buy','hold','sell','cmt'].every(k => (last[k] || '') === (snap[k] || ''))) {
+      toast('직전 기록과 같은 내용이에요', 'err', 2200); return;
+    }
+    item.hist = item.hist.filter(h => h.d !== today); // 같은 날은 최신으로 교체
+    item.hist.unshift(snap);
+    if (item.hist.length > 30) item.hist.length = 30;
+    item.updated = today;
+    saveDiaryData(diary.data); renderFeedScenario();
+    toast(`🗂 ${today} 기록 보관됨`, 'ok', 2500);
+  });
+  header.appendChild(snapBtn);
 
   const heldBtn = document.createElement('button');
   heldBtn.className = 'sc-held' + (item.held ? ' on' : '');
@@ -3595,13 +3622,24 @@ function makeScenarioCard(item) {
 
   (item.hist || []).forEach(h => {
     const div = document.createElement('div'); div.className = 'sc-hist-item';
+    const del = document.createElement('button'); del.className = 'pf-hist-del';
+    del.title = '이 기록 삭제'; del.textContent = '×';
+    del.addEventListener('click', () => {
+      svConfirm(`${h.d} 기록을 삭제할까요?`, () => {
+        item.hist = (item.hist || []).filter(x => x !== h);
+        saveDiaryData(diary.data); renderFeedScenario();
+      });
+    });
+    div.appendChild(del);
     const title = document.createElement('div');
     const b = document.createElement('b'); b.textContent = h.d; title.appendChild(b);
     div.appendChild(title);
-    const strip = s => { const p = document.createElement('div'); p.innerHTML = s || ''; return (p.innerText || '').trim(); };
+    const hasText = s => { const p = document.createElement('div'); p.innerHTML = s || ''; return !!(p.innerText || '').trim(); };
     [['매수', h.buy], ['보유', h.hold], ['매도', h.sell], ['코멘트', h.cmt]].forEach(([lab, v]) => {
-      const t = strip(v); if (!t) return;
-      const line = document.createElement('div'); line.textContent = lab + ' · ' + t;
+      if (!hasText(v)) return;
+      const line = document.createElement('div');
+      // 강조(볼드·색상) 서식 그대로 표시
+      line.innerHTML = `<span style="opacity:.75;">${lab} · </span>` + sanitizeDiaryHTML(v);
       div.appendChild(line);
     });
     histBox.appendChild(div);
