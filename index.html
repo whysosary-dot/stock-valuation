@@ -3523,7 +3523,7 @@ function scSave(item, field, value) {
       probe.innerHTML = (item.buy || '') + (item.sell || '') + (item.cmt || '');
       if ((probe.innerText || '').trim()) {
         item.hist.unshift({ d: item.updated, buy: item.buy || '', sell: item.sell || '', cmt: item.cmt || '',
-                            safePx: item.safePx || '', buyPx: item.buyPx || '', buyWhen: item.buyWhen || '',
+                            safePx: item.safePx || '',
                             sellPx: item.sellPx || '', sellWhen: item.sellWhen || '' });
         if (item.hist.length > 20) item.hist.length = 20;
       }
@@ -3635,10 +3635,10 @@ function makeScenarioCard(item) {
     if (!Array.isArray(item.hist)) item.hist = [];
     const today = todayDateStr();
     const snap = { d: today, buy: item.buy || '', sell: item.sell || '', cmt: item.cmt || '',
-                   safePx: item.safePx || '', buyPx: item.buyPx || '', buyWhen: item.buyWhen || '',
+                   safePx: item.safePx || '',
                    sellPx: item.sellPx || '', sellWhen: item.sellWhen || '' };
     const last = item.hist[0];
-    if (last && ['buy','sell','cmt','safePx','buyPx','buyWhen','sellPx','sellWhen'].every(k => (last[k] || '') === (snap[k] || ''))) {
+    if (last && ['buy','sell','cmt','safePx','sellPx','sellWhen'].every(k => (last[k] || '') === (snap[k] || ''))) {
       toast('직전 기록과 같은 내용이에요', 'err', 2200); return;
     }
     item.hist = item.hist.filter(h => h.d !== today); // 같은 날은 최신으로 교체
@@ -3729,9 +3729,9 @@ function makeScenarioCard(item) {
   };
 
   body.appendChild(mkRow('매수', 'buy',  'buy',  '어떤 조건이면 사는가? (가격대 · 실적 · 이벤트)'));
-  const buySub = mkSub('매수 주가', 'buyPx', 'buyWhen', '매수가', '예: 조정 시 · 3Q 실적 확인 후');
-  // 안전마진 — 매수 주가 왼쪽 (하방 기준가)
+  // 안전마진 (하방 기준가)
   {
+    const safeSub = document.createElement('div'); safeSub.className = 'sc-sub';
     const safeLab = document.createElement('label'); safeLab.textContent = '안전마진';
     const safeInp = document.createElement('input');
     safeInp.className = 'sc-px'; safeInp.type = 'text'; safeInp.inputMode = 'numeric'; safeInp.placeholder = '하방가';
@@ -3741,7 +3741,7 @@ function makeScenarioCard(item) {
       const v = Number(item.safePx) || 0;
       if (!v || !nowPx) { safeUpDn.textContent = ''; return; }
       const pct = (v / nowPx - 1) * 100;
-      safeUpDn.textContent = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+      safeUpDn.textContent = `현재가 대비 ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
       safeUpDn.className = 'sc-updn ' + (pct >= 0 ? 'up' : 'dn');
     };
     safeInp.addEventListener('input', () => {
@@ -3751,11 +3751,9 @@ function makeScenarioCard(item) {
       refreshSafe();
     });
     refreshSafe();
-    buySub.prepend(safeUpDn);
-    buySub.prepend(safeInp);
-    buySub.prepend(safeLab);
+    safeSub.append(safeLab, safeInp, safeUpDn);
+    body.appendChild(safeSub);
   }
-  body.appendChild(buySub);
   body.appendChild(mkRow('매도', 'sell', 'sell', '언제 파는가? (목표가 · 손절 기준 · 논리 훼손 조건)'));
   body.appendChild(mkSub('매도 주가', 'sellPx', 'sellWhen', '목표가', '예: 2Q 실적 발표 후 · 2026년 말'));
   body.appendChild(mkRow('코멘트', 'cmt', 'cmt', '자유 메모 (근황 · 고민 · 체크할 것)'));
@@ -3782,7 +3780,7 @@ function makeScenarioCard(item) {
       line.innerHTML = `<span style="opacity:.75;">${lab} · </span>` + sanitizeDiaryHTML(v);
       div.appendChild(line);
     });
-    [['매수 계획', h.buyPx, h.buyWhen, '매수가', h.safePx], ['매도 계획', h.sellPx, h.sellWhen, '목표', null]].forEach(([lab, px, when, pxLab, safe]) => {
+    [['매수 계획', null, null, '', h.safePx], ['매도 계획', h.sellPx, h.sellWhen, '목표', null]].forEach(([lab, px, when, pxLab, safe]) => {
       if (!px && !when && !safe) return;
       const meta = [];
       if (safe) meta.push('안전마진 ' + Number(safe).toLocaleString('ko-KR') + '원');
@@ -4398,9 +4396,28 @@ function migrateHoldToCmt() {
   if (changed) saveDiaryData(diary.data);
 }
 
+/* (일회성) 매수 주가·시기 제거 — 남은 값은 매수 칸으로 이관 (GitHub 데이터는 이관 완료) */
+function migrateBuyPlanToBuy() {
+  const list = diary.data.scenario;
+  if (!Array.isArray(list)) return;
+  let changed = false;
+  list.forEach(s => {
+    if (!s || (!s.buyPx && !s.buyWhen)) { if (s && ('buyPx' in s || 'buyWhen' in s)) { delete s.buyPx; delete s.buyWhen; changed = true; } return; }
+    const parts = [];
+    if (s.buyPx) parts.push(`매수가 ${Number(s.buyPx).toLocaleString('ko-KR')}원`);
+    if ((s.buyWhen || '').trim()) parts.push(String(s.buyWhen).trim());
+    const cur = (s.buy || '').trim();
+    s.buy = (cur ? cur + '<div></div>' : '') + parts.join(' · ');
+    delete s.buyPx; delete s.buyWhen;
+    changed = true;
+  });
+  if (changed) saveDiaryData(diary.data);
+}
+
 function renderAllDiaryFeeds() {
   migrateTradesToDaily();
   migrateHoldToCmt();
+  migrateBuyPlanToBuy();
   renderFeedDaily(); renderFeedScenario(); renderFeedWeekly(); renderFeedHighlights(); updateTabCounts();
 }
 
