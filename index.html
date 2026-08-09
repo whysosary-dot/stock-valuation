@@ -600,6 +600,18 @@
   .sc-tag.hold { background: #fef3c7; color: #b45309; }
   .sc-tag.sell { background: #dbeafe; color: #2563eb; }
   .sc-tag.cmt  { background: #ede9fe; color: #6d28d9; }
+  .sc-sub { display: flex; gap: 8px; align-items: center; margin: 8px 0 0 54px; flex-wrap: wrap; }
+  .sc-sub label { font-size: 12px; color: var(--text-dim); font-weight: 600; }
+  .sc-sub input {
+    font-size: 13.5px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--panel); color: var(--text); outline: none;
+  }
+  .sc-sub input:focus { border-color: #a78bfa; box-shadow: 0 0 0 2px #ede9fe; }
+  .sc-px  { width: 110px; text-align: right; }
+  .sc-when { width: 190px; flex: 1; min-width: 120px; }
+  .sc-updn { font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .sc-updn.up { color: #dc2626; }
+  .sc-updn.dn { color: #2563eb; }
   .sc-edit {
     flex: 1; min-height: 36px; min-width: 0; border: 1px solid var(--border); border-radius: 10px;
     padding: 8px 11px; font-size: 14.5px; line-height: 1.6; background: var(--panel);
@@ -3494,7 +3506,8 @@ function scSave(item, field, value) {
       const probe = document.createElement('div');
       probe.innerHTML = (item.buy || '') + (item.sell || '') + (item.cmt || '');
       if ((probe.innerText || '').trim()) {
-        item.hist.unshift({ d: item.updated, buy: item.buy || '', sell: item.sell || '', cmt: item.cmt || '' });
+        item.hist.unshift({ d: item.updated, buy: item.buy || '', sell: item.sell || '', cmt: item.cmt || '',
+                            sellPx: item.sellPx || '', sellWhen: item.sellWhen || '' });
         if (item.hist.length > 20) item.hist.length = 20;
       }
     }
@@ -3556,9 +3569,10 @@ function makeScenarioCard(item) {
     if (!(probe.innerText || '').trim()) { toast('기록할 내용이 없어요', 'err', 2200); return; }
     if (!Array.isArray(item.hist)) item.hist = [];
     const today = todayDateStr();
-    const snap = { d: today, buy: item.buy || '', sell: item.sell || '', cmt: item.cmt || '' };
+    const snap = { d: today, buy: item.buy || '', sell: item.sell || '', cmt: item.cmt || '',
+                   sellPx: item.sellPx || '', sellWhen: item.sellWhen || '' };
     const last = item.hist[0];
-    if (last && ['buy','sell','cmt'].every(k => (last[k] || '') === (snap[k] || ''))) {
+    if (last && ['buy','sell','cmt','sellPx','sellWhen'].every(k => (last[k] || '') === (snap[k] || ''))) {
       toast('직전 기록과 같은 내용이에요', 'err', 2200); return;
     }
     item.hist = item.hist.filter(h => h.d !== today); // 같은 날은 최신으로 교체
@@ -3617,6 +3631,38 @@ function makeScenarioCard(item) {
   };
   body.appendChild(mkRow('매수', 'buy',  'buy',  '어떤 조건이면 사는가? (가격대 · 실적 · 이벤트)'));
   body.appendChild(mkRow('매도', 'sell', 'sell', '언제 파는가? (목표가 · 손절 기준 · 논리 훼손 조건)'));
+
+  // 매도 주가 · 매도 시기 (Stock Valuation 매칭 시 현재가 대비 등락 표시)
+  const sub = document.createElement('div'); sub.className = 'sc-sub';
+  const pxLab = document.createElement('label'); pxLab.textContent = '매도 주가';
+  const pxInp = document.createElement('input');
+  pxInp.className = 'sc-px'; pxInp.type = 'text'; pxInp.inputMode = 'numeric'; pxInp.placeholder = '목표가';
+  pxInp.value = item.sellPx ? Number(item.sellPx).toLocaleString('ko-KR') : '';
+  const updn = document.createElement('span'); updn.className = 'sc-updn';
+  const stkNow = scFindStock(item.name);
+  const nowPx = stkNow ? Number(stkNow.price_native) : 0;
+  const refreshUpDn = () => {
+    const v = Number(item.sellPx) || 0;
+    if (!v || !nowPx) { updn.textContent = ''; return; }
+    const pct = (v / nowPx - 1) * 100;
+    updn.textContent = `현재가 대비 ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+    updn.className = 'sc-updn ' + (pct >= 0 ? 'up' : 'dn');
+  };
+  pxInp.addEventListener('input', () => {
+    const v = Number(String(pxInp.value).replace(/[^\d]/g, '')) || 0;
+    pxInp.value = v ? v.toLocaleString('ko-KR') : '';
+    scSave(item, 'sellPx', v || '');
+    refreshUpDn();
+  });
+  refreshUpDn();
+  const whenLab = document.createElement('label'); whenLab.textContent = '시기';
+  const whenInp = document.createElement('input');
+  whenInp.className = 'sc-when'; whenInp.type = 'text';
+  whenInp.placeholder = '예: 2Q 실적 발표 후 · 2026년 말';
+  whenInp.value = item.sellWhen || '';
+  whenInp.addEventListener('input', () => scSave(item, 'sellWhen', whenInp.value));
+  sub.append(pxLab, pxInp, updn, whenLab, whenInp);
+  body.appendChild(sub);
   body.appendChild(mkRow('코멘트', 'cmt', 'cmt', '자유 메모 (근황 · 고민 · 체크할 것)'));
 
   (item.hist || []).forEach(h => {
@@ -3641,6 +3687,14 @@ function makeScenarioCard(item) {
       line.innerHTML = `<span style="opacity:.75;">${lab} · </span>` + sanitizeDiaryHTML(v);
       div.appendChild(line);
     });
+    if (h.sellPx || h.sellWhen) {
+      const meta = [];
+      if (h.sellPx) meta.push('목표 ' + Number(h.sellPx).toLocaleString('ko-KR') + '원');
+      if (h.sellWhen) meta.push(String(h.sellWhen));
+      const line = document.createElement('div');
+      line.innerHTML = '<span style="opacity:.75;">매도 계획 · </span>' + meta.join(' · ').replace(/</g, '&lt;');
+      div.appendChild(line);
+    }
     histBox.appendChild(div);
   });
   body.appendChild(histBox);
