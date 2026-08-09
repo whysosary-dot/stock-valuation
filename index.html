@@ -580,8 +580,15 @@
   .dcard-del:hover { opacity: 1; color: var(--red); }
 
   /* ── 매매 시나리오 카드 ── */
+  /* 미보유(관심) = 보라 / 보유중 = 초록 — 한눈에 구분 */
   #feed-scenario .dcard { border-color: #ddd6fe; }
   #feed-scenario .dcard-header { background: #f7f5ff; border-bottom-color: #ddd6fe; }
+  #feed-scenario .sc-card.sc-held-on { border-color: #a7f3d0; }
+  #feed-scenario .sc-card.sc-held-on .dcard-header {
+    background: #ecfdf5; border-bottom-color: #a7f3d0;
+    border-left: 4px solid #10b981;
+  }
+  #feed-scenario .sc-card.sc-held-on .sc-name { color: #047857; }
   .sc-name {
     font-size: 16px; font-weight: 700; color: #6d28d9; outline: none;
     min-width: 90px; padding: 2px 6px; border-radius: 8px; flex: 1;
@@ -3580,7 +3587,7 @@ function scDragStart(e, item, card) {
 
 function makeScenarioCard(item) {
   const card = document.createElement('div');
-  card.className = 'dcard sc-card' + (item.archived ? ' archived' : '');
+  card.className = 'dcard sc-card' + (item.archived ? ' archived' : '') + (item.held ? ' sc-held-on' : '');
   card.dataset.key = item.id;
 
   const header = document.createElement('div'); header.className = 'dcard-header';
