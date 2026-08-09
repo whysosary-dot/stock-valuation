@@ -3492,9 +3492,9 @@ function scSave(item, field, value) {
     if (!Array.isArray(item.hist)) item.hist = [];
     if (!item.hist.length || item.hist[0].d !== item.updated) {
       const probe = document.createElement('div');
-      probe.innerHTML = (item.buy || '') + (item.hold || '') + (item.sell || '') + (item.cmt || '');
+      probe.innerHTML = (item.buy || '') + (item.sell || '') + (item.cmt || '');
       if ((probe.innerText || '').trim()) {
-        item.hist.unshift({ d: item.updated, buy: item.buy || '', hold: item.hold || '', sell: item.sell || '', cmt: item.cmt || '' });
+        item.hist.unshift({ d: item.updated, buy: item.buy || '', sell: item.sell || '', cmt: item.cmt || '' });
         if (item.hist.length > 20) item.hist.length = 20;
       }
     }
@@ -3552,13 +3552,13 @@ function makeScenarioCard(item) {
   snapBtn.textContent = '🗂';
   snapBtn.addEventListener('click', () => {
     const probe = document.createElement('div');
-    probe.innerHTML = (item.buy || '') + (item.hold || '') + (item.sell || '') + (item.cmt || '');
+    probe.innerHTML = (item.buy || '') + (item.sell || '') + (item.cmt || '');
     if (!(probe.innerText || '').trim()) { toast('기록할 내용이 없어요', 'err', 2200); return; }
     if (!Array.isArray(item.hist)) item.hist = [];
     const today = todayDateStr();
-    const snap = { d: today, buy: item.buy || '', hold: item.hold || '', sell: item.sell || '', cmt: item.cmt || '' };
+    const snap = { d: today, buy: item.buy || '', sell: item.sell || '', cmt: item.cmt || '' };
     const last = item.hist[0];
-    if (last && ['buy','hold','sell','cmt'].every(k => (last[k] || '') === (snap[k] || ''))) {
+    if (last && ['buy','sell','cmt'].every(k => (last[k] || '') === (snap[k] || ''))) {
       toast('직전 기록과 같은 내용이에요', 'err', 2200); return;
     }
     item.hist = item.hist.filter(h => h.d !== today); // 같은 날은 최신으로 교체
@@ -3616,7 +3616,6 @@ function makeScenarioCard(item) {
     return row;
   };
   body.appendChild(mkRow('매수', 'buy',  'buy',  '어떤 조건이면 사는가? (가격대 · 실적 · 이벤트)'));
-  body.appendChild(mkRow('보유', 'hold', 'hold', '들고 가는 근거는? 어떤 신호를 점검하는가?'));
   body.appendChild(mkRow('매도', 'sell', 'sell', '언제 파는가? (목표가 · 손절 기준 · 논리 훼손 조건)'));
   body.appendChild(mkRow('코멘트', 'cmt', 'cmt', '자유 메모 (근황 · 고민 · 체크할 것)'));
 
@@ -4214,8 +4213,27 @@ function renderFeedScenario() {
 }
 
 /* ── 전체 렌더 ── */
+/* (일회성) 시나리오 '보유' 칸 제거 — 남아있는 내용은 코멘트로 이관 (GitHub 데이터는 이관 완료) */
+function migrateHoldToCmt() {
+  const list = diary.data.scenario;
+  if (!Array.isArray(list)) return;
+  let changed = false;
+  list.forEach(s => {
+    if (!s || !s.hold) return;
+    const probe = document.createElement('div'); probe.innerHTML = s.hold;
+    if ((probe.innerText || '').trim()) {
+      const c = (s.cmt || '').trim();
+      s.cmt = (c ? c + '<div><br></div>' : '') + s.hold;
+    }
+    s.hold = '';
+    changed = true;
+  });
+  if (changed) saveDiaryData(diary.data);
+}
+
 function renderAllDiaryFeeds() {
   migrateTradesToDaily();
+  migrateHoldToCmt();
   renderFeedDaily(); renderFeedScenario(); renderFeedWeekly(); renderFeedHighlights(); updateTabCounts();
 }
 
