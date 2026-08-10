@@ -704,6 +704,36 @@
   .pf-info svg { flex: 0 0 auto; }
   .pf-info .up { color: #dc2626; font-weight: 700; }
   .pf-info .dn { color: #2563eb; font-weight: 700; }
+
+  /* 데스크톱: 값 묶음은 투명 컨테이너 (기존 한 줄 레이아웃 유지) */
+  .pf-vals { display: contents; }
+
+  /* ── 모바일(아이폰) 포트 비중 레이아웃 ── */
+  @media (max-width: 640px) {
+    .pf-body { gap: 12px; padding: 12px; }
+    .pf-chart { flex: 1 1 100%; display: flex; justify-content: center; }
+    .pf-rows { flex: 1 1 100%; min-width: 0; }
+    /* 1행: ● 종목명 … 비중 / 2행: 수량 @단가 … 금액 */
+    .pf-row {
+      display: grid;
+      grid-template-columns: 12px 1fr auto;
+      grid-template-areas: "dot nm pct" "vals vals vals";
+      row-gap: 5px; column-gap: 8px;
+      padding: 9px 0 5px; border-bottom: 1px solid var(--border);
+    }
+    .pf-dot { grid-area: dot; align-self: center; }
+    .pf-nm  { grid-area: nm; white-space: normal; font-size: 14.5px; }
+    .pf-pct { grid-area: pct; flex: none; font-size: 14px; }
+    .pf-vals {
+      grid-area: vals; display: flex; align-items: center; gap: 8px; width: 100%;
+    }
+    .pf-qty { width: 78px !important; }
+    .pf-amt { flex: 1; }
+    .pf-amt-view { width: auto; margin-left: auto; }
+    /* 밸류 스트립: 고정폭 해제하고 자동 줄바꿈 */
+    .pf-info { margin: 4px 0 8px 20px; gap: 4px 14px; }
+    .pf-info > span { width: auto !important; }
+  }
   .pf-total { font-size: 12.5px; color: var(--text-dim); font-weight: 600; margin-left: auto; }
   .pf-empty { font-size: 13px; color: var(--text-dim); padding: 4px 0; }
   .pf-memo {
@@ -4027,7 +4057,9 @@ function makePortfolioCard(activeItemsRaw) {
         saveDeb();
         updatePie();
       });
-      row.appendChild(dot); row.appendChild(nm); row.appendChild(qty); row.appendChild(pxLab); row.appendChild(amtView);
+      const vals = document.createElement('span'); vals.className = 'pf-vals';
+      vals.append(qty, pxLab, amtView);
+      row.appendChild(dot); row.appendChild(nm); row.appendChild(vals);
     } else {
       // 매칭 안 됨 → 금액 직접 입력
       const amt = document.createElement('input'); amt.className = 'pf-amt';
@@ -4040,7 +4072,9 @@ function makePortfolioCard(activeItemsRaw) {
         saveDeb();
         updatePie();
       });
-      row.appendChild(dot); row.appendChild(nm); row.appendChild(amt);
+      const vals = document.createElement('span'); vals.className = 'pf-vals';
+      vals.append(amt);
+      row.appendChild(dot); row.appendChild(nm); row.appendChild(vals);
     }
     row.appendChild(pct);
     rows.appendChild(row);
