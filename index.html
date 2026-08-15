@@ -2487,6 +2487,7 @@ function activatePage(page, opts = {}) {
   document.querySelectorAll('.page-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
   markTabVisited(page);
+  try { localStorage.setItem('sv_last_tab', page); } catch (_) {}
   if (page === 'diary' && typeof renderAllDiaryFeeds === 'function') renderAllDiaryFeeds();
   const src = IFRAME_TAB_SRC[page];
   if (src) {
@@ -2534,14 +2535,25 @@ document.getElementById('npay-tab-btn')?.addEventListener('click', () => {
   });
 })();
 
+// 마지막으로 활성화됐던 탭 (앱을 껐다 켜면 이 탭으로 복원). 저장된 탭이 없거나
+// 더 이상 존재하지 않는 탭(예: 삭제된 탭)이면 Diary로 대체.
+function getDefaultTab() {
+  try {
+    const saved = localStorage.getItem('sv_last_tab');
+    if (saved && document.querySelector(`.page-tab-btn[data-page="${saved}"]`)) return saved;
+  } catch (_) {}
+  return 'diary';
+}
+
 // 브라우저 뒤로/앞으로
 const _svLoadTime = Date.now();
 window.addEventListener('popstate', (e) => {
   // iOS 세션 복원 시 이전 히스토리(#folder 등)가 로드 직후 popstate 로 재생되는 경우가 있다.
-  // 사용자의 실제 뒤로가기가 아니므로 무시하고 첫 화면(Diary) 유지.
+  // 사용자의 실제 뒤로가기가 아니므로 무시하고 첫 화면(마지막 사용 탭) 유지.
   if (Date.now() - _svLoadTime < 2500) {
-    try { history.replaceState({ page: 'diary' }, '', '#diary'); } catch (_) {}
-    activatePage('diary', { skipHistory: true });
+    const dflt = getDefaultTab();
+    try { history.replaceState({ page: dflt }, '', '#' + dflt); } catch (_) {}
+    activatePage(dflt, { skipHistory: true });
     return;
   }
   const fromState = e.state && e.state.page;
@@ -2561,12 +2573,13 @@ window.addEventListener('popstate', (e) => {
 //    activatePage 호출은 queueMicrotask 로 현재 스크립트 본문 실행 이후로 미룬다.
 (function initFromHash() {
   history.replaceState({ page: 'valuation' }, '', location.pathname + location.search + location.hash);
-  // 첫 화면은 항상 Diary.
+  // 첫 화면은 마지막으로 사용하던 탭(sv_last_tab).
   // (아이패드/홈화면 아이콘이 예전 주소 #folder 등을 기억해도 무시)
   // 단, 딥링크(?open=…: 폴더 카드 바로 열기)로 들어온 경우엔 해시 그대로 존중.
   const hash = (location.hash || '').replace(/^#/, '');
   const isDeepLink = /(^|[?&])open=/.test(location.search || '');
-  const initial = isDeepLink ? (hash || 'diary') : 'diary';
+  const dflt = getDefaultTab();
+  const initial = isDeepLink ? (hash || dflt) : dflt;
   if (!document.querySelector(`.page-tab-btn[data-page="${initial}"]`)) return;
   queueMicrotask(() => {
     try {
@@ -2581,9 +2594,9 @@ window.addEventListener('popstate', (e) => {
     [400, 1200, 2600].forEach(ms => setTimeout(() => {
       try {
         const cur = document.querySelector('.page-tab-btn.active');
-        if (cur && cur.dataset.page !== 'diary') {
-          activatePage('diary', { skipHistory: true });
-          history.replaceState({ page: 'diary' }, '', '#diary');
+        if (cur && cur.dataset.page !== initial) {
+          activatePage(initial, { skipHistory: true });
+          history.replaceState({ page: initial }, '', '#' + initial);
         }
       } catch (_) {}
     }, ms));
@@ -4924,10 +4937,10 @@ window.addEventListener('pageshow', (e) => {
   // bfcache에서 복원됨 — localStorage에서 최신 상태 재로드 후 렌더
   diary.data = loadDiary();
   renderAllDiaryFeeds();
-  // 한동안 닫아뒀다가 다시 연 경우(앱 재실행처럼 느껴지는 상황) → 첫 화면인 Diary 로
+  // 한동안 닫아뒀다가 다시 연 경우(앱 재실행처럼 느껴지는 상황) → 마지막 사용 탭으로
   try {
     const last = Number(sessionStorage.getItem('sv_last_active') || 0);
-    if (!last || Date.now() - last > 10 * 60 * 1000) activatePage('diary');
+    if (!last || Date.now() - last > 10 * 60 * 1000) activatePage(getDefaultTab());
   } catch (_) {}
 });
 
