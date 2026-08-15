@@ -1197,7 +1197,6 @@ td input, td textarea{border-radius:8px}
   <button class="page-tab-btn" data-page="krmarket">🇰🇷 KR Market</button>
   <button class="page-tab-btn" data-page="awake">🔔 Awake</button>
   <button class="page-tab-btn" data-page="etfmonitor">📡 ETF Monitor</button>
-  <button class="page-tab-btn" data-page="earning">💰 Earning</button>
   <button class="page-tab-btn" data-page="interest">👀 Interest</button>
   <button class="page-tab-btn" id="npay-tab-btn" type="button" title="네이버페이 증권 새 창으로"><span style="display:inline-block;background:#03c75a;color:#fff;font-weight:800;border-radius:4px;width:15px;height:15px;line-height:15px;text-align:center;font-size:10.5px;vertical-align:middle;position:relative;top:-1px;margin-right:1px;">N</span> Npay</button>
   <button class="page-tab-btn" data-page="research">🔬 Research</button>
@@ -1328,16 +1327,6 @@ td input, td textarea{border-radius:8px}
     title="Awake Disclosure"
   ></iframe>
 </div><!-- /page-awake -->
-
-<div id="page-earning" class="page">
-  <iframe
-    id="earning-frame"
-    src="https://whysosary-dot.github.io/kospi-kosdaq-dashboard/?v=3"
-    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
-    loading="lazy"
-    title="Earning Dashboard"
-  ></iframe>
-</div><!-- /page-earning -->
 
 <div id="page-interest" class="page">
   <iframe
@@ -2487,7 +2476,6 @@ const IFRAME_TAB_SRC = {
   usmarket:  'https://whysosary-dot.github.io/us-market-briefing/',
   krmarket:  'https://whysosary-dot.github.io/kr-market-briefing/',
   awake:     'https://whysosary-dot.github.io/awake-disclosure/',
-  earning:   'https://whysosary-dot.github.io/kospi-kosdaq-dashboard/?v=3',
   interest:  'https://whysosary-dot.github.io/watchlist-briefing/',
   research:  'https://whysosary-dot.github.io/investment-notes/',
   // sheet 은 X-Frame-Options 로 iframe 차단되어 안내 페이지로 대체 (IFRAME_TAB_SRC 등록 X)
@@ -2618,7 +2606,6 @@ const TAB_REPOS = {
   usmarket:  { repo: 'whysosary-dot/us-market-briefing' },
   krmarket:  { repo: 'whysosary-dot/kr-market-briefing' },
   awake:     { repo: 'whysosary-dot/awake-disclosure' },
-  earning:   { repo: 'whysosary-dot/kospi-kosdaq-dashboard' },
   interest:  { repo: 'whysosary-dot/watchlist-briefing' },
   research:  { repo: 'whysosary-dot/investment-notes' },
   diary:     { repo: 'whysosary-dot/invest-private', path: 'sv/diary.json' },
@@ -4896,32 +4883,8 @@ async function ghCommitAllRun(pat) {
       }
     } catch (e) { console.warn('[commit] sheets 커밋 스킵:', e); errs.push('폴더: ' + e.message); }
 
-    // ── 4. Earning 즐겨찾기·공부함 : kospi-kosdaq-dashboard repo (same-origin localStorage 공유) ──
-    try {
-      const eRepo = 'kospi-kosdaq-dashboard';
-      const ePut = async (path, arr) => {
-        const getRes = await fetch(`https://api.github.com/repos/${GH.OWNER}/${eRepo}/contents/${path}?ref=main`, {
-          headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'User-Agent': 'sv-browser' }
-        });
-        const sha = getRes.ok ? (await getRes.json()).sha : null;
-        const body = { message: `sync: Earning ${path} 업데이트 ${today}`, branch: 'main',
-          content: btoa(unescape(encodeURIComponent(JSON.stringify(arr)))) };
-        if (sha) body.sha = sha;
-        const putRes = await fetch(`https://api.github.com/repos/${GH.OWNER}/${eRepo}/contents/${path}`, {
-          method: 'PUT',
-          headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        if (!putRes.ok) throw new Error(`PUT ${path}: ${putRes.status}`);
-      };
-      const eFavs = JSON.parse(localStorage.getItem('dart_favs') || 'null');
-      const eStudied = JSON.parse(localStorage.getItem('dart_studied') || 'null');
-      if (Array.isArray(eFavs)) await ePut('favs.json', eFavs);
-      if (Array.isArray(eStudied)) await ePut('studied.json', eStudied);
-    } catch (e) { console.warn('[commit] earning favs 커밋 스킵:', e); errs.push('Earning: ' + e.message); }
-
     if (!errs.length) {
-      toast('✅ GitHub 커밋 완료! (밸류·일기·폴더·Earning)', 'ok', 3500);
+      toast('✅ GitHub 커밋 완료! (밸류·일기·폴더)', 'ok', 3500);
     } else if (errs.some(m => m.includes('401') || m.includes('403'))) {
       toast('❌ 토큰 오류 — ⚙️ 버튼에서 토큰을 확인하세요', 'err', 5000);
     } else {
