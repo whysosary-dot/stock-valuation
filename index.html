@@ -1439,7 +1439,7 @@ td input, td textarea{border-radius:8px}
         <button id="pat-clear" class="btn" style="flex:none; color:#b91c1c; border-color:#b91c1c;">삭제</button>
       </div>
       <div id="pat-status" style="font-size:13px; color:#16a34a; display:none;">✓ 저장됨</div>
-      <div id="build-stamp" style="font-size:11px; color:var(--text-dim); text-align:right;">build 2026.08.16-A</div>
+      <div id="build-stamp" style="font-size:11px; color:var(--text-dim); text-align:right;">build 2026.08.16-B</div>
     </div>
   </div>
 </div>
@@ -2509,7 +2509,11 @@ function activatePage(page, opts = {}) {
 
 // 탭 클릭
 document.querySelectorAll('.page-tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => activatePage(btn.dataset.page));
+  btn.addEventListener('click', () => {
+    // 사용자가 직접 고른 탭 — 로드 직후 안전장치가 되돌리지 못하게 표시
+    window._svUserPicked = true;
+    activatePage(btn.dataset.page);
+  });
 });
 // Npay — 네이버페이 증권 새 창
 document.getElementById('npay-tab-btn')?.addEventListener('click', () => {
@@ -2555,7 +2559,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const upd = () => {
     let saved = '(없음)';
     try { saved = localStorage.getItem('sv_last_tab') || '(없음)'; } catch (_) { saved = '(읽기실패)'; }
-    el.textContent = `build 2026.08.16-A · 마지막 탭: ${saved}`;
+    el.textContent = `build 2026.08.16-B · 마지막 탭: ${saved}`;
   };
   upd();
   document.getElementById('gh-settings-btn')?.addEventListener('click', upd);
@@ -2566,7 +2570,8 @@ const _svLoadTime = Date.now();
 window.addEventListener('popstate', (e) => {
   // iOS 세션 복원 시 이전 히스토리(#folder 등)가 로드 직후 popstate 로 재생되는 경우가 있다.
   // 사용자의 실제 뒤로가기가 아니므로 무시하고 첫 화면(마지막 사용 탭) 유지.
-  if (Date.now() - _svLoadTime < 2500) {
+  // 단, 사용자가 이미 탭을 직접 눌렀다면 그 선택을 존중한다.
+  if (Date.now() - _svLoadTime < 2500 && !window._svUserPicked) {
     const dflt = getDefaultTab();
     try { history.replaceState({ page: dflt }, '', '#' + dflt); } catch (_) {}
     activatePage(dflt, { skipHistory: true });
@@ -2605,10 +2610,12 @@ window.addEventListener('popstate', (e) => {
       console.error('[initFromHash] activatePage failed:', e);
     }
   });
-  // 안전장치: 로드 직후 다른 코드/복원이 탭을 바꿔놓는 경우 한 번 더 확정
+  // 안전장치: 로드 직후 다른 코드/복원이 탭을 바꿔놓는 경우 한 번 더 확정.
+  // 단, 사용자가 직접 탭을 눌렀다면 그 선택을 존중하고 절대 되돌리지 않는다.
   if (!isDeepLink) {
     [400, 1200, 2600].forEach(ms => setTimeout(() => {
       try {
+        if (window._svUserPicked) return;
         const cur = document.querySelector('.page-tab-btn.active');
         if (cur && cur.dataset.page !== initial) {
           activatePage(initial, { skipHistory: true });
