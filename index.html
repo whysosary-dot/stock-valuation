@@ -1439,7 +1439,7 @@ td input, td textarea{border-radius:8px}
         <button id="pat-clear" class="btn" style="flex:none; color:#b91c1c; border-color:#b91c1c;">삭제</button>
       </div>
       <div id="pat-status" style="font-size:13px; color:#16a34a; display:none;">✓ 저장됨</div>
-      <div style="font-size:11px; color:var(--text-dim); text-align:right;">build 2026.07.27-B</div>
+      <div id="build-stamp" style="font-size:11px; color:var(--text-dim); text-align:right;">build 2026.08.16-A</div>
     </div>
   </div>
 </div>
@@ -2486,8 +2486,11 @@ function activatePage(page, opts = {}) {
   if (!btn) return;
   document.querySelectorAll('.page-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
-  markTabVisited(page);
+  // ⚠️ 마지막 탭 기록은 다른 어떤 작업보다 먼저. markTabVisited()는 localStorage에 쓰는데
+  //    용량 초과(QuotaExceededError) 시 throw 되어 activatePage 전체가 중단된다.
+  //    그 아래에 있으면 탭 전환은 되는데 마지막 탭이 영영 저장되지 않는다.
   try { localStorage.setItem('sv_last_tab', page); } catch (_) {}
+  try { markTabVisited(page); } catch (e) { console.warn('[tab] markTabVisited 실패:', e); }
   if (page === 'diary' && typeof renderAllDiaryFeeds === 'function') renderAllDiaryFeeds();
   const src = IFRAME_TAB_SRC[page];
   if (src) {
@@ -2544,6 +2547,19 @@ function getDefaultTab() {
   } catch (_) {}
   return 'diary';
 }
+
+// ⚙️ 모달의 build 스탬프 옆에 '마지막 저장된 탭' 표시 (복원이 안 될 때 원인 진단용)
+document.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('build-stamp');
+  if (!el) return;
+  const upd = () => {
+    let saved = '(없음)';
+    try { saved = localStorage.getItem('sv_last_tab') || '(없음)'; } catch (_) { saved = '(읽기실패)'; }
+    el.textContent = `build 2026.08.16-A · 마지막 탭: ${saved}`;
+  };
+  upd();
+  document.getElementById('gh-settings-btn')?.addEventListener('click', upd);
+});
 
 // 브라우저 뒤로/앞으로
 const _svLoadTime = Date.now();
