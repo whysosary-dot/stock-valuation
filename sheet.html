@@ -563,6 +563,22 @@ function removeSheetData(id) {
   idbDelKey(DATA_PREF + id);
 }
 
+/* 카드 1건의 내용만 GitHub 에서 즉시 받아오기.
+   인덱스는 동기화됐는데 내용 파일이 이 기기에 없을 때(다른 기기에서 만든 카드 등) 복구용. */
+async function pullOneSheetData(id) {
+  const pat = (localStorage.getItem(PAT_KEY) || '').trim();
+  if (!pat) { toast('🔑 대시보드 ⚙️ 에서 GitHub 토큰을 먼저 저장하세요', 'err', 5000); return false; }
+  const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/sv/sheets/data/${id}.json?ref=${GH.BRANCH}&t=${Date.now()}`,
+    { cache: 'no-store', headers: { Authorization: 'token ' + pat, Accept: 'application/vnd.github.raw' } });
+  if (!r.ok) {
+    toast(r.status === 404 ? '❌ GitHub 에 이 카드의 내용이 없습니다 (원본 기기에서 커밋 필요)'
+                           : `❌ 내용 받기 실패 (${r.status})`, 'err', 5000);
+    return false;
+  }
+  saveSheetData(id, await r.json());
+  return true;
+}
+
 let meta = loadMeta();
 let currentId = null;       // 열려있는 시트 문서 id
 let luckyCreated = false;
@@ -2575,8 +2591,29 @@ function buildItemCard(s) {
     bodyWrap.className = 'fv-cardbody';
     const body = document.createElement('div');
     body.className = 'fv-body';
-    if (html.trim()) body.innerHTML = html;
-    else body.textContent = '(내용 없음)';
+    if (html.trim()) {
+      body.innerHTML = html;
+    } else if (!data) {
+      // 인덱스에는 있는데 이 기기에 내용 파일이 아직 없음 (다른 기기에서 작성한 카드 등)
+      // → '내용 없음' 과 구분해서 안내하고, 눌러서 바로 받을 수 있게 한다
+      body.innerHTML = '<div class="fv-sub" style="line-height:1.7">📥 이 기기에 아직 내용이 없습니다.<br>' +
+                       '<span style="font-size:12px;color:#999">다른 기기에서 만든 카드입니다.</span></div>';
+      const pull = document.createElement('button');
+      pull.textContent = '지금 받기';
+      pull.style.cssText = 'margin-top:8px;padding:6px 12px;border:1px solid #cbd5e1;background:#fff;' +
+                           'border-radius:8px;font-size:12.5px;cursor:pointer;color:#334155';
+      pull.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        pull.disabled = true; pull.textContent = '받는 중…';
+        try {
+          if (await pullOneSheetData(s.id)) { openFolderView(currentFolderViewId); return; }
+        } catch (err) { toast('❌ 내용 받기 실패: ' + err.message, 'err', 5000); }
+        pull.disabled = false; pull.textContent = '지금 받기';
+      });
+      body.appendChild(pull);
+    } else {
+      body.textContent = '(내용 없음)';
+    }
     bodyWrap.appendChild(body);
     card.appendChild(bodyWrap);
     // 접힘 판정 — 이미지 로드 후 높이가 늘어나므로 각 이미지 load 시점마다 재측정
@@ -2866,6 +2903,10 @@ async function ghDelete(path, sha, message, pat) {
     }
 
     const ghIndex = JSON.parse(b64decodeUtf8(idxFile.content));
+    // ⚠️ IndexedDB 캐시(_bigCache) 로드 완료를 기다린 뒤 진행해야 한다.
+    //    안 기다리면 아래 다운로드가 '이미 가진 대용량 카드'를 없는 걸로 보고 다시 받거나,
+    //    반대로 늦게 올라온 캐시가 화면 갱신 이후라 카드가 빈 채로 남는다.
+    await _bigReady;
     // 새 커밋 감지 → GitHub 상태로 통째 교체 (합집합 없음 — 중복 방지, 최신 푸시 = 진실)
     const ghSheets = (ghIndex.sheets || []).map(s => ({ ...s, dirty: false }));
     meta = {
@@ -2905,6 +2946,9 @@ async function ghDelete(path, sha, message, pat) {
         try { openFolderView(currentFolderViewId); } catch(_) {}
       }
     }
+    // 위 병렬 다운로드는 실패를 조용히 삼키므로(네트워크·용량 등), 빠진 건 한 번 더 시도.
+    // 이걸 안 하면 SHA 가 '동기화됨'으로 기록돼서 다음 실행 때까지 카드가 빈 채로 남는다.
+    await fetchMissingSheetData(pat);
     localStorage.setItem(SHA_KEY, ghSha);
     renderTree();
     _tryDeepLink();
