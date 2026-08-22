@@ -565,18 +565,68 @@ function removeSheetData(id) {
 
 /* 카드 1건의 내용만 GitHub 에서 즉시 받아오기.
    인덱스는 동기화됐는데 내용 파일이 이 기기에 없을 때(다른 기기에서 만든 카드 등) 복구용. */
-async function pullOneSheetData(id) {
+async function pullOneSheetData(id, opts = {}) {
   const pat = (localStorage.getItem(PAT_KEY) || '').trim();
-  if (!pat) { toast('🔑 대시보드 ⚙️ 에서 GitHub 토큰을 먼저 저장하세요', 'err', 5000); return false; }
+  if (!pat) {
+    if (!opts.silent) toast('🔑 대시보드 ⚙️ 에서 GitHub 토큰을 먼저 저장하세요', 'err', 5000);
+    return false;
+  }
   const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/sv/sheets/data/${id}.json?ref=${GH.BRANCH}&t=${Date.now()}`,
     { cache: 'no-store', headers: { Authorization: 'token ' + pat, Accept: 'application/vnd.github.raw' } });
   if (!r.ok) {
-    toast(r.status === 404 ? '❌ GitHub 에 이 카드의 내용이 없습니다 (원본 기기에서 커밋 필요)'
-                           : `❌ 내용 받기 실패 (${r.status})`, 'err', 5000);
+    if (!opts.silent) {
+      toast(r.status === 404 ? '❌ GitHub 에 이 카드의 내용이 없습니다 (원본 기기에서 커밋 필요)'
+                             : `❌ 내용 받기 실패 (${r.status})`, 'err', 5000);
+    }
     return false;
   }
   saveSheetData(id, await r.json());
   return true;
+}
+
+/* ── 화면에 뜬 카드 중 내용이 없는 것을 자동으로 받아오기 ──
+   전체 동기화가 실패/누락됐어도, 카드가 렌더되는 순간 알아서 채워진다.
+   - 같은 id 중복 요청 방지(_pullInFlight), 실패한 건 반복 재시도 안 함(_pullFailed)
+   - 여러 카드가 동시에 끝나도 화면 갱신은 한 번만 (디바운스) */
+const _pullInFlight = new Set();
+const _pullFailed = new Set();
+const _pullQueue = [];
+let _pullActive = 0;
+let _pullRefreshTimer = null;
+const PULL_MAX = 4;   // 노트 1건이 수 MB 라 동시 다운로드 수 제한
+
+function _pullRefreshSoon() {
+  clearTimeout(_pullRefreshTimer);
+  _pullRefreshTimer = setTimeout(() => {
+    try {
+      if (document.getElementById('folderview').style.display !== 'none') {
+        openFolderView(currentFolderViewId);
+      }
+    } catch(_) {}
+  }, 250);
+}
+
+function _pullNext() {
+  if (_pullActive >= PULL_MAX) return;
+  const id = _pullQueue.shift();
+  if (!id) return;
+  _pullActive++;
+  pullOneSheetData(id, { silent: true })
+    .then(ok => { if (ok) _pullRefreshSoon(); else _pullFailed.add(id); })
+    .catch(() => { _pullFailed.add(id); })
+    .finally(() => {
+      _pullActive--;
+      _pullInFlight.delete(id);
+      _pullNext();
+    });
+}
+
+function autoPullSheetData(id) {
+  if (!id || _pullInFlight.has(id) || _pullFailed.has(id)) return;
+  if (!(localStorage.getItem(PAT_KEY) || '').trim()) return;   // 토큰 없으면 조용히 포기
+  _pullInFlight.add(id);
+  _pullQueue.push(id);
+  _pullNext();
 }
 
 let meta = loadMeta();
@@ -2595,22 +2645,14 @@ function buildItemCard(s) {
       body.innerHTML = html;
     } else if (!data) {
       // 인덱스에는 있는데 이 기기에 내용 파일이 아직 없음 (다른 기기에서 작성한 카드 등)
-      // → '내용 없음' 과 구분해서 안내하고, 눌러서 바로 받을 수 있게 한다
-      body.innerHTML = '<div class="fv-sub" style="line-height:1.7">📥 이 기기에 아직 내용이 없습니다.<br>' +
-                       '<span style="font-size:12px;color:#999">다른 기기에서 만든 카드입니다.</span></div>';
-      const pull = document.createElement('button');
-      pull.textContent = '지금 받기';
-      pull.style.cssText = 'margin-top:8px;padding:6px 12px;border:1px solid #cbd5e1;background:#fff;' +
-                           'border-radius:8px;font-size:12.5px;cursor:pointer;color:#334155';
-      pull.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        pull.disabled = true; pull.textContent = '받는 중…';
-        try {
-          if (await pullOneSheetData(s.id)) { openFolderView(currentFolderViewId); return; }
-        } catch (err) { toast('❌ 내용 받기 실패: ' + err.message, 'err', 5000); }
-        pull.disabled = false; pull.textContent = '지금 받기';
-      });
-      body.appendChild(pull);
+      // → 자동으로 받아오고, 받아지면 화면이 알아서 갱신된다
+      const failed = _pullFailed.has(s.id);
+      const noPat = !(localStorage.getItem(PAT_KEY) || '').trim();
+      body.innerHTML = '<div class="fv-sub" style="line-height:1.7">' + (
+        noPat ? '🔑 대시보드 ⚙️ 에서 GitHub 토큰을 저장하면 내용이 표시됩니다.'
+        : failed ? '⚠️ 내용을 받지 못했습니다 — 원본 기기에서 ☁️ 커밋&amp;푸시가 필요할 수 있습니다.'
+        : '📥 내용 받는 중…') + '</div>';
+      if (!noPat && !failed) autoPullSheetData(s.id);
     } else {
       body.textContent = '(내용 없음)';
     }
@@ -2680,7 +2722,14 @@ function buildItemCard(s) {
         frame.style.transform = `scale(${scale})`;
       });
     } else {
-      frameWrap.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-dim);font-size:13px;">📑 내용 동기화 중… 잠시 후 자동 표시됩니다</div>';
+      const failed = _pullFailed.has(s.id);
+      const noPat = !(localStorage.getItem(PAT_KEY) || '').trim();
+      const msg = noPat ? '🔑 ⚙️ 에서 GitHub 토큰을 저장하면 표시됩니다'
+                : failed ? '⚠️ 내용을 받지 못했습니다 (원본 기기에서 커밋 필요)'
+                : '📑 내용 받는 중… 잠시 후 자동 표시됩니다';
+      frameWrap.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;'
+        + 'color:var(--text-dim);font-size:13px;text-align:center;padding:0 12px;">' + msg + '</div>';
+      if (!noPat && !failed) autoPullSheetData(s.id);
     }
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:absolute; inset:0;';
