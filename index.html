@@ -3892,7 +3892,12 @@ function makePortfolioCard(activeItemsRaw) {
   const snapBtn = document.createElement('button'); snapBtn.className = 'sc-btn';
   snapBtn.title = '현재 비중을 날짜 스냅샷으로 보관'; snapBtn.textContent = '📦';
   snapBtn.addEventListener('click', () => {
-    const items = activeItems.map(it => ({ name: it.name || '(이름 없음)', amt: Number(it.amt) || 0 })).filter(x => x.amt > 0);
+    const items = activeItems.map(it => {
+      const o = { name: it.name || '(이름 없음)', amt: Number(it.amt) || 0 };
+      const q = Number(it.qty) || 0;
+      if (q > 0) o.qty = q;                       // 보유 수량도 같이 보관 (현금 등은 없을 수 있음)
+      return o;
+    }).filter(x => x.amt > 0);
     if (!items.length) { toast('금액이 입력된 보유 종목이 없어요', 'err', 2500); return; }
     const today = todayDateStr();
     const h = pfHist().filter(x => x.d !== today); // 같은 날은 최신으로 교체
@@ -3943,7 +3948,11 @@ function makePortfolioCard(activeItemsRaw) {
     title.appendChild(document.createTextNode(' · 합계 ' + fmtWon(sum) + '원'));
     div.appendChild(title);
     const line = document.createElement('div');
-    line.textContent = h.items.map(x => `${x.name} ${sum ? (x.amt / sum * 100).toFixed(1) : 0}%`).join(' · ');
+    line.textContent = h.items.map(x => {
+      const pct = sum ? (x.amt / sum * 100).toFixed(1) : 0;
+      const q = Number(x.qty) || 0;
+      return `${x.name} ${pct}%` + (q > 0 ? ` (${q.toLocaleString('ko-KR')}주)` : '');
+    }).join(' · ');
     div.appendChild(line);
     if (h.memo) {
       const probe = document.createElement('div'); probe.innerHTML = h.memo;
@@ -4471,10 +4480,46 @@ function migrateBuyPlanToBuy() {
   if (changed) saveDiaryData(diary.data);
 }
 
+/* ── (일회성) 포트 비중 기록에 보유 수량 채우기 ──
+   예전 스냅샷은 {name, amt} 만 저장해서 수량이 없다. 각 기록의 금액을 그날 주가로 나눠
+   원래 수량을 역산해 복원한 값(전 항목 정수로 정확히 떨어짐을 확인). 앞으로 찍는
+   스냅샷은 qty 를 함께 저장하므로 이 표는 과거 기록 전용이다. */
+const PF_QTY_BACKFILL = {
+  "2026-08-19":{"DN오토모티브":3728,"와이지-원":12470},
+  "2026-08-14":{"HD한국조선해양":708,"와이지-원":9150},
+  "2026-08-13":{"HD한국조선해양":712,"와이지-원":3247,"제주반도체":553},
+  "2026-08-12":{"HD한국조선해양":712,"와이지-원":3247,"제주반도체":1106},
+  "2026-08-10":{"HD한국조선해양":935,"SK하이닉스":20,"삼성전자":79,"와이지-원":75,"제주반도체":140},
+  "2026-08-07":{"HD한국조선해양":935,"SK하이닉스":20,"메지온":25,"삼성전자":80,"제주반도체":140},
+  "2026-08-06":{"HD한국조선해양":935,"SK하이닉스":12,"삼성전자":80,"제주반도체":338},
+  "2026-08-04":{"HD한국조선해양":1127},
+  "2026-07-31":{"HD한국조선해양":367,"HD현대마린엔진":1823,"SK하이닉스":65,"삼성전자":455},
+  "2026-07-28":{"HD현대마린엔진":7890},
+  "2026-07-27":{"HD현대마린엔진":5173,"SK하이닉스":35,"삼성전자":269,"한화엔진":1169},
+  "2026-07-24":{"HD현대마린엔진":5173,"SK하이닉스":35,"삼성전자":269},
+  "2026-07-23":{"HD현대마린엔진":2539,"SK하이닉스":49,"삼성전자":383,"제주반도체":2147}
+};
+function migratePfHistQty() {
+  const list = diary.data.pfHist;
+  if (!Array.isArray(list)) return;
+  let changed = false;
+  list.forEach(h => {
+    const m = h && PF_QTY_BACKFILL[h.d];
+    if (!m || !Array.isArray(h.items)) return;
+    h.items.forEach(it => {
+      if (!it || it.qty != null) return;          // 이미 있으면 건드리지 않음
+      const q = m[it.name];
+      if (q) { it.qty = q; changed = true; }
+    });
+  });
+  if (changed) saveDiaryData(diary.data);
+}
+
 function renderAllDiaryFeeds() {
   migrateTradesToDaily();
   migrateHoldToCmt();
   migrateBuyPlanToBuy();
+  migratePfHistQty();
   renderFeedDaily(); renderFeedScenario(); renderFeedWeekly(); renderFeedHighlights(); updateTabCounts();
 }
 
