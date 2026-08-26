@@ -1491,6 +1491,9 @@ const COLS = [
   { key: '_upside',         label: '상방 %',        type: 'calc',    sortable: true },
   { key: '_downside',       label: '하방 %',        type: 'calc',    sortable: true },
   { key: '_chart3y',        label: '3년 차트',       type: 'chart3y', sortable: false, align: 'center' },
+  { key: '_ret1m',          label: '1개월 수익률',   type: 'calc',    sortable: true,  align: 'center' },
+  { key: '_ret2m',          label: '2개월 수익률',   type: 'calc',    sortable: true,  align: 'center' },
+  { key: '_ret3m',          label: '3개월 수익률',   type: 'calc',    sortable: true,  align: 'center' },
   { key: '_chart',          label: '1년 차트',       type: 'chart',   sortable: false, align: 'center' },
   { key: '_chart3m',        label: '3개월 차트',     type: 'chart3m', sortable: false, align: 'center' },
   { key: 'price_native',    label: '현재주가',      type: 'current-price', sortable: true },
@@ -1659,6 +1662,22 @@ const targetPor = s => { const t = parseNum(s.target_cap_oku), sum = opSum(s); r
 const upside = s => { const mc = parseNum(s.market_cap_oku), t = parseNum(s.target_cap_oku); return (!mc || !t) ? null : (t/mc-1)*100; };
 const downside = s => { const mc = parseNum(s.market_cap_oku), sf = parseNum(s.safety_cap_oku); return (!mc || !sf) ? null : (sf/mc-1)*100; };
 
+/* N개월 수익률 — 3개월 일봉(price_history_3m)에서 거래일 기준 역산
+   (1개월 ≈ 21거래일, 2개월 ≈ 42, 3개월 ≈ 63; 배열이 짧으면 맨 앞 값으로 클램프) */
+function retNm(s, months) {
+  const arr = s && s.price_history_3m;
+  if (!Array.isArray(arr) || arr.length < 5) return null;
+  const cur = parseNum(s.price_native) ?? arr[arr.length - 1];
+  if (!cur) return null;
+  const lookback = months * 21;
+  const idx = Math.max(0, arr.length - 1 - lookback);
+  // 3개월인데 배열이 심하게 짧으면(신규 추가 종목 등) 왜곡되므로 표시 안 함
+  if (months >= 3 && arr.length < 45) return null;
+  const base = arr[idx];
+  if (!base) return null;
+  return (cur / base - 1) * 100;
+}
+
 /* 주가 표시 자릿수 (네이티브 통화 기준) */
 function priceDecimals(s) {
   const p = parseNum(s && s.price_native);
@@ -1674,6 +1693,9 @@ function sortValue(s, k) {
     case 'price_change_pct': return parseNum(s.price_change_pct);
     case '_upside': return upside(s);
     case '_downside': return downside(s);
+    case '_ret1m': return retNm(s, 1);
+    case '_ret2m': return retNm(s, 2);
+    case '_ret3m': return retNm(s, 3);
     case '_op_sum': return opSum(s);
     case '_por': return por(s);
     case '_target_por': return targetPor(s);
@@ -1992,6 +2014,10 @@ function renderRow(s) {
       } else if (c.key === '_downside') {
         const v = downside(s);
         if (v !== null) { text = fmt(v,1) + '%'; cls = v >= 0 ? 'down' : 'up'; }  // +: red, −: blue
+      } else if (c.key === '_ret1m' || c.key === '_ret2m' || c.key === '_ret3m') {
+        const v = retNm(s, c.key === '_ret1m' ? 1 : c.key === '_ret2m' ? 2 : 3);
+        if (v !== null) { text = (v >= 0 ? '+' : '') + fmt(v,1) + '%'; cls = v > 0 ? 'down' : v < 0 ? 'up' : 'dim'; }
+        td.classList.add('text-center');
       } else if (c.key === '_op_sum') {
         const v = opSum(s); text = v ? fmt(v,0) : '—'; cls = '';
         td.style.cursor = 'pointer';
