@@ -215,6 +215,18 @@
   td.chart-cell { width: 120px; min-width: 120px; padding: 6px 8px; text-align: center; }
   td.chart-cell svg { display: block; margin: 0 auto; }
 
+  /* 월별 추세 (M3·M2·M1 분해) */
+  td.trend-cell { white-space: nowrap; text-align: center; padding: 6px 8px; }
+  .trend-nums { font-variant-numeric: tabular-nums; font-size: 12px; letter-spacing: -.2px; }
+  .trend-nums i { font-style: normal; }
+  .trend-nums s { text-decoration: none; color: var(--text-dim, #9aa3af); margin: 0 2px; }
+  .trend-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 5px;
+                 border-radius: 999px; margin-right: 5px; vertical-align: middle; }
+  .trend-badge.turn { background: #fee2e2; color: #b91c1c; }   /* 반등 전환 */
+  .trend-badge.keep { background: #dcfce7; color: #15803d; }   /* 추세 유지 */
+  .trend-badge.fade { background: #dbeafe; color: #1d4ed8; }   /* 꺾임 */
+  .trend-badge.down { background: #eef2f7; color: #64748b; }   /* 두 달 연속 하락 */
+
   .readonly-cell { color: var(--text); font-weight: 500; }
   .readonly-cell.name { font-weight: 600; }
   .readonly-cell.name a {
@@ -1494,6 +1506,7 @@ const COLS = [
   { key: '_ret1m',          label: '1개월 수익률',   type: 'calc',    sortable: true,  align: 'center' },
   { key: '_ret2m',          label: '2개월 수익률',   type: 'calc',    sortable: true,  align: 'center' },
   { key: '_ret3m',          label: '3개월 수익률',   type: 'calc',    sortable: true,  align: 'center' },
+  { key: '_trend',          label: '월별 추세 M3·M2·M1', type: 'trend', sortable: true, align: 'center' },
   { key: '_chart',          label: '1년 차트',       type: 'chart',   sortable: false, align: 'center' },
   { key: '_chart3m',        label: '3개월 차트',     type: 'chart3m', sortable: false, align: 'center' },
   { key: 'price_native',    label: '현재주가',      type: 'current-price', sortable: true },
@@ -1678,6 +1691,27 @@ function retNm(s, months) {
   return (cur / base - 1) * 100;
 }
 
+/* 겹치는 누적수익률(1·2·3개월)을 겹치지 않는 '월 구간'으로 분해.
+   2개월 안에 1개월이 이미 포함돼 있어 그대로 비교하면 오독하므로,
+   M1=최근 한 달, M2=그 이전 한 달, M3=그 이전 한 달 로 나눈다. */
+function trendParts(s) {
+  const r1 = retNm(s, 1), r2 = retNm(s, 2), r3 = retNm(s, 3);
+  if (r1 === null || r2 === null || r3 === null) return null;
+  const M1 = r1;
+  const M2 = ((1 + r2 / 100) / (1 + r1 / 100) - 1) * 100;
+  const M3 = ((1 + r3 / 100) / (1 + r2 / 100) - 1) * 100;
+  if (!isFinite(M2) || !isFinite(M3)) return null;
+  // 최근 두 달(M2→M1)의 방향 전환으로 4가지 상태를 빠짐없이 분류.
+  // M3 는 배경(추세가 얼마나 오래됐는지)으로 숫자에만 남긴다.
+  let pat;
+  if (M1 > 0 && M2 > 0)       pat = 'keep';   // 두 달 연속 상승 — 추세 유지
+  else if (M1 > 0)            pat = 'turn';   // 하락하다 최근 달 상승 — 반등 전환
+  else if (M2 > 0)            pat = 'fade';   // 오르다 최근 달 하락 — 꺾임
+  else                        pat = 'down';   // 두 달 연속 하락
+  return { M1, M2, M3, r3, pat };
+}
+const TREND_LABEL = { turn: '턴', keep: '유지', fade: '꺾임', down: '하락' };
+
 /* 주가 표시 자릿수 (네이티브 통화 기준) */
 function priceDecimals(s) {
   const p = parseNum(s && s.price_native);
@@ -1696,6 +1730,8 @@ function sortValue(s, k) {
     case '_ret1m': return retNm(s, 1);
     case '_ret2m': return retNm(s, 2);
     case '_ret3m': return retNm(s, 3);
+    // 정렬은 '개선폭'(최근 달 − 그 이전 달) 기준 — 턴어라운드가 위로 올라온다
+    case '_trend': { const t = trendParts(s); return t ? t.M1 - t.M2 : null; }
     case '_op_sum': return opSum(s);
     case '_por': return por(s);
     case '_target_por': return targetPor(s);
@@ -1838,6 +1874,18 @@ function renderRow(s) {
         wrap.appendChild(document.createTextNode(s[c.key] || ''));
       }
       td.appendChild(wrap);
+    } else if (c.type === 'trend') {
+      td.classList.add('trend-cell');
+      const t = trendParts(s);
+      if (!t) { td.textContent = '—'; td.classList.add('dim'); }
+      else {
+        const n = v => `<i class="${v >= 0 ? 'down' : 'up'}">${v >= 0 ? '+' : ''}${fmt(v, 0)}</i>`;
+        td.innerHTML =
+          (t.pat ? `<span class="trend-badge ${t.pat}">${TREND_LABEL[t.pat]}</span>` : '') +
+          `<span class="trend-nums">${n(t.M3)}<s>·</s>${n(t.M2)}<s>·</s>${n(t.M1)}</span>`;
+        td.title = `M3(3개월 전 한 달) ${fmt(t.M3,1)}% · M2(2개월 전 한 달) ${fmt(t.M2,1)}% · M1(최근 한 달) ${fmt(t.M1,1)}%\n`
+                 + `개선폭(M1−M2) ${fmt(t.M1 - t.M2, 1)}%p`;
+      }
     } else if (c.type === 'chart3y') {
       td.classList.add('chart-cell');
       td.innerHTML = renderSparkline(s.price_history_3y);
