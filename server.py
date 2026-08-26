@@ -191,6 +191,20 @@ def _fetch_marketcap_krw(ticker: str, usdkrw: float, shares_adjustment: float = 
                 prev_close = full_info.get("regularMarketPreviousClose") or full_info.get("previousClose")
             if price and prev_close and float(prev_close) > 0:
                 price_change_pct = round((float(price) - float(prev_close)) / float(prev_close) * 100, 2)
+
+            # ⚠️ yfinance 의 previousClose 는 무상증자·액면분할 권리락 이후 한동안
+            #    조정 전 값이 남아 있는 경우가 있다 (예: 알테오젠 권리락 후 previousClose
+            #    234,999원 → 등락률 +32% 로 표기, 실제 전일 종가 305,500 / +1.96%).
+            #    변동폭이 비정상적으로 크면 실제 일봉으로 교차검증한다.
+            #    (국내 상·하한가가 ±30% 이므로 임계값을 넘어도 진짜일 수 있어 '검증'만 하고 값은 일봉을 신뢰)
+            if price and (price_change_pct is None or abs(price_change_pct) > 12):
+                h = t.history(period="7d", interval="1d")
+                cl = [float(x) for x in h["Close"].dropna().tolist()] if not h.empty else []
+                if len(cl) >= 2:
+                    # 마지막 봉이 이미 현재가면 그 직전 봉이 전일 종가
+                    prev = cl[-2] if abs(cl[-1] - float(price)) / float(price) < 1e-4 else cl[-1]
+                    if prev > 0:
+                        price_change_pct = round((float(price) - prev) / prev * 100, 2)
         except Exception:
             pass
 
