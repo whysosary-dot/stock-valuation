@@ -226,6 +226,8 @@
   .trend-badge.keep { background: #dcfce7; color: #15803d; }   /* 추세 유지 */
   .trend-badge.fade { background: #dbeafe; color: #1d4ed8; }   /* 꺾임 */
   .trend-badge.down { background: #eef2f7; color: #64748b; }   /* 두 달 연속 하락 */
+  .trend-sum { display: inline-block; margin-left: 6px; font-size: 10.5px; font-weight: 600;
+               opacity: .75; font-variant-numeric: tabular-nums; }
 
   .readonly-cell { color: var(--text); font-weight: 500; }
   .readonly-cell.name { font-weight: 600; }
@@ -1503,9 +1505,6 @@ const COLS = [
   { key: '_upside',         label: '상방 %',        type: 'calc',    sortable: true },
   { key: '_downside',       label: '하방 %',        type: 'calc',    sortable: true },
   { key: '_chart3y',        label: '3년 차트',       type: 'chart3y', sortable: false, align: 'center' },
-  { key: '_ret1m',          label: '1개월 수익률',   type: 'calc',    sortable: true,  align: 'center' },
-  { key: '_ret2m',          label: '2개월 수익률',   type: 'calc',    sortable: true,  align: 'center' },
-  { key: '_ret3m',          label: '3개월 수익률',   type: 'calc',    sortable: true,  align: 'center' },
   { key: '_trend',          label: '월별 추세 M3·M2·M1', type: 'trend', sortable: true, align: 'center' },
   { key: '_chart',          label: '1년 차트',       type: 'chart',   sortable: false, align: 'center' },
   { key: '_chart3m',        label: '3개월 차트',     type: 'chart3m', sortable: false, align: 'center' },
@@ -1727,9 +1726,6 @@ function sortValue(s, k) {
     case 'price_change_pct': return parseNum(s.price_change_pct);
     case '_upside': return upside(s);
     case '_downside': return downside(s);
-    case '_ret1m': return retNm(s, 1);
-    case '_ret2m': return retNm(s, 2);
-    case '_ret3m': return retNm(s, 3);
     // 정렬은 '개선폭'(최근 달 − 그 이전 달) 기준 — 턴어라운드가 위로 올라온다
     case '_trend': { const t = trendParts(s); return t ? t.M1 - t.M2 : null; }
     case '_op_sum': return opSum(s);
@@ -1882,8 +1878,11 @@ function renderRow(s) {
         const n = v => `<i class="${v >= 0 ? 'down' : 'up'}">${v >= 0 ? '+' : ''}${fmt(v, 0)}</i>`;
         td.innerHTML =
           (t.pat ? `<span class="trend-badge ${t.pat}">${TREND_LABEL[t.pat]}</span>` : '') +
-          `<span class="trend-nums">${n(t.M3)}<s>·</s>${n(t.M2)}<s>·</s>${n(t.M1)}</span>`;
-        td.title = `M3(3개월 전 한 달) ${fmt(t.M3,1)}% · M2(2개월 전 한 달) ${fmt(t.M2,1)}% · M1(최근 한 달) ${fmt(t.M1,1)}%\n`
+          `<span class="trend-nums">${n(t.M3)}<s>·</s>${n(t.M2)}<s>·</s>${n(t.M1)}</span>` +
+          `<span class="trend-sum ${t.r3 >= 0 ? 'down' : 'up'}">∑${t.r3 >= 0 ? '+' : ''}${fmt(t.r3, 0)}%</span>`;
+        const r1 = retNm(s, 1), r2 = retNm(s, 2);
+        td.title = `월 구간: M3(3개월 전) ${fmt(t.M3,1)}% · M2(2개월 전) ${fmt(t.M2,1)}% · M1(최근 한 달) ${fmt(t.M1,1)}%\n`
+                 + `누적: 1개월 ${fmt(r1,1)}% · 2개월 ${fmt(r2,1)}% · 3개월 ${fmt(t.r3,1)}%\n`
                  + `개선폭(M1−M2) ${fmt(t.M1 - t.M2, 1)}%p`;
       }
     } else if (c.type === 'chart3y') {
@@ -2062,10 +2061,6 @@ function renderRow(s) {
       } else if (c.key === '_downside') {
         const v = downside(s);
         if (v !== null) { text = fmt(v,1) + '%'; cls = v >= 0 ? 'down' : 'up'; }  // +: red, −: blue
-      } else if (c.key === '_ret1m' || c.key === '_ret2m' || c.key === '_ret3m') {
-        const v = retNm(s, c.key === '_ret1m' ? 1 : c.key === '_ret2m' ? 2 : 3);
-        if (v !== null) { text = (v >= 0 ? '+' : '') + fmt(v,1) + '%'; cls = v > 0 ? 'down' : v < 0 ? 'up' : 'dim'; }
-        td.classList.add('text-center');
       } else if (c.key === '_op_sum') {
         const v = opSum(s); text = v ? fmt(v,0) : '—'; cls = '';
         td.style.cursor = 'pointer';
