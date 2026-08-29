@@ -1453,7 +1453,7 @@ td input, td textarea{border-radius:8px}
         <button id="pat-clear" class="btn" style="flex:none; color:#b91c1c; border-color:#b91c1c;">삭제</button>
       </div>
       <div id="pat-status" style="font-size:13px; color:#16a34a; display:none;">✓ 저장됨</div>
-      <div id="build-stamp" style="font-size:11px; color:var(--text-dim); text-align:right;">build 2026.08.16-B</div>
+      <div id="build-stamp" style="font-size:11px; color:var(--text-dim); text-align:right;">build 2026.08.29-A</div>
     </div>
   </div>
 </div>
@@ -2628,7 +2628,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const upd = () => {
     let saved = '(없음)';
     try { saved = localStorage.getItem('sv_last_tab') || '(없음)'; } catch (_) { saved = '(읽기실패)'; }
-    el.textContent = `build 2026.08.16-B · 마지막 탭: ${saved}`;
+    const ds = window._diarySyncStat || '(아직 실행 안 됨)';
+    el.textContent = `build 2026.08.29-A · 마지막 탭: ${saved} · 다이어리 동기화: ${ds}`;
   };
   upd();
   document.getElementById('gh-settings-btn')?.addEventListener('click', upd);
@@ -4778,6 +4779,7 @@ function initDiary() {
      예전엔 페이지 로드 때 한 번만 실행돼서, PC 처럼 탭을 오래 열어두는 기기는
      다른 기기 커밋을 영영 못 받아왔다 → 탭 재활성화 때마다 재실행 (스로틀 90초). */
   let _diarySyncing = false, _diaryLastSyncAt = 0;
+  const _dStat = m => { window._diarySyncStat = m + ' · ' + new Date().toTimeString().slice(0,5); };
   async function syncDiaryFromGitHub(force) {
     if (_diarySyncing) return;
     if (!force && Date.now() - _diaryLastSyncAt < 90 * 1000) return;
@@ -4785,7 +4787,14 @@ function initDiary() {
     try {
       const lastSha = localStorage.getItem(DIARY_GH_SHA_KEY) || '';
       const pat = svPat();
-      if (!pat) return;   // 비공개 리포 — PAT 없으면 동기화 불가
+      if (!pat) {   // 비공개 리포 — PAT 없으면 동기화 불가
+        _dStat('❌ 토큰 없음');
+        if (!window._diaryAuthWarned) {
+          window._diaryAuthWarned = true;
+          toast('🔑 다이어리 동기화엔 GitHub 토큰이 필요해요 — ⚙️ 에서 저장', 'err', 6000);
+        }
+        return;
+      }
 
       let ghDiary = null, ghSha = '';
       try {
@@ -4796,46 +4805,54 @@ function initDiary() {
         );
         if (r1.status === 401 || r1.status === 403) {
           // 토큰 만료/권한 문제 — 조용히 옛 데이터를 보여주는 게 최악이므로 알린다 (세션당 1회)
+          _dStat(`❌ 권한 오류 ${r1.status}`);
           if (!window._diaryAuthWarned) {
             window._diaryAuthWarned = true;
             toast('⚠️ 다이어리 동기화 실패 — ⚙️ 에서 GitHub 토큰을 확인하세요', 'err', 6000);
           }
           return;
         }
-        if (r1.ok) {
-          const meta = await r1.json();
-          ghSha = meta && meta.sha ? String(meta.sha) : '';
-          _diaryLastSyncAt = Date.now();
-          // SHA 가 마지막 동기화 시점과 같으면 — 새 커밋 없음 → 머지 없이 종료
-          if (ghSha && lastSha && ghSha === lastSha) return;
-          if (meta && meta.content) {
-            const raw = new TextDecoder().decode(Uint8Array.from(atob(String(meta.content).replace(/\n/g,'')), c => c.charCodeAt(0)));
-            ghDiary = JSON.parse(raw);
-          }
+        if (!r1.ok) { _dStat(`❌ HTTP ${r1.status}`); return; }
+        const meta = await r1.json();
+        ghSha = meta && meta.sha ? String(meta.sha) : '';
+        _diaryLastSyncAt = Date.now();
+        // SHA 가 마지막 동기화 시점과 같으면 — 새 커밋 없음 → 머지 없이 종료
+        if (ghSha && lastSha && ghSha === lastSha) { _dStat('✓ 최신 (변경 없음)'); return; }
+        if (meta && meta.content) {
+          const raw = new TextDecoder().decode(Uint8Array.from(atob(String(meta.content).replace(/\n/g,'')), c => c.charCodeAt(0)));
+          ghDiary = JSON.parse(raw);
         }
       } catch(e) {
         if (e && e.name === 'AbortError') return;
+        _dStat('❌ 네트워크 오류');
       }
-      if (!ghDiary || typeof ghDiary !== 'object') return;
+      if (!ghDiary || typeof ghDiary !== 'object') { if (!window._diarySyncStat) _dStat('❌ 응답 없음'); return; }
       // GitHub 데이터가 비어있으면 localStorage 보존 (네트워크 오류·빈 응답 방어)
       const ghHasData = Object.keys(ghDiary.daily||{}).length
                       + Object.keys(ghDiary.weekly||{}).length
                       + (Array.isArray(ghDiary.scenario) ? ghDiary.scenario.length : 0);
-      if (!ghHasData) return;
+      if (!ghHasData) { _dStat('⚠️ 서버 데이터 비어있음 — 보류'); return; }
 
       // 사용자가 지금 다이어리 입력 중이면 덮어쓰지 않고 다음 기회로 미룬다
       const ae = document.activeElement;
       if (ae && (ae.isContentEditable || ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT')
              && ae.closest && ae.closest('#page-diary')) {
         _diaryLastSyncAt = 0;   // 스로틀 해제 — 포커스 벗어난 뒤 재시도
+        _dStat('⏸ 입력 중 — 대기');
         return;
       }
 
       // 새 커밋 발견 → GitHub 상태로 통째 교체 (최신 푸시 = 진실, 모든 기기 미러링)
       // 주의: 모든 필드 포함 — scenario / pfDeposits / pfMemo / pfHist / trades_backup 등
       diary.data = { daily: {}, weekly: {}, ...ghDiary };
-      saveDiaryData(diary.data);
-      if (ghSha) localStorage.setItem(DIARY_GH_SHA_KEY, ghSha);
+      let saved = true;
+      try { saveDiaryData(diary.data); } catch (e) {
+        // localStorage 용량 초과 등 — 저장은 실패해도 화면은 최신으로 보여준다
+        saved = false;
+        toast('⚠️ 최신 데이터를 받았지만 이 기기에 저장 못 했어요 (저장공간 부족) — 새로고침하면 되돌아갈 수 있음', 'err', 7000);
+      }
+      if (saved && ghSha) localStorage.setItem(DIARY_GH_SHA_KEY, ghSha);
+      _dStat(saved ? `✓ 업데이트됨 (${ghSha.slice(0,7)})` : '⚠️ 표시만 최신 (저장 실패)');
       renderAllDiaryFeeds();
       requestAnimationFrame(() => {
         const sq = document.getElementById('diary-search').value;
