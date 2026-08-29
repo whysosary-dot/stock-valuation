@@ -532,6 +532,20 @@ const _bigReady = (async () => {
         try { _bigCache[k.slice(DATA_PREF.length)] = JSON.parse(v); n++; } catch(_) {}
       }
     }
+    // localStorage 에 남아있는 옛 사본 → IndexedDB 로 이관 (공유 5MB 확보)
+    const legacy = [];
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(DATA_PREF)) legacy.push(k);
+    }
+    let freed = 0;
+    for (const k of legacy) {
+      const v = localStorage.getItem(k);
+      if (v == null) continue;
+      try { _bigCache[k.slice(DATA_PREF.length)] = JSON.parse(v); } catch(_) {}
+      try { await idbSetStr(k, v); localStorage.removeItem(k); freed += v.length; n++; } catch(_) {}
+    }
+    if (freed) console.log(`[storage] 폴더 데이터 ${legacy.length}건 (${(freed/1048576).toFixed(1)}MB) localStorage → IndexedDB 이관`);
     if (n) { try { renderTree(); } catch(_) {} }
   } catch(_) {}
 })();
@@ -545,17 +559,13 @@ function loadSheetData(id) {
 }
 function saveSheetData(id, data) {
   const str = JSON.stringify(data);
-  try {
-    localStorage.setItem(DATA_PREF + id, str);
-    if (_bigCache[id]) { delete _bigCache[id]; idbDelKey(DATA_PREF + id); }
-  } catch (e) {
-    // 용량 초과 → IndexedDB 로 저장 (기기 내 안전 보관, 커밋&푸시에도 포함됨)
-    try { localStorage.removeItem(DATA_PREF + id); } catch(_) {}
-    _bigCache[id] = data;
-    idbSetStr(DATA_PREF + id, str)
-      .then(() => { try { setStatus('저장됨 ✓ (대용량)', true); } catch(_) {} })
-      .catch(() => { try { toast('❌ 저장 실패 — 파일이 너무 큽니다', 'err', 5000); } catch(_) {} });
-  }
+  // 항상 IndexedDB 에 저장.
+  // localStorage(5MB) 는 다이어리·설정과 같은 공간이라, 폴더 데이터가 차지하면
+  // 다이어리 동기화가 "저장공간 부족"으로 실패한다 (실제 발생했던 사고).
+  _bigCache[id] = data;
+  try { localStorage.removeItem(DATA_PREF + id); } catch(_) {}
+  idbSetStr(DATA_PREF + id, str)
+    .catch(() => { try { toast('❌ 저장 실패 — 저장공간 오류', 'err', 5000); } catch(_) {} });
 }
 function removeSheetData(id) {
   try { localStorage.removeItem(DATA_PREF + id); } catch(_) {}
