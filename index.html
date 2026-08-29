@@ -2635,6 +2635,25 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('gh-settings-btn')?.addEventListener('click', upd);
 });
 
+// ⚙️ 모달 열기 바인딩 — 조기 연결.
+// 원래 스크립트 맨 끝에서 바인딩했는데, 그 앞 어디서든 에러가 나면 버튼이 영영 죽는다.
+// (openPatModal 은 같은 스크립트 블록의 함수 선언이라 호이스팅으로 여기서도 호출 가능)
+if (!window._patBtnBound) {
+  window._patBtnBound = true;
+  document.getElementById('gh-settings-btn')?.addEventListener('click', () => {
+    try { openPatModal(); } catch (e) { console.warn('[patModal]', e); }
+  });
+}
+// 마지막 방어선: 어떤 에러로 스크립트가 죽어도 원인이 보이게
+window.addEventListener('error', e => {
+  try {
+    if (window._svFatalShown) return;
+    window._svFatalShown = true;
+    const el = document.getElementById('build-stamp');
+    if (el) el.textContent += ` · ⚠️ JS오류: ${String(e.message).slice(0, 80)}`;
+  } catch (_) {}
+});
+
 // 브라우저 뒤로/앞으로
 const _svLoadTime = Date.now();
 window.addEventListener('popstate', (e) => {
@@ -2726,7 +2745,7 @@ function loadVisitMap() {
   try { return JSON.parse(localStorage.getItem(TAB_VISIT_KEY) || '{}'); }
   catch { return {}; }
 }
-function saveVisitMap(m) { localStorage.setItem(TAB_VISIT_KEY, JSON.stringify(m)); }
+function saveVisitMap(m) { try { localStorage.setItem(TAB_VISIT_KEY, JSON.stringify(m)); } catch (_) {} }
 
 function loadCommitCache() {
   try { return JSON.parse(localStorage.getItem(TAB_COMMIT_KEY) || '{}'); }
@@ -4586,10 +4605,12 @@ function migratePfHistQty() {
 }
 
 function renderAllDiaryFeeds() {
-  migrateTradesToDaily();
-  migrateHoldToCmt();
-  migrateBuyPlanToBuy();
-  migratePfHistQty();
+  // 마이그레이션은 localStorage 쓰기를 포함 — 용량 초과 등으로 throw 해도
+  // 렌더와 이후 초기화(⚙️ 버튼 바인딩 등)까지 죽이면 안 된다
+  try { migrateTradesToDaily(); } catch (e) { console.warn('[migrate] trades:', e); }
+  try { migrateHoldToCmt(); } catch (e) { console.warn('[migrate] hold:', e); }
+  try { migrateBuyPlanToBuy(); } catch (e) { console.warn('[migrate] buyPlan:', e); }
+  try { migratePfHistQty(); } catch (e) { console.warn('[migrate] pfQty:', e); }
   renderFeedDaily(); renderFeedScenario(); renderFeedWeekly(); renderFeedHighlights(); updateTabCounts();
 }
 
@@ -4884,7 +4905,10 @@ function openPatModal() {
 }
 function closePatModal() { document.getElementById('pat-modal').style.display = 'none'; }
 
-document.getElementById('gh-settings-btn').addEventListener('click', openPatModal);
+if (!window._patBtnBound) {
+  window._patBtnBound = true;
+  document.getElementById('gh-settings-btn').addEventListener('click', openPatModal);
+}
 document.getElementById('pat-close').addEventListener('click', closePatModal);
 document.getElementById('pat-modal').addEventListener('click', e => { if (e.target === document.getElementById('pat-modal')) closePatModal(); });
 
