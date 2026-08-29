@@ -4868,9 +4868,14 @@ function initDiary() {
       diary.data = { daily: {}, weekly: {}, ...ghDiary };
       let saved = true;
       try { saveDiaryData(diary.data); } catch (e) {
-        // localStorage 용량 초과 등 — 저장은 실패해도 화면은 최신으로 보여준다
-        saved = false;
-        toast('⚠️ 최신 데이터를 받았지만 이 기기에 저장 못 했어요 (저장공간 부족) — 새로고침하면 되돌아갈 수 있음', 'err', 7000);
+        // 용량 초과 → 폴더 데이터 IndexedDB 이관이 끝나길 기다렸다가 한 번 더
+        try {
+          await (window._svLsMigration || Promise.resolve());
+          saveDiaryData(diary.data);
+        } catch (e2) {
+          saved = false;
+          toast('⚠️ 최신 데이터를 받았지만 이 기기에 저장 못 했어요 (저장공간 부족) — 새로고침하면 되돌아갈 수 있음', 'err', 7000);
+        }
       }
       if (saved && ghSha) localStorage.setItem(DIARY_GH_SHA_KEY, ghSha);
       _dStat(saved ? `✓ 업데이트됨 (${ghSha.slice(0,7)})` : '⚠️ 표시만 최신 (저장 실패)');
@@ -4967,6 +4972,45 @@ async function ghCommitAll() {
   if (!pat) { openPatModal(); return; }
   svConfirm('밸류에이션·다이어리·폴더를 GitHub에 커밋 & 푸시할까요?', () => ghCommitAllRun(pat));
 }
+
+/* localStorage 공간 확보 — 폴더(sheet) 데이터를 IndexedDB 로 이관.
+   localStorage 5MB 를 다이어리·설정과 공유하는데 폴더 데이터가 다 차지하면
+   다이어리 동기화 저장이 실패한다 (PC 에서 실제 발생). 대시보드 로드 때도 이관해서
+   폴더 탭을 안 여는 기기도 공간이 확보되게 한다. */
+function svBigSet(k, str) {
+  return new Promise((resolve, reject) => {
+    try {
+      const rq = indexedDB.open('sv_big_v1', 1);
+      rq.onupgradeneeded = () => rq.result.createObjectStore('kv');
+      rq.onsuccess = () => {
+        try {
+          const tx = rq.result.transaction('kv', 'readwrite');
+          tx.objectStore('kv').put(str, k);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        } catch(e) { reject(e); }
+      };
+      rq.onerror = () => reject(rq.error);
+    } catch(e) { reject(e); }
+  });
+}
+window._svLsMigration = (async () => {
+  try {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('sv_sheet_data_')) keys.push(k);
+    }
+    let freed = 0;
+    for (const k of keys) {
+      const v = localStorage.getItem(k);
+      if (v == null) continue;
+      try { await svBigSet(k, v); localStorage.removeItem(k); freed += v.length; } catch(_) {}
+    }
+    if (freed) console.log(`[storage] 폴더 데이터 ${keys.length}건 (${(freed/1048576).toFixed(1)}MB) → IndexedDB 이관`);
+    return freed;
+  } catch(_) { return 0; }
+})();
 
 /* 대용량 시트 데이터 (sheet.html 이 IndexedDB 'sv_big_v1' 에 저장) 읽기 — same-origin 공유 */
 function svBigGet(k) {
