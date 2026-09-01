@@ -4206,6 +4206,168 @@ function makePortfolioCard(activeItemsRaw) {
   return card;
 }
 
+/* ── 🎯 목표 포트폴리오 카드 ──
+   실제 포트 비중과 별개로 '가고 싶은 구성'을 비중(%)으로 직접 입력.
+   실제 포트에 없는 종목도 자유롭게 추가 가능. 각 행에 실제 비중과의 차이를 표시. */
+function makeTargetPortfolioCard(heldItems) {
+  const tgt = () => { if (!Array.isArray(diary.data.pfTarget)) diary.data.pfTarget = []; return diary.data.pfTarget; };
+
+  // 실제 포트 비중 계산 (포트 비중 카드와 동일: 수량 연동 종목은 최신 주가로 재계산)
+  const curW = {};
+  {
+    let sum = 0;
+    const amts = heldItems.map(it => {
+      const stk = scFindStock(it.name);
+      const px = stk ? Number(stk.price_native) : 0;
+      let amt = Number(it.amt) || 0;
+      if (it.qty && px > 0) {
+        const krw = (stk.currency && stk.currency !== 'KRW' && Number(state.usdkrw) > 0) ? px * Number(state.usdkrw) : px;
+        amt = Math.round(it.qty * krw) || 0;
+      }
+      sum += amt;
+      return { name: it.name, amt };
+    });
+    if (sum > 0) amts.forEach(a => { if (a.amt) curW[String(a.name || '').toLowerCase().replace(/\s+/g, '')] = a.amt / sum * 100; });
+  }
+
+  const card = document.createElement('div');
+  card.className = 'dcard pf-card';
+  const header = document.createElement('div'); header.className = 'dcard-header';
+  const title = document.createElement('span'); title.className = 'dcard-date';
+  title.style.color = '#0e7490'; title.textContent = '🎯 목표 포트폴리오';
+  header.appendChild(title);
+  const total = document.createElement('span'); total.className = 'pf-total';
+  header.appendChild(total);
+  card.appendChild(header);
+
+  const body = document.createElement('div'); body.className = 'pf-body';
+  const chartWrap = document.createElement('div'); chartWrap.className = 'pf-chart';
+  const rows = document.createElement('div'); rows.className = 'pf-rows';
+  body.appendChild(chartWrap); body.appendChild(rows);
+
+  // 메모 (포트 비중 카드와 동일 스타일)
+  const memo = document.createElement('div');
+  memo.className = 'pf-memo';
+  memo.contentEditable = 'true';
+  memo.setAttribute('data-placeholder', '📝 목표 구성의 논리 (왜 이 비중인지 · 어떤 조건에서 조정할지)');
+  memo.innerHTML = normalizeDiaryValue(diary.data.pfTargetMemo || '');
+  attachEditable(memo);
+  memo.addEventListener('input', () => {
+    diary.data.pfTargetMemo = sanitizeDiaryHTML(memo.innerHTML);
+    clearTimeout(diary.saveTimers['pfTargetMemo']);
+    diary.saveTimers['pfTargetMemo'] = setTimeout(() => saveDiaryData(diary.data), 500);
+  });
+  body.appendChild(memo);
+  card.appendChild(body);
+
+  const saveDeb = () => {
+    clearTimeout(diary.saveTimers['pfTarget']);
+    diary.saveTimers['pfTarget'] = setTimeout(() => saveDiaryData(diary.data), 500);
+  };
+
+  const pctEls = [], dotEls = [], curEls = [];
+  const updatePie = () => {
+    const list = tgt();
+    const data = list.map((it, i) => ({ v: Number(it.pct) || 0, color: PF_COLORS[i % PF_COLORS.length] }));
+    const sum = data.reduce((a, b) => a + b.v, 0);
+    total.textContent = sum ? `합계 ${sum.toFixed(1)}%` : '';
+    total.style.color = Math.abs(sum - 100) < 0.05 ? '' : '#d97706';   // 100% 아니면 주황
+    list.forEach((it, i) => {
+      if (pctEls[i]) pctEls[i].textContent = data[i].v ? data[i].v.toFixed(1) + '%' : '';
+      if (dotEls[i]) dotEls[i].style.background = data[i].v ? data[i].color : 'var(--border)';
+      if (curEls[i]) {
+        const cur = curW[String(it.name || '').toLowerCase().replace(/\s+/g, '')] || 0;
+        const diff = (Number(it.pct) || 0) - cur;
+        curEls[i].innerHTML = cur || it.pct
+          ? `현재 ${cur.toFixed(1)}% · <span class="${diff >= 0 ? 'up' : 'dn'}">${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%p</span>`
+          : '';
+      }
+    });
+    if (!sum) {
+      chartWrap.innerHTML = '<div class="pf-empty" style="text-align:center;padding-top:60px;">목표 비중을 입력하면<br>차트가 나타나요</div>';
+      chartWrap.style.height = '170px';
+      return;
+    }
+    chartWrap.style.height = '';
+    const slices = data.filter(d => d.v > 0);
+    if (slices.length === 1) {
+      chartWrap.innerHTML = `<svg viewBox="0 0 160 160" width="170" height="170"><circle cx="80" cy="80" r="70" fill="${slices[0].color}" stroke="#fff" stroke-width="1.5"/></svg>`;
+      return;
+    }
+    let ang = -Math.PI / 2, paths = '';
+    for (const d of slices) {
+      const a0 = ang, a1 = ang + (d.v / sum) * Math.PI * 2; ang = a1;
+      const large = (a1 - a0) > Math.PI ? 1 : 0;
+      const x0 = (80 + 70 * Math.cos(a0)).toFixed(2), y0 = (80 + 70 * Math.sin(a0)).toFixed(2);
+      const x1 = (80 + 70 * Math.cos(a1)).toFixed(2), y1 = (80 + 70 * Math.sin(a1)).toFixed(2);
+      paths += `<path d="M80,80 L${x0},${y0} A70,70 0 ${large} 1 ${x1},${y1} Z" fill="${d.color}" stroke="#fff" stroke-width="1.5"/>`;
+    }
+    chartWrap.innerHTML = `<svg viewBox="0 0 160 160" width="170" height="170">${paths}</svg>`;
+  };
+
+  const buildRows = () => {
+    rows.innerHTML = ''; pctEls.length = 0; dotEls.length = 0; curEls.length = 0;
+    tgt().forEach((it, i) => {
+      const row = document.createElement('div'); row.className = 'pf-row';
+      const dot = document.createElement('span'); dot.className = 'pf-dot'; dotEls.push(dot);
+
+      const nm = document.createElement('input');
+      nm.className = 'pf-amt'; nm.type = 'text'; nm.placeholder = '종목명';
+      nm.style.cssText = 'width:130px; text-align:left; font-weight:600;';
+      nm.value = it.name || '';
+      nm.addEventListener('input', () => { it.name = nm.value.trim(); saveDeb(); updatePie(); });
+
+      const pin = document.createElement('input');
+      pin.className = 'pf-amt'; pin.type = 'text'; pin.inputMode = 'decimal'; pin.placeholder = '비중%';
+      pin.style.width = '64px';
+      pin.value = it.pct != null ? String(it.pct) : '';
+      pin.addEventListener('input', () => {
+        const v = parseFloat(String(pin.value).replace(/[^\d.]/g, ''));
+        it.pct = isFinite(v) ? v : undefined;
+        saveDeb(); updatePie();
+      });
+
+      const del = document.createElement('button'); del.className = 'sc-btn';
+      del.title = '이 종목 제거'; del.textContent = '×';
+      del.addEventListener('click', () => {
+        svConfirm(`목표 포트에서 '${it.name || '(이름 없음)'}' 을 뺄까요?`, () => {
+          diary.data.pfTarget = tgt().filter(x => x !== it);
+          saveDiaryData(diary.data);
+          buildRows(); updatePie();
+        });
+      });
+
+      const pct = document.createElement('span'); pct.className = 'pf-pct'; pctEls.push(pct);
+      const vals = document.createElement('span'); vals.className = 'pf-vals';
+      vals.append(nm, pin, del);
+      row.appendChild(dot); row.appendChild(vals); row.appendChild(pct);
+      rows.appendChild(row);
+
+      // 실제 비중과의 차이 표시줄
+      const cur = document.createElement('div'); cur.className = 'pf-info'; curEls.push(cur);
+      rows.appendChild(cur);
+    });
+
+    // 종목 추가 버튼
+    const addBtn = document.createElement('button');
+    addBtn.className = 'sc-btn';
+    addBtn.style.cssText = 'margin-top:8px; width:100%; padding:7px 0; font-size:13px;';
+    addBtn.textContent = '＋ 종목 추가';
+    addBtn.addEventListener('click', () => {
+      tgt().push({ id: 'tg' + Math.random().toString(36).slice(2, 8), name: '', pct: undefined });
+      saveDeb();
+      buildRows(); updatePie();
+      const inps = rows.querySelectorAll('input[placeholder="종목명"]');
+      if (inps.length) inps[inps.length - 1].focus();
+    });
+    rows.appendChild(addBtn);
+  };
+
+  buildRows();
+  updatePie();
+  return card;
+}
+
 /* ── 월간 수익률 누적 그래프 (마지막 주 평일 21시 자동 스냅샷 기반) ── */
 let _pfMonthlyFetched = false;
 function pfMonthlyData() {
@@ -4453,7 +4615,9 @@ function renderFeedScenario() {
   const active = list.filter(s => s && !s.archived);
   const archived = list.filter(s => s && s.archived);
 
-  // 포트 비중 카드 — 항상 최상단 고정 (보유중으로 표시한 종목만)
+  // 🎯 목표 포트폴리오 — 맨 위 고정
+  feed.appendChild(makeTargetPortfolioCard(active.filter(s => s.held)));
+  // 포트 비중 카드 — 그 아래 (보유중으로 표시한 종목만)
   feed.appendChild(makePortfolioCard(active.filter(s => s.held)));
   // 월간 수익률 누적 그래프 — 포트 비중 바로 아래
   feed.appendChild(makePfReturnCard());
