@@ -109,9 +109,13 @@ def main():
         amt = 0
         stk = find_stock(it.get("name"))
         px = float(stk.get("price_native") or 0) if stk else 0
+        cur = (stk.get("currency") or "KRW").upper() if stk else "KRW"
+        # 환산 지원: KRW 그대로, USD 는 usdkrw. 그 외 통화는 환율 미보유 → 수동 입력 amt 사용
+        if cur == "USD" and usdkrw > 0:
+            px *= usdkrw
+        elif cur != "KRW":
+            px = 0
         if it.get("qty") and px > 0:
-            if stk.get("currency") and stk["currency"] != "KRW" and usdkrw > 0:
-                px *= usdkrw
             amt = round(float(it["qty"]) * px)
         elif it.get("amt"):
             amt = round(float(it["amt"]))
