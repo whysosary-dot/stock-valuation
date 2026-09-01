@@ -3194,7 +3194,9 @@ function updateTabCounts() {
   Object.values(d.weekly || {}).forEach(countIn);
   (d.scenario || []).forEach(it => { if (it) [it.buy, it.hold, it.sell, it.cmt].forEach(countIn); });
   countIn(d.pfMemo || '');
+  countIn(d.pfTargetMemo || '');
   (d.pfHist || []).forEach(h => countIn(h && h.memo || ''));
+  (d.pfTargetHist || []).forEach(h => countIn(h && h.memo || ''));
   const elHi = document.getElementById('cnt-highlights');
   if (elHi) elHi.textContent = hi;
   const elSc = document.getElementById('cnt-scenario');
@@ -3609,6 +3611,16 @@ function renderFeedHighlights() {
     if (!h) return;
     _extractHighlights(h.memo || '').forEach(snippet => {
       items.push({ date: h.d || '', sortKey: _diaryDateSortKey(h.d || ''), sectionKey: 'scenario', sectionLabel: '시나리오', extraTag: '포트 메모 보관', htmlSnippet: snippet });
+    });
+  });
+  // 매수 목표 포트폴리오 메모·보관 기록의 강조
+  _extractHighlights(diary.data.pfTargetMemo || '').forEach(snippet => {
+    items.push({ date: '', sortKey: '9999-99-98', sectionKey: 'scenario', sectionLabel: '시나리오', extraTag: '목표 포트 메모', htmlSnippet: snippet });
+  });
+  (diary.data.pfTargetHist || []).forEach(h => {
+    if (!h) return;
+    _extractHighlights(h.memo || '').forEach(snippet => {
+      items.push({ date: h.d || '', sortKey: _diaryDateSortKey(h.d || ''), sectionKey: 'scenario', sectionLabel: '시나리오', extraTag: '목표 포트 보관', htmlSnippet: snippet });
     });
   });
 
@@ -4262,6 +4274,36 @@ function makeTargetPortfolioCard(heldItems) {
   header.appendChild(title);
   const total = document.createElement('span'); total.className = 'pf-total';
   header.appendChild(total);
+
+  // 목표 스냅샷 보관 — 그때그때 목표 구성을 날짜별로 저장해두고 나중에 비교
+  const tHist = () => { if (!Array.isArray(diary.data.pfTargetHist)) diary.data.pfTargetHist = []; return diary.data.pfTargetHist; };
+  const histBox = document.createElement('div'); histBox.className = 'pf-hist';
+  if (tHist().length) {
+    const histBtn = document.createElement('button'); histBtn.className = 'sc-btn';
+    histBtn.title = '보관된 목표 기록 보기'; histBtn.textContent = `🕘 ${tHist().length}`;
+    histBtn.addEventListener('click', () => histBox.classList.toggle('show'));
+    header.appendChild(histBtn);
+  }
+  const snapBtn = document.createElement('button'); snapBtn.className = 'sc-btn';
+  snapBtn.title = '현재 목표 구성을 날짜 스냅샷으로 보관'; snapBtn.textContent = '📦';
+  snapBtn.addEventListener('click', () => {
+    const items = tgt().map(it => {
+      const o = { name: it.name || '(이름 없음)' };
+      if (Number(it.pct) > 0) o.pct = Number(it.pct);
+      if (Number(it.amt) > 0) o.amt = Number(it.amt);
+      return o;
+    }).filter(x => x.pct || x.amt);
+    if (!items.length) { toast('비중이나 금액이 입력된 종목이 없어요', 'err', 2500); return; }
+    const today = todayDateStr();
+    const h = tHist().filter(x => x.d !== today); // 같은 날은 최신으로 교체
+    h.unshift({ d: today, items, memo: diary.data.pfTargetMemo || '' });
+    if (h.length > 30) h.length = 30;
+    diary.data.pfTargetHist = h;
+    saveDiaryData(diary.data);
+    toast('📦 오늘 목표 구성을 보관했어요', 'ok', 2500);
+    renderFeedScenario();
+  });
+  header.appendChild(snapBtn);
   card.appendChild(header);
 
   const body = document.createElement('div'); body.className = 'pf-body';
@@ -4282,6 +4324,43 @@ function makeTargetPortfolioCard(heldItems) {
     diary.saveTimers['pfTargetMemo'] = setTimeout(() => saveDiaryData(diary.data), 500);
   });
   body.appendChild(memo);
+
+  // 보관된 목표 기록 목록
+  tHist().forEach(h => {
+    const div = document.createElement('div'); div.className = 'sc-hist-item';
+    const del = document.createElement('button'); del.className = 'pf-hist-del'; del.title = '이 기록 삭제'; del.textContent = '×';
+    del.addEventListener('click', () => {
+      svConfirm(`${h.d} 목표 기록을 삭제할까요?`, () => {
+        diary.data.pfTargetHist = tHist().filter(x => x !== h);
+        saveDiaryData(diary.data); renderFeedScenario();
+      });
+    });
+    div.appendChild(del);
+    const titleEl = document.createElement('div');
+    const b = document.createElement('b'); b.textContent = h.d;
+    titleEl.appendChild(b);
+    const pctS = h.items.reduce((a, x) => a + (Number(x.pct) || 0), 0);
+    if (pctS > 0 && pctS < 100 - 0.05) titleEl.appendChild(document.createTextNode(` · 현금 ${(100 - pctS).toFixed(1)}%`));
+    div.appendChild(titleEl);
+    const line = document.createElement('div');
+    line.textContent = h.items.map(x => {
+      const parts = [];
+      if (x.pct) parts.push(x.pct + '%');
+      if (x.amt) parts.push(fmtWon(x.amt) + '원');
+      return `${x.name} ${parts.join('·')}`;
+    }).join(' · ');
+    div.appendChild(line);
+    if (h.memo) {
+      const probe = document.createElement('div'); probe.innerHTML = h.memo;
+      if ((probe.innerText || '').trim()) {
+        const ml = document.createElement('div');
+        ml.innerHTML = '📝 ' + sanitizeDiaryHTML(h.memo);   // 강조(볼드·색상) 서식 그대로 표시
+        div.appendChild(ml);
+      }
+    }
+    histBox.appendChild(div);
+  });
+  body.appendChild(histBox);
   card.appendChild(body);
 
   const saveDeb = () => {
