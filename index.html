@@ -4266,6 +4266,7 @@ function makeTargetPortfolioCard(heldItems) {
   };
 
   const pctEls = [], dotEls = [], curEls = [];
+  let cashRowEl = null, cashDotEl = null, cashPctEl = null, cashInfoEl = null;
   const updatePie = () => {
     const list = tgt();
     // 파이·비중은 % 우선, %가 하나도 없으면 금액 비율로
@@ -4277,23 +4278,46 @@ function makeTargetPortfolioCard(heldItems) {
     }));
     const sum = data.reduce((a, b) => a + b.v, 0);
     const amtSum = list.reduce((a, b) => a + (Number(b.amt) || 0), 0);
+    // %-모드에서 100% 미달분은 '현금'으로 간주 (초과만 경고)
+    const CASH_GRAY = '#94a3b8';
+    const cashPct = (!useAmt && pctSum > 0 && pctSum < 100 - 0.05) ? (100 - pctSum) : 0;
     const parts = [];
-    if (pctSum > 0) parts.push(`합계 ${pctSum.toFixed(1)}%`);
+    if (pctSum > 0) {
+      parts.push(`목표 합계 ${pctSum.toFixed(1)}%`);
+      if (cashPct) parts.push(`현금 ${cashPct.toFixed(1)}%`);
+    }
     if (amtSum > 0) parts.push(fmtWon(amtSum) + '원');
     total.textContent = parts.join(' · ');
-    total.style.color = (pctSum > 0 && Math.abs(pctSum - 100) >= 0.05) ? '#d97706' : '';   // % 합이 100 아니면 주황
+    total.style.color = (pctSum > 100 + 0.05) ? '#d97706' : '';   // 100% 초과만 주황 (미달 = 현금)
     list.forEach((it, i) => {
-      const share = sum && data[i].v ? data[i].v / sum * 100 : 0;   // 파이 기준 실효 비중
-      if (pctEls[i]) pctEls[i].textContent = share ? share.toFixed(1) + '%' : '';
+      // %-모드: 입력한 목표 %를 그대로 (정규화하지 않음 — 나머지는 현금)
+      // 금액-모드: 금액 비율
+      const share = useAmt ? (sum && data[i].v ? data[i].v / sum * 100 : 0) : (Number(it.pct) || 0);
+      if (pctEls[i]) pctEls[i].textContent = share ? '목표 ' + share.toFixed(1) + '%' : '';
       if (dotEls[i]) dotEls[i].style.background = data[i].v ? data[i].color : 'var(--border)';
       if (curEls[i]) {
         const cur = curW[String(it.name || '').toLowerCase().replace(/\s+/g, '')] || 0;
         const diff = share - cur;
         curEls[i].innerHTML = (cur || share)
-          ? `현재 ${cur.toFixed(1)}% · <span class="${diff >= 0 ? 'up' : 'dn'}">${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%p</span>`
+          ? `현재 ${cur.toFixed(1)}% · 차이 <span class="${diff >= 0 ? 'up' : 'dn'}">${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%p</span>`
           : '';
       }
     });
+    // 암시적 현금 행 (%-모드에서 100% 미달일 때만 표시)
+    if (cashRowEl) {
+      if (cashPct) {
+        cashRowEl.style.display = '';
+        cashDotEl.style.background = CASH_GRAY;
+        cashPctEl.textContent = '목표 ' + cashPct.toFixed(1) + '%';
+        const curCash = curW['현금'] || 0;
+        const dCash = cashPct - curCash;
+        cashInfoEl.innerHTML = `현재 ${curCash.toFixed(1)}% · 차이 <span class="${dCash >= 0 ? 'up' : 'dn'}">${dCash >= 0 ? '+' : ''}${dCash.toFixed(1)}%p</span>`;
+        cashInfoEl.style.display = '';
+      } else {
+        cashRowEl.style.display = 'none';
+        cashInfoEl.style.display = 'none';
+      }
+    }
     if (!sum) {
       chartWrap.innerHTML = '<div class="pf-empty" style="text-align:center;padding-top:60px;">목표 비중을 입력하면<br>차트가 나타나요</div>';
       chartWrap.style.height = '170px';
@@ -4301,13 +4325,15 @@ function makeTargetPortfolioCard(heldItems) {
     }
     chartWrap.style.height = '';
     const slices = data.filter(d => d.v > 0);
+    if (cashPct) slices.push({ v: cashPct, color: CASH_GRAY });   // 현금 슬라이스 (회색)
+    const pieSum = sum + cashPct;
     if (slices.length === 1) {
       chartWrap.innerHTML = `<svg viewBox="0 0 160 160" width="170" height="170"><circle cx="80" cy="80" r="70" fill="${slices[0].color}" stroke="#fff" stroke-width="1.5"/></svg>`;
       return;
     }
     let ang = -Math.PI / 2, paths = '';
     for (const d of slices) {
-      const a0 = ang, a1 = ang + (d.v / sum) * Math.PI * 2; ang = a1;
+      const a0 = ang, a1 = ang + (d.v / pieSum) * Math.PI * 2; ang = a1;
       const large = (a1 - a0) > Math.PI ? 1 : 0;
       const x0 = (80 + 70 * Math.cos(a0)).toFixed(2), y0 = (80 + 70 * Math.sin(a0)).toFixed(2);
       const x1 = (80 + 70 * Math.cos(a1)).toFixed(2), y1 = (80 + 70 * Math.sin(a1)).toFixed(2);
@@ -4369,6 +4395,17 @@ function makeTargetPortfolioCard(heldItems) {
       const cur = document.createElement('div'); cur.className = 'pf-info'; curEls.push(cur);
       rows.appendChild(cur);
     });
+
+    // 암시적 현금 행 — 목표 % 합이 100 미만일 때 나머지를 현금으로 표시
+    cashRowEl = document.createElement('div'); cashRowEl.className = 'pf-row'; cashRowEl.style.display = 'none';
+    cashDotEl = document.createElement('span'); cashDotEl.className = 'pf-dot';
+    const cashNm = document.createElement('span'); cashNm.className = 'pf-nm';
+    cashNm.textContent = '💵 현금 (나머지)'; cashNm.style.color = '#64748b';
+    cashPctEl = document.createElement('span'); cashPctEl.className = 'pf-pct';
+    cashRowEl.appendChild(cashDotEl); cashRowEl.appendChild(cashNm); cashRowEl.appendChild(cashPctEl);
+    rows.appendChild(cashRowEl);
+    cashInfoEl = document.createElement('div'); cashInfoEl.className = 'pf-info'; cashInfoEl.style.display = 'none';
+    rows.appendChild(cashInfoEl);
 
     // 종목 추가 버튼
     const addBtn = document.createElement('button');
