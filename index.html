@@ -4323,7 +4323,7 @@ function makeTargetPortfolioCard(heldItems) {
         const cur = curW[String(it.name || '').toLowerCase().replace(/\s+/g, '')] || 0;
         const diff = share - cur;
         curEls[i].innerHTML = (cur || share)
-          ? `현재 ${cur.toFixed(1)}% · 차이 <span class="${diff >= 0 ? 'up' : 'dn'}">${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%p</span>`
+          ? `현재 <span class="up">${cur.toFixed(1)}%</span> · 차이 ${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%p`
           : '';
       }
     });
@@ -4335,7 +4335,7 @@ function makeTargetPortfolioCard(heldItems) {
         cashPctEl.textContent = '목표 ' + cashPct.toFixed(1) + '%';
         const curCash = curW['현금'] || 0;
         const dCash = cashPct - curCash;
-        cashInfoEl.innerHTML = `현재 ${curCash.toFixed(1)}% · 차이 <span class="${dCash >= 0 ? 'up' : 'dn'}">${dCash >= 0 ? '+' : ''}${dCash.toFixed(1)}%p</span>`;
+        cashInfoEl.innerHTML = `현재 <span class="up">${curCash.toFixed(1)}%</span> · 차이 ${dCash >= 0 ? '+' : ''}${dCash.toFixed(1)}%p`;
         cashInfoEl.style.display = '';
       } else {
         cashRowEl.style.display = 'none';
