@@ -4234,7 +4234,7 @@ function makeTargetPortfolioCard(heldItems) {
   card.className = 'dcard pf-card';
   const header = document.createElement('div'); header.className = 'dcard-header';
   const title = document.createElement('span'); title.className = 'dcard-date';
-  title.style.color = '#0e7490'; title.textContent = '🎯 목표 포트폴리오';
+  title.style.color = '#0e7490'; title.textContent = '🎯 매수 목표 포트폴리오';
   header.appendChild(title);
   const total = document.createElement('span'); total.className = 'pf-total';
   header.appendChild(total);
@@ -4268,17 +4268,28 @@ function makeTargetPortfolioCard(heldItems) {
   const pctEls = [], dotEls = [], curEls = [];
   const updatePie = () => {
     const list = tgt();
-    const data = list.map((it, i) => ({ v: Number(it.pct) || 0, color: PF_COLORS[i % PF_COLORS.length] }));
+    // 파이·비중은 % 우선, %가 하나도 없으면 금액 비율로
+    const pctSum = list.reduce((a, b) => a + (Number(b.pct) || 0), 0);
+    const useAmt = !(pctSum > 0);
+    const data = list.map((it, i) => ({
+      v: useAmt ? (Number(it.amt) || 0) : (Number(it.pct) || 0),
+      color: PF_COLORS[i % PF_COLORS.length]
+    }));
     const sum = data.reduce((a, b) => a + b.v, 0);
-    total.textContent = sum ? `합계 ${sum.toFixed(1)}%` : '';
-    total.style.color = Math.abs(sum - 100) < 0.05 ? '' : '#d97706';   // 100% 아니면 주황
+    const amtSum = list.reduce((a, b) => a + (Number(b.amt) || 0), 0);
+    const parts = [];
+    if (pctSum > 0) parts.push(`합계 ${pctSum.toFixed(1)}%`);
+    if (amtSum > 0) parts.push(fmtWon(amtSum) + '원');
+    total.textContent = parts.join(' · ');
+    total.style.color = (pctSum > 0 && Math.abs(pctSum - 100) >= 0.05) ? '#d97706' : '';   // % 합이 100 아니면 주황
     list.forEach((it, i) => {
-      if (pctEls[i]) pctEls[i].textContent = data[i].v ? data[i].v.toFixed(1) + '%' : '';
+      const share = sum && data[i].v ? data[i].v / sum * 100 : 0;   // 파이 기준 실효 비중
+      if (pctEls[i]) pctEls[i].textContent = share ? share.toFixed(1) + '%' : '';
       if (dotEls[i]) dotEls[i].style.background = data[i].v ? data[i].color : 'var(--border)';
       if (curEls[i]) {
         const cur = curW[String(it.name || '').toLowerCase().replace(/\s+/g, '')] || 0;
-        const diff = (Number(it.pct) || 0) - cur;
-        curEls[i].innerHTML = cur || it.pct
+        const diff = share - cur;
+        curEls[i].innerHTML = (cur || share)
           ? `현재 ${cur.toFixed(1)}% · <span class="${diff >= 0 ? 'up' : 'dn'}">${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%p</span>`
           : '';
       }
@@ -4327,6 +4338,17 @@ function makeTargetPortfolioCard(heldItems) {
         saveDeb(); updatePie();
       });
 
+      const ain = document.createElement('input');
+      ain.className = 'pf-amt'; ain.type = 'text'; ain.inputMode = 'numeric'; ain.placeholder = '금액(원)';
+      ain.style.width = '110px';
+      ain.value = fmtWon(it.amt);
+      ain.addEventListener('input', () => {
+        const v = Number(String(ain.value).replace(/[^\d]/g, '')) || 0;
+        it.amt = v || undefined;
+        ain.value = fmtWon(v);
+        saveDeb(); updatePie();
+      });
+
       const del = document.createElement('button'); del.className = 'sc-btn';
       del.title = '이 종목 제거'; del.textContent = '×';
       del.addEventListener('click', () => {
@@ -4339,7 +4361,7 @@ function makeTargetPortfolioCard(heldItems) {
 
       const pct = document.createElement('span'); pct.className = 'pf-pct'; pctEls.push(pct);
       const vals = document.createElement('span'); vals.className = 'pf-vals';
-      vals.append(nm, pin, del);
+      vals.append(nm, pin, ain, del);
       row.appendChild(dot); row.appendChild(vals); row.appendChild(pct);
       rows.appendChild(row);
 
