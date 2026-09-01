@@ -3968,6 +3968,19 @@ function scFindStock(name) {
   return hit || null;
 }
 
+/* 포트 비중용 원화 환산 주가.
+   KRW 그대로, USD 는 usdkrw 적용 (엔비디아 등 미국주식 수량 연동).
+   그 외 통화(JPY·HKD·EUR…)는 환율 데이터가 없어 0 반환 → 수량 연동 대신
+   금액 직접 입력으로 폴백 (잘못된 환율로 곱하는 것보다 안전). */
+function pfPxKrw(stk) {
+  const px = Number(stk && stk.price_native) || 0;
+  if (!px) return 0;
+  const cur = (stk.currency || 'KRW').toUpperCase();
+  if (cur === 'KRW') return px;
+  if (cur === 'USD' && Number(state.usdkrw) > 0) return px * Number(state.usdkrw);
+  return 0;
+}
+
 function makePortfolioCard(activeItemsRaw) {
   let activeItems = activeItemsRaw;
   const card = document.createElement('div');
@@ -4071,9 +4084,8 @@ function makePortfolioCard(activeItemsRaw) {
   // 수량 연동 종목은 최신 주가로 금액 먼저 계산 → 그 뒤 금액 큰 순 정렬
   activeItems.forEach(it => {
     const stk = scFindStock(it.name);
-    const px = stk ? Number(stk.price_native) : 0;
-    if (it.qty && px > 0) {
-      const krw = (stk.currency && stk.currency !== 'KRW' && Number(state.usdkrw) > 0) ? px * Number(state.usdkrw) : px;
+    const krw = stk ? pfPxKrw(stk) : 0;   // KRW·USD 자동 환산, 그 외 통화는 수동 입력 유지
+    if (it.qty && krw > 0) {
       it.amt = Math.round(it.qty * krw) || undefined;
     }
   });
@@ -4166,18 +4178,22 @@ function makePortfolioCard(activeItemsRaw) {
         cell(96, '상방 ' + pv(u)) +
         cell(96, '하방 ' + pv(dnV));
     }
-    if (stk && Number(stk.price_native) > 0) {
-      // 주가 자동 연동: 수량 입력 → 현재가 × 수량
+    if (stk && pfPxKrw(stk) > 0) {
+      // 주가 자동 연동: 수량 입력 → 현재가 × 수량 (USD 는 환율 자동 적용)
       const px = Number(stk.price_native);
-      const pxKrw = (stk.currency && stk.currency !== 'KRW' && Number(state.usdkrw) > 0) ? px * Number(state.usdkrw) : px;
+      const pxKrw = pfPxKrw(stk);
       if (it.qty) { it.amt = Math.round(it.qty * pxKrw) || undefined; saveDeb(); } // 렌더 시 최신 주가로 재계산
 
       const qty = document.createElement('input'); qty.className = 'pf-amt pf-qty';
       qty.type = 'text'; qty.inputMode = 'numeric'; qty.placeholder = '수량';
       qty.value = it.qty ? Number(it.qty).toLocaleString('ko-KR') : '';
       const pxLab = document.createElement('span'); pxLab.className = 'pf-px';
-      pxLab.textContent = '@' + (stk.currency === 'USD' ? '$' + px.toLocaleString('en-US') : px.toLocaleString('ko-KR'));
-      pxLab.title = '현재가 자동 연동 (Stock Valuation)';
+      pxLab.textContent = '@' + (stk.currency === 'USD'
+        ? '$' + px.toLocaleString('en-US') + '≈' + Math.round(pxKrw).toLocaleString('ko-KR') + '원'
+        : px.toLocaleString('ko-KR'));
+      pxLab.title = stk.currency === 'USD'
+        ? `현재가 자동 연동 · 환율 ${Number(state.usdkrw).toLocaleString('ko-KR')}원/$ 적용`
+        : '현재가 자동 연동 (Stock Valuation)';
       const amtView = document.createElement('span'); amtView.className = 'pf-amt-view';
       amtView.textContent = fmtWon(it.amt);
       qty.addEventListener('input', () => {
@@ -4229,12 +4245,9 @@ function makeTargetPortfolioCard(heldItems) {
     let sum = 0;
     const amts = heldItems.map(it => {
       const stk = scFindStock(it.name);
-      const px = stk ? Number(stk.price_native) : 0;
+      const krw = stk ? pfPxKrw(stk) : 0;   // KRW·USD 자동 환산
       let amt = Number(it.amt) || 0;
-      if (it.qty && px > 0) {
-        const krw = (stk.currency && stk.currency !== 'KRW' && Number(state.usdkrw) > 0) ? px * Number(state.usdkrw) : px;
-        amt = Math.round(it.qty * krw) || 0;
-      }
+      if (it.qty && krw > 0) amt = Math.round(it.qty * krw) || 0;
       sum += amt;
       return { name: it.name, amt };
     });
