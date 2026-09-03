@@ -4401,8 +4401,9 @@ function makeTargetPortfolioCard(heldItems) {
       if (curEls[i]) {
         const cur = curW[String(it.name || '').toLowerCase().replace(/\s+/g, '')] || 0;
         const diff = cur - share;   // 현재 − 목표: 부족하면 −, 초과하면 +
+        const fill = share > 0 ? ` · 달성 <b>${(cur / share * 100).toFixed(1)}%</b>` : '';
         curEls[i].innerHTML = (cur || share)
-          ? `현재 <span class="up">${cur.toFixed(1)}%</span> · 차이 ${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%p`
+          ? `현재 <span class="up">${cur.toFixed(1)}%</span> · 차이 ${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%p${fill}`
           : '';
       }
     });
@@ -4414,7 +4415,8 @@ function makeTargetPortfolioCard(heldItems) {
         cashPctEl.textContent = '목표 ' + cashPct.toFixed(1) + '%';
         const curCash = curW['현금'] || 0;
         const dCash = curCash - cashPct;   // 현재 − 목표: 부족하면 −, 초과하면 +
-        cashInfoEl.innerHTML = `현재 <span class="up">${curCash.toFixed(1)}%</span> · 차이 ${dCash >= 0 ? '+' : ''}${dCash.toFixed(1)}%p`;
+        const cashFill = cashPct > 0 ? ` · 달성 <b>${(curCash / cashPct * 100).toFixed(1)}%</b>` : '';
+        cashInfoEl.innerHTML = `현재 <span class="up">${curCash.toFixed(1)}%</span> · 차이 ${dCash >= 0 ? '+' : ''}${dCash.toFixed(1)}%p${cashFill}`;
         cashInfoEl.style.display = '';
       } else {
         cashRowEl.style.display = 'none';
