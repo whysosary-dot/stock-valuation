@@ -4291,9 +4291,10 @@ function makeTargetPortfolioCard(heldItems) {
       const o = { name: it.name || '(이름 없음)' };
       if (Number(it.pct) > 0) o.pct = Number(it.pct);
       if (Number(it.amt) > 0) o.amt = Number(it.amt);
+      if (Number(it.entry) > 0) o.entry = Number(it.entry);
       if (Number(it.core) > 0) o.core = Number(it.core);
       if (Number(it.alpha) > 0) o.alpha = Number(it.alpha);
-      if (it.kind === 'etc') o.kind = 'etc';
+      if (it.rank != null) o.rank = it.rank;
       return o;
     }).filter(x => x.pct || x.amt);
     if (!items.length) { toast('비중이나 금액이 입력된 종목이 없어요', 'err', 2500); return; }
@@ -4398,13 +4399,13 @@ function makeTargetPortfolioCard(heldItems) {
     total.textContent = parts.join(' · ');
     total.style.color = (pctSum > 100 + 0.05) ? '#d97706' : '';   // 100% 초과만 주황 (미달 = 현금)
 
-    // 주력/기타 요약 — DP식: 기타 묶음은 10~20% 권장
+    // 순위/기타 요약 — DP식: 기타 묶음은 10~20% 권장
     if (sumDiv) {
-      const mainSum = list.filter(x => x.kind !== 'etc').reduce((a, b) => a + (Number(b.pct) || 0), 0);
-      const etcSum  = list.filter(x => x.kind === 'etc').reduce((a, b) => a + (Number(b.pct) || 0), 0);
+      const rankSum = list.filter(x => x.rank !== 'etc').reduce((a, b) => a + (Number(b.pct) || 0), 0);
+      const etcSum  = list.filter(x => x.rank === 'etc').reduce((a, b) => a + (Number(b.pct) || 0), 0);
       if (pctSum > 0) {
         const etcWarn = etcSum > 0 && (etcSum < 10 - 0.05 || etcSum > 20 + 0.05);
-        sumDiv.innerHTML = `주력 <b>${mainSum.toFixed(1)}%</b> · 기타 `
+        sumDiv.innerHTML = `순위종목 <b>${rankSum.toFixed(1)}%</b> · 기타 `
           + `<b${etcWarn ? ' style="color:#d97706"' : ''}>${etcSum.toFixed(1)}%</b>`
           + `<span style="opacity:.6"> (권장 10~20%)</span>`
           + (cashPct ? ` · 현금 ${cashPct.toFixed(1)}%` : '');
@@ -4527,6 +4528,9 @@ function makeTargetPortfolioCard(heldItems) {
       nm.value = it.name || '';
       nm.addEventListener('input', () => { it.name = nm.value.trim(); saveDeb(); updatePie(); });
 
+      // 구분류(주력/기타) → 순위 체계 이관
+      if (it.kind === 'etc' && it.rank == null) it.rank = 'etc';
+      if ('kind' in it) delete it.kind;
       // 목표 비중 = 초장기% + α% (DP식: 초장기 수량 최소 7% 확보 후 알파 물량 분할)
       // 예전 데이터(pct만 있음)는 초장기 7% 우선 배정으로 표시 분해
       if (it.pct != null && it.core == null && it.alpha == null) {
@@ -4554,15 +4558,21 @@ function makeTargetPortfolioCard(heldItems) {
       const pinCore = mkPctInp('core', '메인', '48px', '메인 물량 — 최소 7% 권장 (끝까지 안 파는 초장기 수량)');
       const pinAlpha = mkPctInp('alpha', '추가', '48px', '추가 물량 — 이슈 급등 시 분할 매도하는 물량');
 
-      const kindBtn = document.createElement('button');
-      kindBtn.className = 'sc-btn';
-      const kindLab = () => { kindBtn.textContent = it.kind === 'etc' ? '기타' : '주력'; };
-      kindBtn.title = '주력 ↔ 기타 전환 (기타 = 후보·실험 종목, 합계 10~20% 권장, 더 좋은 종목 발견 시 먼저 매도)';
-      kindBtn.style.cssText = 'font-size:11px; padding:3px 7px;' ;
-      kindLab();
-      kindBtn.addEventListener('click', () => {
-        it.kind = it.kind === 'etc' ? 'main' : 'etc';
-        kindLab(); saveDeb(); updatePie();
+      // 포트 순위 — 클릭할 때마다 1위→2위→…→5위→기타 순환. 순위 바꾸면 목록도 순위순 재정렬
+      const rankBtn = document.createElement('button');
+      rankBtn.className = 'sc-btn';
+      const rankLab = () => {
+        rankBtn.textContent = it.rank === 'etc' ? '기타' : (it.rank ? it.rank + '위' : '순위');
+        rankBtn.style.fontWeight = it.rank === 1 ? '800' : '600';
+      };
+      rankBtn.title = '포트 순위 (클릭해서 변경) — 시나리오·확률·리스크로 순위를 정하고 비중을 차등 배분. 기타 = 후보·실험 종목(합계 10~20% 권장, 더 좋은 종목 발견 시 먼저 매도)';
+      rankBtn.style.cssText = 'font-size:11px; padding:3px 7px;';
+      rankLab();
+      rankBtn.addEventListener('click', () => {
+        it.rank = it.rank === 'etc' ? 1 : (Number(it.rank) >= 5 ? 'etc' : (Number(it.rank) || 0) + 1);
+        const rv = x => x.rank === 'etc' ? 999 : (Number(x.rank) || 500);
+        diary.data.pfTarget = tgt().slice().sort((a, b) => rv(a) - rv(b));
+        saveDeb(); buildRows(); updatePie();
       });
 
       const ain = document.createElement('input');
@@ -4590,7 +4600,7 @@ function makeTargetPortfolioCard(heldItems) {
 
       const pct = document.createElement('span'); pct.className = 'pf-pct'; pctEls.push(pct);
       const vals = document.createElement('span'); vals.className = 'pf-vals';
-      vals.append(nm, pinEntry, pinCore, pinAlpha, ain, kindBtn, del);
+      vals.append(nm, pinEntry, pinCore, pinAlpha, ain, rankBtn, del);
       row.appendChild(dot); row.appendChild(vals); row.appendChild(pct);
       rows.appendChild(row);
 
