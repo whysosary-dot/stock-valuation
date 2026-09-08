@@ -4371,8 +4371,10 @@ function makeTargetPortfolioCard(heldItems) {
     diary.saveTimers['pfTarget'] = setTimeout(() => saveDiaryData(diary.data), 500);
   };
 
-  const pctEls = [], dotEls = [], curEls = [];
+  const pctEls = [], dotEls = [], curEls = [], amtEls = [];
   let cashRowEl = null, cashDotEl = null, cashPctEl = null, cashInfoEl = null, sumDiv = null;
+  const budget = () => Number(diary.data.pfTargetTotal) || 0;
+  const segWon = (p) => budget() > 0 && p > 0 ? ` <span style="opacity:.65">(${fmtWon(Math.round(budget() * p / 100))}원)</span>` : '';
   const updatePie = () => {
     const list = tgt();
     // 파이·비중은 % 우선, %가 하나도 없으면 금액 비율로
@@ -4419,16 +4421,32 @@ function makeTargetPortfolioCard(heldItems) {
         const cur = curW[String(it.name || '').toLowerCase().replace(/\s+/g, '')] || 0;
         const diff = cur - share;   // 현재 − 목표: 부족하면 −, 초과하면 +
         const fill = share > 0 ? ` · 달성 <b>${(cur / share * 100).toFixed(1)}%</b>` : '';
-        // 초장기+α 분해 표시 (초장기 7% 미달이면 ⚠)
+        // a(진입)+초장기+α 분해 표시 (초장기 7% 미달이면 ⚠)
         let split = '';
-        const co = Number(it.core) || 0, al = Number(it.alpha) || 0;
-        if (co || al) {
-          split = `초장기 ${co}%${co > 0 && co < 7 ? '<span title="강의 기준 초장기 최소 7%" style="color:#d97706">⚠</span>' : ''}`
-                + (al ? ` + α ${al}%` : '') + ' · ';
+        const en = Number(it.entry) || 0, co = Number(it.core) || 0, al = Number(it.alpha) || 0;
+        if (en || co || al) {
+          const segs = [];
+          if (en) segs.push(`a ${en}%${segWon(en)}`);
+          segs.push(`초장기 ${co}%${co > 0 && co < 7 ? '<span title="강의 기준 초장기 최소 7%" style="color:#d97706">⚠</span>' : ''}${segWon(co)}`);
+          if (al) segs.push(`α ${al}%${segWon(al)}`);
+          split = segs.join(' + ') + ' · ';
         }
         curEls[i].innerHTML = (cur || share)
           ? `${split}현재 <span class="up">${cur.toFixed(1)}%</span> · 차이 ${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%p${fill}`
           : '';
+      }
+      // 총 금액이 설정되면 종목 금액 = 총 금액 × 목표% 자동 계산 (수동 입력 잠금)
+      if (amtEls[i]) {
+        const p = Number(it.pct) || 0;
+        if (budget() > 0 && p > 0) {
+          it.amt = Math.round(budget() * p / 100);
+          amtEls[i].value = fmtWon(it.amt);
+          amtEls[i].readOnly = true; amtEls[i].style.opacity = '.7';
+          amtEls[i].title = '총 금액 × 목표% 자동 계산 (직접 입력하려면 총 금액을 비우세요)';
+        } else {
+          amtEls[i].readOnly = false; amtEls[i].style.opacity = '';
+          amtEls[i].title = '';
+        }
       }
     });
     // 암시적 현금 행 (%-모드에서 100% 미달일 때만 표시)
@@ -4440,7 +4458,7 @@ function makeTargetPortfolioCard(heldItems) {
         const curCash = curW['현금'] || 0;
         const dCash = curCash - cashPct;   // 현재 − 목표: 부족하면 −, 초과하면 +
         const cashFill = cashPct > 0 ? ` · 달성 <b>${(curCash / cashPct * 100).toFixed(1)}%</b>` : '';
-        cashInfoEl.innerHTML = `현재 <span class="up">${curCash.toFixed(1)}%</span> · 차이 ${dCash >= 0 ? '+' : ''}${dCash.toFixed(1)}%p${cashFill}`;
+        cashInfoEl.innerHTML = `현재 <span class="up">${curCash.toFixed(1)}%</span> · 차이 ${dCash >= 0 ? '+' : ''}${dCash.toFixed(1)}%p${cashFill}${segWon(cashPct)}`;
         cashInfoEl.style.display = '';
       } else {
         cashRowEl.style.display = 'none';
@@ -4472,7 +4490,24 @@ function makeTargetPortfolioCard(heldItems) {
   };
 
   const buildRows = () => {
-    rows.innerHTML = ''; pctEls.length = 0; dotEls.length = 0; curEls.length = 0;
+    rows.innerHTML = ''; pctEls.length = 0; dotEls.length = 0; curEls.length = 0; amtEls.length = 0;
+    // 💰 총 금액 — 입력하면 종목·구간(a/초장기/α)별 금액이 % 대로 자동 계산
+    const totWrap = document.createElement('div');
+    totWrap.style.cssText = 'display:flex; align-items:center; gap:8px; padding-bottom:8px;';
+    const totLab = document.createElement('span');
+    totLab.textContent = '💰 총 금액'; totLab.style.cssText = 'font-size:12.5px; font-weight:600; color:var(--text-dim); white-space:nowrap;';
+    const totInp = document.createElement('input');
+    totInp.className = 'pf-amt'; totInp.type = 'text'; totInp.inputMode = 'numeric';
+    totInp.placeholder = '전체 투자금(원)'; totInp.style.cssText = 'width:150px; text-align:right;';
+    totInp.value = fmtWon(diary.data.pfTargetTotal);
+    totInp.addEventListener('input', () => {
+      const v = Number(String(totInp.value).replace(/[^\d]/g, '')) || 0;
+      diary.data.pfTargetTotal = v || undefined;
+      totInp.value = fmtWon(v);
+      saveDeb(); updatePie();
+    });
+    totWrap.append(totLab, totInp);
+    rows.appendChild(totWrap);
     // 주력/기타/현금 요약줄 (DP식 가이드)
     sumDiv = document.createElement('div');
     sumDiv.className = 'pf-empty';
@@ -4496,7 +4531,7 @@ function makeTargetPortfolioCard(heldItems) {
         it.alpha = p > 7 ? +(p - 7).toFixed(2) : undefined;
       }
       const syncPct = () => {
-        const s = (Number(it.core) || 0) + (Number(it.alpha) || 0);
+        const s = (Number(it.entry) || 0) + (Number(it.core) || 0) + (Number(it.alpha) || 0);
         it.pct = s > 0 ? +s.toFixed(2) : undefined;
       };
       const mkPctInp = (key, ph, w, title) => {
@@ -4511,8 +4546,9 @@ function makeTargetPortfolioCard(heldItems) {
         });
         return inp;
       };
+      const pinEntry = mkPctInp('entry', 'a%', '44px', '진입 물량(앞의 a) — 리서치 진행하며 조금씩 사는 소액~3% 구간. 리서치 결과가 나쁘면 여기서 멈춤');
       const pinCore = mkPctInp('core', '초장기', '56px', '초장기 수량 목표 비중 — 최소 7% 권장 (끝까지 안 파는 물량)');
-      const pinAlpha = mkPctInp('alpha', 'α%', '48px', '알파 물량 목표 비중 — 이슈 급등 시 분할 매도하는 물량');
+      const pinAlpha = mkPctInp('alpha', 'α%', '48px', '알파 물량(뒤의 a) 목표 비중 — 이슈 급등 시 분할 매도하는 물량');
 
       const kindBtn = document.createElement('button');
       kindBtn.className = 'sc-btn';
@@ -4529,7 +4565,9 @@ function makeTargetPortfolioCard(heldItems) {
       ain.className = 'pf-amt'; ain.type = 'text'; ain.inputMode = 'numeric'; ain.placeholder = '금액(원)';
       ain.style.width = '110px';
       ain.value = fmtWon(it.amt);
+      amtEls.push(ain);
       ain.addEventListener('input', () => {
+        if (ain.readOnly) return;   // 총 금액 자동 계산 모드
         const v = Number(String(ain.value).replace(/[^\d]/g, '')) || 0;
         it.amt = v || undefined;
         ain.value = fmtWon(v);
@@ -4548,7 +4586,7 @@ function makeTargetPortfolioCard(heldItems) {
 
       const pct = document.createElement('span'); pct.className = 'pf-pct'; pctEls.push(pct);
       const vals = document.createElement('span'); vals.className = 'pf-vals';
-      vals.append(nm, pinCore, pinAlpha, ain, kindBtn, del);
+      vals.append(nm, pinEntry, pinCore, pinAlpha, ain, kindBtn, del);
       row.appendChild(dot); row.appendChild(vals); row.appendChild(pct);
       rows.appendChild(row);
 
