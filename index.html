@@ -751,6 +751,20 @@
     /* 목표 포트 '실제 채움' 줄 — 모바일 그리드에선 점(●) 오프셋이 없으므로 스페이서 제거 */
     .pf-act-dotpad { display: none; }
 
+    /* ── 🎯 매수 목표 포트: 모바일 재배치 (한 줄 514px 가로 넘침 방지) ──
+       1줄: 종목명(전체폭) + 순위 + ×  /  2줄: [목표] 리서치·메인·추가·금액
+       3줄: [실제] …  /  4줄: [금액] … — 라벨 44px 로 열 맞춤 */
+    .pf-target-card .pf-vals { flex-wrap: wrap; row-gap: 6px; }
+    .pf-target-card .pf-vals > input[placeholder="종목명"] { order: -2; flex: 1 1 auto; width: auto; min-width: 0; }
+    .pf-target-card .pf-vals > input[placeholder="순위"],
+    .pf-target-card .pf-vals > button { order: -1; }
+    .pf-target-card .pf-vals::before {
+      content: '목표'; flex: 0 0 44px; width: 44px; align-self: center;
+      text-align: right; padding-right: 8px; font-size: 11.5px; font-weight: 700; color: var(--text-dim);
+    }
+    .pf-target-card .pf-vals > input[placeholder="금액(원)"] { flex: 1 1 90px; width: auto; min-width: 80px; }
+    .pf-target-card .pf-seg-lab { flex: 0 0 44px !important; width: 44px !important; }
+
     /* ── 시나리오 카드 헤더: 버튼(🕘 🗂 보유 📦 ×) 잘림 방지 — 두 줄로 감싸기 ──
        1줄: ⠿ + 종목명 (통째로) / 2줄: 수정일 …(왼쪽) 버튼들(오른쪽) */
     #feed-scenario .dcard-header { flex-wrap: wrap; row-gap: 6px; padding: 10px 12px; }
@@ -4270,7 +4284,7 @@ function makeTargetPortfolioCard(heldItems) {
   }
 
   const card = document.createElement('div');
-  card.className = 'dcard pf-card';
+  card.className = 'dcard pf-card pf-target-card';
   const header = document.createElement('div'); header.className = 'dcard-header';
   const title = document.createElement('span'); title.className = 'dcard-date';
   title.style.color = '#0e7490'; title.textContent = '🎯 매수 목표 포트폴리오';
@@ -4656,7 +4670,8 @@ function makeTargetPortfolioCard(heldItems) {
       actSpacer.className = 'pf-act-dotpad';
       actSpacer.style.cssText = 'flex:0 0 10px; width:10px;';     // ● 점 자리 (모바일 그리드에선 CSS로 숨김)
       const actLab = document.createElement('span');
-      actLab.textContent = '실제 채움';
+      actLab.className = 'pf-seg-lab';
+      actLab.textContent = '실제'; actLab.title = '실제로 채운 비중';
       actLab.style.cssText = 'flex:0 0 130px; width:130px; display:inline-block; text-align:right; font-size:11.5px; color:var(--text-dim); font-weight:700; padding-right:8px;';  // 종목명 칸 자리
       const mkActInp = (key, ph, w) => {
         const inp = document.createElement('input');
@@ -4685,7 +4700,8 @@ function makeTargetPortfolioCard(heldItems) {
       amtSpacer.className = 'pf-act-dotpad';
       amtSpacer.style.cssText = 'flex:0 0 10px; width:10px;';
       const amtLab = document.createElement('span');
-      amtLab.innerHTML = '금액 <span style="font-weight:400">목표/실제</span>';
+      amtLab.className = 'pf-seg-lab';
+      amtLab.textContent = '금액'; amtLab.title = '총 금액 × 비중 자동 계산 (위: 목표 / 아래: 실제)';
       amtLab.style.cssText = 'flex:0 0 130px; width:130px; display:inline-block; text-align:right; font-size:10.5px; color:var(--text-dim); font-weight:700; padding-right:8px; line-height:1.4;';
       const mkAmtCell = (w) => {
         const s = document.createElement('span');
