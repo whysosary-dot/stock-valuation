@@ -748,6 +748,9 @@
     .pf-info { margin: 4px 0 8px 20px; gap: 4px 14px; }
     .pf-info > span { width: auto !important; }
 
+    /* 목표 포트 '실제 채움' 줄 — 모바일 그리드에선 점(●) 오프셋이 없으므로 스페이서 제거 */
+    .pf-act-dotpad { display: none; }
+
     /* ── 시나리오 카드 헤더: 버튼(🕘 🗂 보유 📦 ×) 잘림 방지 — 두 줄로 감싸기 ──
        1줄: ⠿ + 종목명 (통째로) / 2줄: 수정일 …(왼쪽) 버튼들(오른쪽) */
     #feed-scenario .dcard-header { flex-wrap: wrap; row-gap: 6px; padding: 10px 12px; }
@@ -4624,8 +4627,10 @@ function makeTargetPortfolioCard(heldItems) {
       // ── 실제 채운 비중 입력줄 (목표 vs 실제) — 위 목표 칸과 같은 위치·같은 크기로 정렬 ──
       const actWrap = document.createElement('div');
       actWrap.style.cssText = 'display:flex; align-items:center; gap:8px; padding:0 0 4px;';
+      actWrap.className = 'pf-act-row';
       const actSpacer = document.createElement('span');
-      actSpacer.style.cssText = 'flex:0 0 10px; width:10px;';     // ● 점 자리
+      actSpacer.className = 'pf-act-dotpad';
+      actSpacer.style.cssText = 'flex:0 0 10px; width:10px;';     // ● 점 자리 (모바일 그리드에선 CSS로 숨김)
       const actLab = document.createElement('span');
       actLab.textContent = '실제 채움';
       actLab.style.cssText = 'flex:0 0 130px; width:130px; display:inline-block; text-align:right; font-size:11.5px; color:var(--text-dim); font-weight:700; padding-right:8px;';  // 종목명 칸 자리
