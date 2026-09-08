@@ -4604,7 +4604,8 @@ function makeTargetPortfolioCard(heldItems) {
       const mkPctInp = (key, ph, w, title) => {
         const inp = document.createElement('input');
         inp.className = 'pf-amt'; inp.type = 'text'; inp.inputMode = 'decimal';
-        inp.placeholder = ph; inp.style.width = w; inp.style.textAlign = 'center'; inp.title = title;
+        inp.placeholder = ph; inp.style.width = w; inp.style.flex = '0 0 ' + w;
+        inp.style.textAlign = 'center'; inp.title = title;
         inp.value = it[key] != null ? String(it[key]) : '';
         inp.addEventListener('input', () => {
           const v = parseFloat(String(inp.value).replace(/[^\d.]/g, ''));
@@ -4620,7 +4621,7 @@ function makeTargetPortfolioCard(heldItems) {
       // 포트 순위 — 숫자 직접 입력 (기타 종목은 '기타'라고 입력). 입력 확정(blur) 시 순위순 재정렬
       const rankInp = document.createElement('input');
       rankInp.className = 'pf-amt'; rankInp.type = 'text'; rankInp.placeholder = '순위';
-      rankInp.style.cssText = 'width:46px; text-align:center;';
+      rankInp.style.cssText = 'width:46px; flex:0 0 46px; text-align:center;';
       rankInp.title = '포트 순위 — 숫자 입력 (1이 최상위). 후보·실험 종목은 "기타" 입력 (합계 10~20% 권장, 더 좋은 종목 발견 시 먼저 매도)';
       rankInp.value = it.rank === 'etc' ? '기타' : (it.rank != null ? String(it.rank) : '');
       rankInp.addEventListener('input', () => {
