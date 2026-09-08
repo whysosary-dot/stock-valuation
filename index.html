@@ -4294,6 +4294,9 @@ function makeTargetPortfolioCard(heldItems) {
       if (Number(it.entry) > 0) o.entry = Number(it.entry);
       if (Number(it.core) > 0) o.core = Number(it.core);
       if (Number(it.alpha) > 0) o.alpha = Number(it.alpha);
+      if (Number(it.entryAct) > 0) o.entryAct = Number(it.entryAct);
+      if (Number(it.coreAct) > 0) o.coreAct = Number(it.coreAct);
+      if (Number(it.alphaAct) > 0) o.alphaAct = Number(it.alphaAct);
       if (it.rank != null) o.rank = it.rank;
       return o;
     }).filter(x => x.pct || x.amt);
@@ -4423,22 +4426,34 @@ function makeTargetPortfolioCard(heldItems) {
         const diff = cur - share;   // 현재 − 목표: 부족하면 −, 초과하면 +
         const fill = share > 0 ? ` · 달성 <b>${(cur / share * 100).toFixed(1)}%</b>` : '';
         // 코어(리서치+메인)+추가 분해 표시 — 리서치·메인 개별 %는 입력칸에만, 아래엔 합만
-        let split = '';
+        // '실제' 칸이 입력돼 있으면 목표 vs 실제(실제/목표, 구간별 달성)로 표시
         const en = Number(it.entry) || 0, co = Number(it.core) || 0, al = Number(it.alpha) || 0;
-        if (en || co || al) {
-          const coreSum = +(en + co).toFixed(2);
+        const enA = Number(it.entryAct) || 0, coA = Number(it.coreAct) || 0, alA = Number(it.alphaAct) || 0;
+        const hasAct = enA > 0 || coA > 0 || alA > 0;
+        const coreSum = +(en + co).toFixed(2), coreActSum = +(enA + coA).toFixed(2);
+        const coreWarn = co > 0 && co < 7 ? '<span title="메인 물량이 7% 미만 (강의 기준 최소 7%)" style="color:#d97706">⚠</span>' : '';
+        const fillPct = (a, t) => t > 0 ? ` <b>(${(a / t * 100).toFixed(0)}%)</b>` : '';
+        let split = '';
+        if (hasAct) {
           const segs = [];
-          if (coreSum) {
-            segs.push(`코어 ${coreSum}%`
-              + (co > 0 && co < 7 ? '<span title="메인 물량이 7% 미만 (강의 기준 최소 7%)" style="color:#d97706">⚠</span>' : '')
-              + segWon(coreSum));
-          }
-          if (al) segs.push(`추가 ${al}%${segWon(al)}`);
+          if (coreSum || coreActSum) segs.push(`코어 <span class="up">${coreActSum}</span>/${coreSum}%${coreWarn}${fillPct(coreActSum, coreSum)}`);
+          if (al || alA) segs.push(`추가 <span class="up">${alA}</span>/${al}%${fillPct(alA, al)}`);
           split = segs.join(' + ') + ' · ';
+          const actSum = +(enA + coA + alA).toFixed(2);
+          const d2 = actSum - share;
+          curEls[i].innerHTML = `${split}실제 합 <span class="up">${actSum.toFixed(1)}%</span> · 차이 ${d2 >= 0 ? '+' : ''}${d2.toFixed(1)}%p`
+            + (share > 0 ? ` · 달성 <b>${(actSum / share * 100).toFixed(1)}%</b>` : '');
+        } else {
+          if (en || co || al) {
+            const segs = [];
+            if (coreSum) segs.push(`코어 ${coreSum}%${coreWarn}${segWon(coreSum)}`);
+            if (al) segs.push(`추가 ${al}%${segWon(al)}`);
+            split = segs.join(' + ') + ' · ';
+          }
+          curEls[i].innerHTML = (cur || share)
+            ? `${split}현재 <span class="up">${cur.toFixed(1)}%</span> · 차이 ${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%p${fill}`
+            : '';
         }
-        curEls[i].innerHTML = (cur || share)
-          ? `${split}현재 <span class="up">${cur.toFixed(1)}%</span> · 차이 ${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%p${fill}`
-          : '';
       }
       // 총 금액이 설정되면 종목 금액 = 총 금액 × 목표% 자동 계산 (수동 입력 잠금)
       if (amtEls[i]) {
@@ -4604,7 +4619,31 @@ function makeTargetPortfolioCard(heldItems) {
       row.appendChild(dot); row.appendChild(vals); row.appendChild(pct);
       rows.appendChild(row);
 
-      // 실제 비중과의 차이 표시줄
+      // ── 실제 채운 비중 입력줄 (목표 vs 실제) — 구간별로 지금까지 채운 %를 직접 기록 ──
+      const actWrap = document.createElement('div');
+      actWrap.style.cssText = 'display:flex; align-items:center; gap:8px; margin:2px 0 2px 18px; flex-wrap:wrap;';
+      const actLab = document.createElement('span');
+      actLab.textContent = '실제'; actLab.style.cssText = 'font-size:11px; color:var(--text-dim); font-weight:700;';
+      const mkActInp = (key, ph, w) => {
+        const inp = document.createElement('input');
+        inp.className = 'pf-amt'; inp.type = 'text'; inp.inputMode = 'decimal';
+        inp.placeholder = ph; inp.style.cssText = `width:${w}; font-size:12px; padding:3px 6px;`;
+        inp.title = `${ph} 물량을 실제로 채운 비중(%)`;
+        inp.value = it[key] != null ? String(it[key]) : '';
+        inp.addEventListener('input', () => {
+          const v = parseFloat(String(inp.value).replace(/[^\d.]/g, ''));
+          it[key] = isFinite(v) ? v : undefined;
+          saveDeb(); updatePie();
+        });
+        return inp;
+      };
+      actWrap.append(actLab,
+        mkActInp('entryAct', '리서치', '52px'),
+        mkActInp('coreAct', '메인', '48px'),
+        mkActInp('alphaAct', '추가', '48px'));
+      rows.appendChild(actWrap);
+
+      // 목표 vs 실제 진행 표시줄
       const cur = document.createElement('div'); cur.className = 'pf-info'; curEls.push(cur);
       rows.appendChild(cur);
     });
