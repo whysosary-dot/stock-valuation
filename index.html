@@ -4498,6 +4498,19 @@ function makeTargetPortfolioCard(heldItems) {
         } else {
           segAmtEls[i].wrap.style.display = 'none';
         }
+        // 구성비줄: 종목 보유분=100% 기준 각 물량의 비율 (매도 시 보유분 대비 몇 %인지)
+        const tSum = tE + tC + tA, aSum = aE + aC + aA;
+        if (tSum > 0 || aSum > 0) {
+          const norm = v => (v >= 99.95 ? '100' : v.toFixed(1).replace(/\.0$/, '')) + '%';
+          const compPair = (t, a) =>
+            `${tSum > 0 && t ? norm(t / tSum * 100) : '–'}<br><span class="up">${aSum > 0 && a ? norm(a / aSum * 100) : '–'}</span>`;
+          segAmtEls[i].compCells[0].innerHTML = compPair(tE, aE);
+          segAmtEls[i].compCells[1].innerHTML = compPair(tC, aC);
+          segAmtEls[i].compCells[2].innerHTML = compPair(tA, aA);
+          segAmtEls[i].compWrap.style.display = 'flex';
+        } else {
+          segAmtEls[i].compWrap.style.display = 'none';
+        }
       }
       // 총 금액이 설정되면 종목 금액 = 총 금액 × 목표% 자동 계산 (수동 입력 잠금)
       if (amtEls[i]) {
@@ -4719,7 +4732,25 @@ function makeTargetPortfolioCard(heldItems) {
       const cells = [mkAmtCell('52px'), mkAmtCell('48px'), mkAmtCell('48px')];
       amtLine.append(amtSpacer, amtLab, ...cells);
       rows.appendChild(amtLine);
-      segAmtEls.push({ wrap: amtLine, cells });
+
+      // ── 포지션 내 구성비줄 — 이 종목 보유분을 100%로 봤을 때 리서치/메인/추가가 차지하는 비율.
+      //    추가 물량만 매도할 때 "보유분의 몇 %를 팔아야 하는지" 확인용 ──
+      const compLine = document.createElement('div');
+      compLine.className = 'pf-act-row';
+      compLine.style.cssText = 'display:flex; align-items:flex-start; gap:8px; padding:0 0 4px; display:none;';
+      const compSpacer = document.createElement('span');
+      compSpacer.className = 'pf-act-dotpad';
+      compSpacer.style.cssText = 'flex:0 0 10px; width:10px;';
+      const compLab = document.createElement('span');
+      compLab.className = 'pf-seg-lab';
+      compLab.textContent = '구성';
+      compLab.title = '포지션 내 구성비 — 이 종목 보유분 전체를 100%로 봤을 때 각 물량의 비율 (위: 목표 / 아래: 실제). 추가 물량만 팔 때 보유분의 몇 %를 팔지 여기서 확인';
+      compLab.style.cssText = 'flex:0 0 130px; width:130px; display:inline-block; text-align:right; font-size:10.5px; color:var(--text-dim); font-weight:700; padding-right:8px; line-height:1.4;';
+      const compCells = [mkAmtCell('52px'), mkAmtCell('48px'), mkAmtCell('48px')];
+      compLine.append(compSpacer, compLab, ...compCells);
+      rows.appendChild(compLine);
+
+      segAmtEls.push({ wrap: amtLine, cells, compWrap: compLine, compCells });
 
       // 목표 vs 실제 진행 표시줄
       const cur = document.createElement('div'); cur.className = 'pf-info'; curEls.push(cur);
