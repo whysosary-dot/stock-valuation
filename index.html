@@ -4573,18 +4573,20 @@ function makeTargetPortfolioCard(heldItems) {
       const pinCore = mkPctInp('core', '메인', '48px', '메인 물량 — 최소 7% 권장 (끝까지 안 파는 초장기 수량)');
       const pinAlpha = mkPctInp('alpha', '추가', '48px', '추가 물량 — 이슈 급등 시 분할 매도하는 물량');
 
-      // 포트 순위 — 클릭할 때마다 1위→2위→…→5위→기타 순환. 순위 바꾸면 목록도 순위순 재정렬
-      const rankBtn = document.createElement('button');
-      rankBtn.className = 'sc-btn';
-      const rankLab = () => {
-        rankBtn.textContent = it.rank === 'etc' ? '기타' : (it.rank ? it.rank + '위' : '순위');
-        rankBtn.style.fontWeight = it.rank === 1 ? '800' : '600';
-      };
-      rankBtn.title = '포트 순위 (클릭해서 변경) — 시나리오·확률·리스크로 순위를 정하고 비중을 차등 배분. 기타 = 후보·실험 종목(합계 10~20% 권장, 더 좋은 종목 발견 시 먼저 매도)';
-      rankBtn.style.cssText = 'font-size:11px; padding:3px 7px;';
-      rankLab();
-      rankBtn.addEventListener('click', () => {
-        it.rank = it.rank === 'etc' ? 1 : (Number(it.rank) >= 5 ? 'etc' : (Number(it.rank) || 0) + 1);
+      // 포트 순위 — 숫자 직접 입력 (기타 종목은 '기타'라고 입력). 입력 확정(blur) 시 순위순 재정렬
+      const rankInp = document.createElement('input');
+      rankInp.className = 'pf-amt'; rankInp.type = 'text'; rankInp.placeholder = '순위';
+      rankInp.style.cssText = 'width:46px; text-align:center;';
+      rankInp.title = '포트 순위 — 숫자 입력 (1이 최상위). 후보·실험 종목은 "기타" 입력 (합계 10~20% 권장, 더 좋은 종목 발견 시 먼저 매도)';
+      rankInp.value = it.rank === 'etc' ? '기타' : (it.rank != null ? String(it.rank) : '');
+      rankInp.addEventListener('input', () => {
+        const raw = rankInp.value.trim();
+        if (!raw) { it.rank = undefined; }
+        else if (/[기타etcETC]/.test(raw)) { it.rank = 'etc'; }
+        else { const n = parseInt(raw.replace(/[^\d]/g, ''), 10); it.rank = n > 0 ? n : undefined; }
+        saveDeb(); updatePie();
+      });
+      rankInp.addEventListener('change', () => {
         const rv = x => x.rank === 'etc' ? 999 : (Number(x.rank) || 500);
         diary.data.pfTarget = tgt().slice().sort((a, b) => rv(a) - rv(b));
         saveDeb(); buildRows(); updatePie();
@@ -4615,19 +4617,22 @@ function makeTargetPortfolioCard(heldItems) {
 
       const pct = document.createElement('span'); pct.className = 'pf-pct'; pctEls.push(pct);
       const vals = document.createElement('span'); vals.className = 'pf-vals';
-      vals.append(nm, pinEntry, pinCore, pinAlpha, ain, rankBtn, del);
+      vals.append(nm, pinEntry, pinCore, pinAlpha, ain, rankInp, del);
       row.appendChild(dot); row.appendChild(vals); row.appendChild(pct);
       rows.appendChild(row);
 
-      // ── 실제 채운 비중 입력줄 (목표 vs 실제) — 구간별로 지금까지 채운 %를 직접 기록 ──
+      // ── 실제 채운 비중 입력줄 (목표 vs 실제) — 위 목표 칸과 같은 위치·같은 크기로 정렬 ──
       const actWrap = document.createElement('div');
-      actWrap.style.cssText = 'display:flex; align-items:center; gap:8px; margin:2px 0 2px 18px; flex-wrap:wrap;';
+      actWrap.style.cssText = 'display:flex; align-items:center; gap:8px; padding:0 0 4px;';
+      const actSpacer = document.createElement('span');
+      actSpacer.style.cssText = 'flex:0 0 10px;';                 // ● 점 자리
       const actLab = document.createElement('span');
-      actLab.textContent = '실제'; actLab.style.cssText = 'font-size:11px; color:var(--text-dim); font-weight:700;';
+      actLab.textContent = '실제 채움';
+      actLab.style.cssText = 'width:130px; text-align:right; font-size:11.5px; color:var(--text-dim); font-weight:700; padding-right:8px;';  // 종목명 칸 자리
       const mkActInp = (key, ph, w) => {
         const inp = document.createElement('input');
         inp.className = 'pf-amt'; inp.type = 'text'; inp.inputMode = 'decimal';
-        inp.placeholder = ph; inp.style.cssText = `width:${w}; font-size:12px; padding:3px 6px;`;
+        inp.placeholder = ph; inp.style.cssText = `width:${w}; text-align:center;`;
         inp.title = `${ph} 물량을 실제로 채운 비중(%)`;
         inp.value = it[key] != null ? String(it[key]) : '';
         inp.addEventListener('input', () => {
@@ -4637,7 +4642,7 @@ function makeTargetPortfolioCard(heldItems) {
         });
         return inp;
       };
-      actWrap.append(actLab,
+      actWrap.append(actSpacer, actLab,
         mkActInp('entryAct', '리서치', '52px'),
         mkActInp('coreAct', '메인', '48px'),
         mkActInp('alphaAct', '추가', '48px'));
