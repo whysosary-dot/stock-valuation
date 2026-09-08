@@ -721,6 +721,8 @@
 
   /* 데스크톱: 값 묶음은 투명 컨테이너 (기존 한 줄 레이아웃 유지) */
   .pf-vals { display: contents; }
+  /* 목표 포트 모바일 전용 보조 요소 — 데스크톱에선 숨김 */
+  .pf-tgt-break, .pf-tgt-lab { display: none; }
 
   /* ── 모바일(아이폰) 포트 비중 레이아웃 ── */
   @media (max-width: 640px) {
@@ -755,11 +757,12 @@
        1줄: 종목명(전체폭) + 순위 + ×  /  2줄: [목표] 리서치·메인·추가·금액
        3줄: [실제] …  /  4줄: [금액] … — 라벨 44px 로 열 맞춤 */
     .pf-target-card .pf-vals { flex-wrap: wrap; row-gap: 6px; }
-    .pf-target-card .pf-vals > input[placeholder="종목명"] { order: -2; flex: 1 1 auto; width: auto; min-width: 0; }
+    .pf-target-card .pf-vals > input[placeholder="종목명"] { order: -3; flex: 1 1 auto; width: auto; min-width: 0; }
     .pf-target-card .pf-vals > input[placeholder="순위"],
-    .pf-target-card .pf-vals > button { order: -1; }
-    .pf-target-card .pf-vals::before {
-      content: '목표'; flex: 0 0 44px; width: 44px; align-self: center;
+    .pf-target-card .pf-vals > button { order: -2; }
+    .pf-target-card .pf-tgt-break { display: block; order: -1; flex: 0 0 100%; height: 0; }
+    .pf-target-card .pf-tgt-lab {
+      display: inline-block; flex: 0 0 44px; width: 44px; align-self: center;
       text-align: right; padding-right: 8px; font-size: 11.5px; font-weight: 700; color: var(--text-dim);
     }
     .pf-target-card .pf-vals > input[placeholder="금액(원)"] { flex: 1 1 90px; width: auto; min-width: 80px; }
@@ -4658,7 +4661,11 @@ function makeTargetPortfolioCard(heldItems) {
 
       const pct = document.createElement('span'); pct.className = 'pf-pct'; pctEls.push(pct);
       const vals = document.createElement('span'); vals.className = 'pf-vals';
-      vals.append(nm, pinEntry, pinCore, pinAlpha, ain, rankInp, del);
+      // 모바일 전용 보조 요소: 강제 줄바꿈 + '목표' 라벨 (데스크톱에선 CSS로 숨김)
+      const tgtBrk = document.createElement('span'); tgtBrk.className = 'pf-tgt-break';
+      const tgtLab = document.createElement('span'); tgtLab.className = 'pf-tgt-lab pf-seg-lab';
+      tgtLab.textContent = '목표';
+      vals.append(nm, tgtBrk, tgtLab, pinEntry, pinCore, pinAlpha, ain, rankInp, del);
       row.appendChild(dot); row.appendChild(vals); row.appendChild(pct);
       rows.appendChild(row);
 
