@@ -4421,14 +4421,18 @@ function makeTargetPortfolioCard(heldItems) {
         const cur = curW[String(it.name || '').toLowerCase().replace(/\s+/g, '')] || 0;
         const diff = cur - share;   // 현재 − 목표: 부족하면 −, 초과하면 +
         const fill = share > 0 ? ` · 달성 <b>${(cur / share * 100).toFixed(1)}%</b>` : '';
-        // a(진입)+초장기+α 분해 표시 (초장기 7% 미달이면 ⚠)
+        // 코어(리서치+메인)+추가 분해 표시 — 리서치·메인 개별 %는 입력칸에만, 아래엔 합만
         let split = '';
         const en = Number(it.entry) || 0, co = Number(it.core) || 0, al = Number(it.alpha) || 0;
         if (en || co || al) {
+          const coreSum = +(en + co).toFixed(2);
           const segs = [];
-          if (en) segs.push(`a ${en}%${segWon(en)}`);
-          segs.push(`초장기 ${co}%${co > 0 && co < 7 ? '<span title="강의 기준 초장기 최소 7%" style="color:#d97706">⚠</span>' : ''}${segWon(co)}`);
-          if (al) segs.push(`α ${al}%${segWon(al)}`);
+          if (coreSum) {
+            segs.push(`코어 ${coreSum}%`
+              + (co > 0 && co < 7 ? '<span title="메인 물량이 7% 미만 (강의 기준 최소 7%)" style="color:#d97706">⚠</span>' : '')
+              + segWon(coreSum));
+          }
+          if (al) segs.push(`추가 ${al}%${segWon(al)}`);
           split = segs.join(' + ') + ' · ';
         }
         curEls[i].innerHTML = (cur || share)
@@ -4546,9 +4550,9 @@ function makeTargetPortfolioCard(heldItems) {
         });
         return inp;
       };
-      const pinEntry = mkPctInp('entry', 'a%', '44px', '진입 물량(앞의 a) — 리서치 진행하며 조금씩 사는 소액~3% 구간. 리서치 결과가 나쁘면 여기서 멈춤');
-      const pinCore = mkPctInp('core', '초장기', '56px', '초장기 수량 목표 비중 — 최소 7% 권장 (끝까지 안 파는 물량)');
-      const pinAlpha = mkPctInp('alpha', 'α%', '48px', '알파 물량(뒤의 a) 목표 비중 — 이슈 급등 시 분할 매도하는 물량');
+      const pinEntry = mkPctInp('entry', '리서치', '52px', '리서치 물량 — 리서치 진행하며 조금씩 사는 소액~3% 구간. 리서치 결과가 나쁘면 여기서 멈춤');
+      const pinCore = mkPctInp('core', '메인', '48px', '메인 물량 — 최소 7% 권장 (끝까지 안 파는 초장기 수량)');
+      const pinAlpha = mkPctInp('alpha', '추가', '48px', '추가 물량 — 이슈 급등 시 분할 매도하는 물량');
 
       const kindBtn = document.createElement('button');
       kindBtn.className = 'sc-btn';
