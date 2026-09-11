@@ -1243,6 +1243,7 @@ td input, td textarea{border-radius:8px}
   <button class="page-tab-btn" data-page="awake">🔔 Awake</button>
   <button class="page-tab-btn" data-page="etfmonitor">📡 ETF Monitor</button>
   <button class="page-tab-btn" data-page="interest">👀 Interest</button>
+  <button class="page-tab-btn" data-page="rock">🪨 돌뒤집기</button>
   <button class="page-tab-btn" id="npay-tab-btn" type="button" title="네이버페이 증권 새 창으로"><span style="display:inline-block;background:#03c75a;color:#fff;font-weight:800;border-radius:4px;width:15px;height:15px;line-height:15px;text-align:center;font-size:10.5px;vertical-align:middle;position:relative;top:-1px;margin-right:1px;">N</span> Npay</button>
   <button class="page-tab-btn" data-page="research">🔬 Research</button>
   <button class="page-tab-btn" data-page="sheet">📁 Folder</button>
@@ -1382,6 +1383,16 @@ td input, td textarea{border-radius:8px}
     title="Interest Briefing"
   ></iframe>
 </div><!-- /page-interest -->
+
+<div id="page-rock" class="page">
+  <!-- 돌뒤집기(성장주 발굴) — same-origin ./rock/ , 데이터는 rock/data/*.json (매일 07:00 KST 자동 갱신) -->
+  <iframe
+    id="rock-frame"
+    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
+    loading="lazy"
+    title="돌뒤집기"
+  ></iframe>
+</div><!-- /page-rock -->
 
 <!-- Npay 탭은 새 창으로 열림 — 임베드 페이지 없음 -->
 
@@ -2578,6 +2589,7 @@ const IFRAME_TAB_SRC = {
   awake:     'https://whysosary-dot.github.io/awake-disclosure/',
   interest:  'https://whysosary-dot.github.io/watchlist-briefing/',
   research:  'https://whysosary-dot.github.io/investment-notes/',
+  rock:      './rock/index.html?v=' + Date.now(),   // 돌뒤집기 (same-origin, 캐시 무력화)
   // sheet 은 X-Frame-Options 로 iframe 차단되어 안내 페이지로 대체 (IFRAME_TAB_SRC 등록 X)
 };
 

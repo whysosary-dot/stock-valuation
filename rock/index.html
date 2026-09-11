@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>돌뒤집기</title>
+<style>
+:root{
+  --bg:#f6f5f1; --fg:#1e2227; --muted:#626b78; --line:#d8d5cc; --card:#ffffff; --soft:#edebe4;
+  --think:#eceef7; --warnbg:#fbe6e2; --warnfg:#b3261e; --o:#c2620a; --r:#b3261e; --g:#1f7a4d; --b:#1a4fd6;
+  --spot:#f5e8b9; --hdr:#e3e8f1; --accent:#2f5fd6; --us:#1f4e79; --jp:#a02020; --kr:#2e75b6;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#15171b; --fg:#e6e4dd; --muted:#a0a6b0; --line:#2f333b; --card:#1d2026; --soft:#23262d;
+    --think:#24273a; --warnbg:#3a1f1c; --warnfg:#ff8a80; --o:#f0a050; --r:#ff8a80; --g:#6fd39a; --b:#8fb0ff;
+    --spot:#4a4020; --hdr:#262b36; --accent:#8fb0ff; }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg)}
+body{font-family:-apple-system,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;font-size:14px;line-height:1.5;
+  padding-inline:max(12px,env(safe-area-inset-left)) max(12px,env(safe-area-inset-right));padding-block:8px max(16px,env(safe-area-inset-bottom))}
+.wrap{max-width:960px;margin:0 auto}
+header{position:sticky;top:0;background:var(--bg);z-index:5;padding:6px 0 8px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+header h1{font-size:17px;margin:0;flex:1 1 auto}
+.datenav{display:flex;gap:6px;align-items:center}
+.datenav button,.datenav select{font:inherit;font-size:13px;padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg)}
+.datenav button:disabled{opacity:.35}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:8px 0 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;font-size:13px;padding:5px 11px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--muted);cursor:pointer;white-space:nowrap}
+.tab.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.tab .n{opacity:.75;font-size:11px;margin-left:3px}
+section{display:none}section.active{display:block}
+.legend{font-size:11.5px;color:var(--muted);background:var(--soft);padding:7px 9px;border-radius:6px;margin:8px 0}
+.alert{border:1.5px solid var(--warnfg);background:var(--warnbg);color:var(--fg);padding:8px 10px;border-radius:6px;margin:8px 0;font-size:12.5px}
+.alert b{color:var(--warnfg)}
+.one{background:var(--think);padding:8px 10px;border-radius:6px;margin:8px 0;font-size:13px}
+.card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;background:var(--card)}
+.top{display:flex;gap:7px;align-items:center;flex-wrap:wrap;font-size:15px}
+.mkt{font-size:10.5px;font-weight:700;padding:2px 6px;border-radius:4px;color:#fff;background:#666;letter-spacing:.03em}
+.mkt.US{background:var(--us)}.mkt.JP{background:var(--jp)}.mkt.KR{background:var(--kr)}
+.tk{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.spot{font-size:11.5px;background:var(--spot);padding:2px 8px;border-radius:10px;flex-basis:100%}
+.meta{font-size:12px;color:var(--muted);margin:3px 0 5px}
+.card p{margin:5px 0}
+.think{background:var(--think);padding:6px 8px;border-radius:5px}
+.o{color:var(--o)}.r{color:var(--r)}.g{color:var(--g)}.b{color:var(--b)}
+.fin{margin-top:7px}
+.fin summary{font-size:12.5px;color:var(--accent);cursor:pointer;list-style:none;-webkit-tap-highlight-color:transparent}
+.fin summary::before{content:"▸ ";}
+.fin[open] summary::before{content:"▾ ";}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:6px}
+table{border-collapse:collapse;font-size:11.5px;width:100%;font-variant-numeric:tabular-nums}
+th,td{border:1px solid var(--line);padding:3px 5px;text-align:right;white-space:nowrap}
+th{background:var(--hdr);font-weight:600}
+td:first-child,th:first-child{text-align:left;position:sticky;left:0;background:var(--card)}
+th:first-child{background:var(--hdr)}
+.src{font-size:11px;color:var(--muted);margin-top:4px}
+.warn{color:var(--warnfg);font-size:12px;background:var(--warnbg);padding:6px 8px;border-radius:5px;margin-top:6px}
+table.t td,table.t th{white-space:normal;text-align:left;vertical-align:top;font-size:12.5px;padding:6px}
+table.t td:first-child,table.t th:first-child{position:static}
+.status{display:inline-block;font-size:11px;padding:1px 7px;border-radius:9px;border:1px solid var(--line)}
+.status.기각{color:var(--r);border-color:var(--r)}.status.심층{color:var(--g);border-color:var(--g);font-weight:700}.status.보류{background:var(--spot)}
+.wl{border-bottom:1px solid var(--line);padding:8px 2px}
+.wl .l1{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.wl .l2{font-size:12px;color:var(--muted);margin-top:2px}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.filters button{font:inherit;font-size:12px;padding:3px 9px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--muted)}
+.filters button.on{background:var(--soft);color:var(--fg);border-color:var(--fg)}
+.empty{color:var(--muted);padding:24px 0;text-align:center}
+footer{font-size:11px;color:var(--muted);margin-top:18px}
+h2{font-size:14px;margin:16px 0 6px;border-left:3px solid var(--o);padding-left:7px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>🪨 돌뒤집기</h1>
+  <div class="datenav">
+    <button id="prev" title="이전 날">◀</button>
+    <select id="dates"></select>
+    <button id="next" title="다음 날">▶</button>
+  </div>
+</header>
+<div class="tabs" id="tabs">
+  <button class="tab active" data-t="cards">후보<span class="n" id="n-cards"></span></button>
+  <button class="tab" data-t="clusters">군집<span class="n" id="n-clusters"></span></button>
+  <button class="tab" data-t="watch">워치리스트<span class="n" id="n-watch"></span></button>
+  <button class="tab" data-t="excluded">제외<span class="n" id="n-excluded"></span></button>
+  <button class="tab" data-t="dart">DART<span class="n" id="n-dart"></span></button>
+  <button class="tab" data-t="check">검증</button>
+</div>
+
+<section id="s-cards" class="active"></section>
+<section id="s-clusters"></section>
+<section id="s-watch"></section>
+<section id="s-excluded"></section>
+<section id="s-dart"></section>
+<section id="s-check"></section>
+<footer id="foot"></footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => (n == null ? '' : Number(n).toLocaleString('ko-KR', {maximumFractionDigits: 0}));
+const pct = v => (v == null ? '' : `${Number(v).toFixed(0)}%`);
+const NOCACHE = { cache: 'no-store' };
+let DATES = [], CUR = null, DATA = null, WATCH = {};
+
+async function loadIndex() {
+  const r = await fetch('data/index.json?v=' + Date.now(), NOCACHE);
+  DATES = (await r.json()).slice().sort().reverse();
+  const sel = $('#dates');
+  sel.innerHTML = DATES.map(d => `<option value="${d}">${d}</option>`).join('');
+  const hash = (location.hash || '').replace('#', '');
+  await show(DATES.includes(hash) ? hash : DATES[0]);
+}
+async function show(date) {
+  CUR = date; $('#dates').value = date;
+  const i = DATES.indexOf(date);
+  $('#prev').disabled = i >= DATES.length - 1; $('#next').disabled = i <= 0;
+  try { history.replaceState(null, '', '#' + date); } catch (_) {}
+  const [d, w] = await Promise.all([
+    fetch(`data/${date}.json?v=${Date.now()}`, NOCACHE).then(r => r.json()),
+    fetch(`data/watchlist_state.json?v=${Date.now()}`, NOCACHE).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+  ]);
+  DATA = d; WATCH = w; render();
+}
+$('#prev').onclick = () => show(DATES[DATES.indexOf(CUR) + 1]);
+$('#next').onclick = () => show(DATES[DATES.indexOf(CUR) - 1]);
+$('#dates').onchange = e => show(e.target.value);
+$('#tabs').addEventListener('click', e => {
+  const b = e.target.closest('.tab'); if (!b) return;
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === b));
+  document.querySelectorAll('section').forEach(s => s.classList.toggle('active', s.id === 's-' + b.dataset.t));
+  try { localStorage.setItem('rock_tab', b.dataset.t); } catch (_) {}
+});
+try { const t = localStorage.getItem('rock_tab'); if (t) document.querySelector(`.tab[data-t="${t}"]`)?.click(); } catch (_) {}
+
+function finTable(c) {
+  if (!c.rev || !c.rev.length) return `<div class="warn">재무 미보강 — 코스닥 종목은 클라우드에서 분기 재무를 가져올 소스가 없음. DART 확인 필요</div>`;
+  const unit = c.mkt === 'JP' ? '백만 JPY' : (c.mkt === 'KR' ? '백만 KRW' : '백만 USD');
+  return `<details class="fin"><summary>8분기 매출·YoY·영업이익률 (${unit})</summary><div class="tw"><table>
+  <tr><th></th>${c.rev.map(q => `<th>${esc(q[0])}</th>`).join('')}</tr>
+  <tr><td>매출</td>${c.rev.map(q => `<td class="o">${fmt(q[1])}</td>`).join('')}</tr>
+  <tr><td>YoY</td>${c.rev.map(q => `<td class="r">${pct(q[2])}</td>`).join('')}</tr>
+  <tr><td>OPM</td>${(c.opm || []).map(v => `<td class="g">${pct(v)}</td>`).join('')}</tr>
+  </table></div><div class="src">주황 = 2차 소스(stockanalysis.com). 1차 공시 대조 전 수치</div></details>`;
+}
+function card(c) {
+  const st = WATCH[`${c.mkt}:${c.ticker}`]?.status;
+  return `<div class="card">
+  <div class="top"><span class="mkt ${esc(c.mkt)}">${esc(c.mkt)}</span><b>${esc(c.name)}</b><span class="tk">${esc(c.ticker)}</span>${st ? `<span class="status ${esc(st)}">${esc(st)}</span>` : ''}<span class="spot">${esc(c.spot)}</span></div>
+  <div class="meta">시총 <span class="o">${esc(c.mcap)}</span> · 주가 <span class="o">${esc(c.price)}</span></div>
+  <p><b>무슨 회사</b> ${esc(c.what)}</p>
+  <p><b>왜 오늘</b> ${esc(c.why)}</p>
+  <p class="think"><b>★ 2차적 사고</b> ${esc(c.think)}</p>
+  <p><b>확인할 공시</b> ${esc(c.check)}</p>
+  ${finTable(c)}</div>`;
+}
+function render() {
+  const D = DATA;
+  const wd = '월화수목금토일'[(new Date(D.date + 'T00:00:00').getDay() + 6) % 7];
+  $('#n-cards').textContent = D.cards.length; $('#n-clusters').textContent = D.clusters.length;
+  $('#n-excluded').textContent = D.excluded.length; $('#n-dart').textContent = (D.dart_today || []).length;
+  $('#n-watch').textContent = Object.keys(WATCH).length;
+
+  $('#s-cards').innerHTML = `
+    <div class="legend">${D.date} (${wd}) · 주황 = 2차 소스 · 파랑 = 1차 공시 · ★ = Claude 해석(공시 아님) · 시총 하한 국내 1,000억 / 미국 $5억 / 일본 ¥750억</div>
+    ${D.alert_html ? `<div class="alert"><b>데이터 한계</b><br>${D.alert_html}</div>` : ''}
+    ${D.one_line ? `<div class="one">★ ${esc(D.one_line)}</div>` : ''}
+    ${D.cards.map(card).join('')}`;
+
+  $('#s-clusters').innerHTML = D.clusters.length ? D.clusters.map(cl => `<div class="card">
+    <div class="top"><span class="mkt ${esc(cl.mkt)}">${esc(cl.mkt)}</span><b>${esc(cl.theme)}</b></div>
+    <p>${esc(cl.members)}</p><p class="think">★ ${esc(cl.note)}</p></div>`).join('') : '<div class="empty">군집 없음</div>';
+
+  $('#s-excluded').innerHTML = D.excluded.length ? `<div class="legend">걸렸지만 뺀 것 — 필터 편향을 나중에 검토하기 위한 기록</div>` +
+    D.excluded.map(e => `<div class="wl"><div class="l1"><span class="mkt ${esc(e.mkt)}">${esc(e.mkt)}</span><b>${esc(e.ticker)}</b></div><div class="l2">${esc(e.reason)}</div></div>`).join('') : '<div class="empty">없음</div>';
+
+  $('#s-dart').innerHTML = (D.dart_today || []).length ? `<div class="tw"><table class="t"><tr><th>시각</th><th>회사</th><th>제목(1차)</th><th>★ 비고</th></tr>` +
+    D.dart_today.map(d => `<tr><td>${esc(d.time)}</td><td>${esc(d.company)}</td><td class="b">${esc(d.title)}</td><td>${esc(d.note)}</td></tr>`).join('') + '</table></div>' : '<div class="empty">없음</div>';
+
+  renderWatch('all');
+  const src = D.sources_status || [], warns = D.warnings || [], checks = D.checks || [];
+  $('#s-check').innerHTML = `
+    <h2>소스 상태</h2>${src.length ? `<div class="tw"><table class="t"><tr><th>소스</th><th>용도</th><th>상태</th><th>비고</th></tr>${src.map(s => `<tr><td>${esc(s[0])}</td><td>${esc(s[1])}</td><td class="${/무효|차단|대기/.test(s[2]) ? 'r' : ''}">${esc(s[2])}</td><td>${esc(s[3])}</td></tr>`).join('')}</table></div>` : '<div class="empty">엑셀 ★검증 리포트 참조</div>'}
+    <h2>이상치·경고</h2>${warns.length ? warns.map(w => `<div class="warn"><b>${esc(w[0])}</b> — ${esc(w[1])} → ${esc(w[2])}</div>`).join('') : '<div class="empty">엑셀 ★검증 리포트 참조</div>'}
+    <h2>검증 건수</h2>${checks.length ? `<div class="tw"><table class="t">${checks.map(c => `<tr><td>${esc(c[0])}</td><td>${esc(c[1])}</td></tr>`).join('')}</table></div>` : ''}`;
+  $('#foot').textContent = `생성: Claude 자동 스크리닝 · 매일 07:00 KST · 모든 ★ 문장은 공시가 아닌 해석이며 투자 판단의 책임은 사용자에게 있습니다.`;
+}
+function renderWatch(filter) {
+  const rows = Object.values(WATCH).filter(v => filter === 'all' || v.status === filter)
+    .sort((a, b) => (a.status !== '관찰') - (b.status !== '관찰') || b.hits - a.hits || a.mkt.localeCompare(b.mkt));
+  const counts = {}; Object.values(WATCH).forEach(v => counts[v.status] = (counts[v.status] || 0) + 1);
+  $('#s-watch').innerHTML = `<div class="filters">${['all', '관찰', '심층', '보류', '기각'].map(f => `<button class="${f === filter ? 'on' : ''}" data-f="${f}">${f === 'all' ? '전체' : f} ${f === 'all' ? Object.keys(WATCH).length : (counts[f] || 0)}</button>`).join('')}</div>
+    <div class="legend">상태(관찰/심층/기각)는 엑셀 워치리스트에서 바꾸고 알려 주시면 다음 실행에 반영됩니다</div>` +
+    (rows.length ? rows.map(v => `<div class="wl"><div class="l1"><span class="mkt ${esc(v.mkt)}">${esc(v.mkt)}</span><b>${esc(v.name || v.ticker)}</b><span class="tk">${esc(v.ticker)}</span><span class="status ${esc(v.status)}">${esc(v.status)}</span><span class="tk">${v.hits}회</span></div>
+      <div class="l2">${esc(v.spot)} · 최초 ${esc(v.first)} · 최근 ${esc(v.last)}${v.memo ? ' · ' + esc(v.memo) : ''}</div></div>`).join('') : '<div class="empty">없음</div>');
+  $('#s-watch .filters').onclick = e => { const b = e.target.closest('button'); if (b) renderWatch(b.dataset.f); };
+}
+loadIndex().catch(e => { $('#s-cards').innerHTML = `<div class="warn">데이터를 불러오지 못했습니다: ${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>
