@@ -103,10 +103,10 @@
   "ticker": "098120",
   "name": "마이크로컨텍솔",
   "first": "2026-09-11",
-  "last": "2026-09-11",
-  "spot": "52주 신고가 + 당일 +9.5%",
+  "last": "2026-09-12",
+  "spot": "52주 신고가 3일 연속 + 매출 YoY 87%",
   "status": "관찰",
-  "hits": 5,
+  "hits": 6,
   "memo": ""
  },
  "KR:386380": {
@@ -240,5 +240,137 @@
   "status": "기각",
   "hits": 1,
   "memo": "タイミー — Yahoo Japan 신고가 랭킹에 있었으나 실제 주가 1,300엔은 연중고가 1,825엔 대비 −29%(당일 −16.6%). 랭킹 소스 자체가 과거 시점 캐시로 판명 → 일본 신고가 소스 무효"
+ },
+ "US:HTFL": {
+  "mkt": "US",
+  "ticker": "HTFL",
+  "name": "HeartFlow",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "상장 13개월 + 매출 YoY 3분기 연속 가속",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "US:ARX": {
+  "mkt": "US",
+  "ticker": "ARX",
+  "name": "Accelerant Holdings",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "52주 신고가 + 상장 14개월 + 매출 YoY 57%",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "US:SLDE": {
+  "mkt": "US",
+  "ticker": "SLDE",
+  "name": "Slide Insurance Holdings",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "52주 신고가 근접 + 매출 YoY 가속 + OPM 46%",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "US:FEIM": {
+  "mkt": "US",
+  "ticker": "FEIM",
+  "name": "Frequency Electronics",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "52주 신고가 + 실적 서프라이즈(당일 +42%)",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "US:LIFE": {
+  "mkt": "US",
+  "ticker": "LIFE",
+  "name": "Ethos Technologies",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "상장 7.5개월 + 매출 YoY 100% 이상 2분기 연속",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "KR:252990": {
+  "mkt": "KR",
+  "ticker": "252990",
+  "name": "샘씨엔에스",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "당일 +13.1% + 매출 YoY 4분기 연속 60%대 + OPM 30%",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "KR:126730": {
+  "mkt": "KR",
+  "ticker": "126730",
+  "name": "코칩",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "당일 +10.4% + 매출 YoY 109% + OPM 급개선",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "KR:003350": {
+  "mkt": "KR",
+  "ticker": "003350",
+  "name": "한국화장품제조",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "52주 신고가 + 당일 +19.4% + 매출 YoY 32%",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "JP:6027": {
+  "mkt": "JP",
+  "ticker": "6027",
+  "name": "弁護士ドットコム (Bengo4.com)",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "52주 신고가 + 매출 YoY 가속(16→27%)",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "JP:7433": {
+  "mkt": "JP",
+  "ticker": "7433",
+  "name": "伯東 (Hakuto)",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "52주 신고가 + 매출 YoY 급반전(7→35%)",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "JP:2737": {
+  "mkt": "JP",
+  "ticker": "2737",
+  "name": "トーメンデバイス (Tomen Devices)",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "52주 신고가 목록 + 매출 YoY 286%(메모리 가격 전가)",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "JP:3132": {
+  "mkt": "JP",
+  "ticker": "3132",
+  "name": "マクニカHD (Macnica)",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "매출 YoY 4분기 연속 가속(10→40%) + 당일 +2.4%",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
  }
 }
