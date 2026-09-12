@@ -1234,10 +1234,8 @@ td input, td textarea{border-radius:8px}
   <button class="page-tab-btn active" data-page="valuation">📊 Stock Valuation</button>
   <button class="page-tab-btn" data-page="calendar">📅 Calendar</button>
   <button class="page-tab-btn" data-page="index">📈 Index</button>
-  <button class="page-tab-btn" data-page="tptracker">🎯 TP Tracker</button>
   <button class="page-tab-btn" data-page="screener">🔍 KR Screener</button>
   <button class="page-tab-btn" data-page="dart">📋 Dart</button>
-  <button class="page-tab-btn" data-page="news">📰 News</button>
   <button class="page-tab-btn" data-page="usmarket">🇺🇸 US Market</button>
   <button class="page-tab-btn" data-page="krmarket">🇰🇷 KR Market</button>
   <button class="page-tab-btn" data-page="awake">🔔 Awake</button>
@@ -1304,16 +1302,6 @@ td input, td textarea{border-radius:8px}
   ></iframe>
 </div><!-- /page-index -->
 
-<div id="page-tptracker" class="page">
-  <iframe
-    id="tptracker-frame"
-    src="https://whysosary-dot.github.io/tp-tracker/"
-    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
-    loading="lazy"
-    title="TP Tracker"
-  ></iframe>
-</div><!-- /page-tptracker -->
-
 <div id="page-screener" class="page">
   <iframe
     id="screener-frame"
@@ -1333,16 +1321,6 @@ td input, td textarea{border-radius:8px}
     title="DART Monitoring"
   ></iframe>
 </div><!-- /page-dart -->
-
-<div id="page-news" class="page">
-  <iframe
-    id="news-frame"
-    src="https://whysosary-dot.github.io/stock-sites/"
-    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
-    loading="lazy"
-    title="Stock News"
-  ></iframe>
-</div><!-- /page-news -->
 
 <div id="page-usmarket" class="page">
   <iframe
@@ -2580,10 +2558,8 @@ init();
 const IFRAME_TAB_SRC = {
   calendar:  'https://whysosary-dot.github.io/investment-calendar/',
   index:     'https://whysosary-dot.github.io/invest-index/',
-  tptracker: 'https://whysosary-dot.github.io/tp-tracker/',
   screener:  'https://whysosary-dot.github.io/stock-screener/',
   dart:      'https://whysosary-dot.github.io/dart-monitoring/',
-  news:      'https://whysosary-dot.github.io/stock-sites/',
   usmarket:  'https://whysosary-dot.github.io/us-market-briefing/',
   krmarket:  'https://whysosary-dot.github.io/kr-market-briefing/',
   awake:     'https://whysosary-dot.github.io/awake-disclosure/',
@@ -2767,10 +2743,8 @@ const TAB_REPOS = {
   valuation: { repo: 'whysosary-dot/invest-private', path: 'sv/stocks.json' },
   calendar:  { repo: 'whysosary-dot/investment-calendar' },
   index:     { repo: 'whysosary-dot/invest-index' },
-  tptracker: { repo: 'whysosary-dot/tp-tracker' },
   screener:  { repo: 'whysosary-dot/stock-screener' },
   dart:      { repo: 'whysosary-dot/dart-monitoring' },
-  news:      { repo: 'whysosary-dot/stock-sites' },
   usmarket:  { repo: 'whysosary-dot/us-market-briefing' },
   krmarket:  { repo: 'whysosary-dot/kr-market-briefing' },
   awake:     { repo: 'whysosary-dot/awake-disclosure' },
@@ -6107,24 +6081,6 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
   const orig = window.activatePage;
   window.activatePage = function(p, o){ orig(p, o); if(p==='index') renderIndexNative(); };
   if((location.hash||'').replace('#','')==='index') renderIndexNative();
-})();
-</script>
-
-<!-- ═══════ news 탭: 임베드 시 링크를 현재 창(_top)으로 (뒤로가기 체인 유지) ═══════ -->
-<script>
-(function(){
-  const fr = document.getElementById('news-frame');
-  if(!fr) return;
-  fr.addEventListener('load', function(){
-    try{
-      const doc = fr.contentDocument;
-      if(!doc) return;
-      doc.addEventListener('click', function(e){
-        const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
-        if(a && /^https?:/i.test(a.href)) a.target = '_top';
-      }, true);
-    }catch(err){ /* cross-origin 등 접근 불가 시 무시 */ }
-  });
 })();
 </script>
 
