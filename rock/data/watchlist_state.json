@@ -548,5 +548,27 @@
   "status": "관찰",
   "hits": 2,
   "memo": ""
+ },
+ "US:DY": {
+  "mkt": "US",
+  "ticker": "DY",
+  "name": "Dycom Industries",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "실적 가속 vs 주가 정체 + 내부자 클러스터 매수 + record backlog (8-K 전문검색)",
+  "status": "관찰",
+  "hits": 3,
+  "memo": ""
+ },
+ "US:AMRZ": {
+  "mkt": "US",
+  "ticker": "AMRZ",
+  "name": "Amrize Ltd",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "내부자 클러스터 매수 (C레벨 11인) + 스핀오프",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
  }
 }
