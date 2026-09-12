@@ -372,5 +372,93 @@
   "status": "관찰",
   "hits": 1,
   "memo": ""
+ },
+ "KR:032580": {
+  "mkt": "KR",
+  "ticker": "032580",
+  "name": "피델릭스",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "실적 가속 vs 주가 정체 (+ 흑자전환 2분기차)",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "US:FTK": {
+  "mkt": "US",
+  "ticker": "FTK",
+  "name": "Flotek Industries",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "가이던스 상향 (8-K 2회) + 실적 가속 vs 주가 하락",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "US:KMT": {
+  "mkt": "US",
+  "ticker": "KMT",
+  "name": "Kennametal",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "산업지표 급등 → 수혜 벤더 (텅스텐) + 내부자 클러스터 매수",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "US:MFP": {
+  "mkt": "US",
+  "ticker": "MFP",
+  "name": "Midera Food Processing (ex-Middleby Food Processing)",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "스핀오프 / 분할 상장 (26.07.06 분리, 2개월차)",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "JP:6966": {
+  "mkt": "JP",
+  "ticker": "6966",
+  "name": "三井ハイテック (Mitsui High-tec)",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "가이던스 상향 (TDnet 9/9) + 실적 가속 vs 주가 정체",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "JP:6317": {
+  "mkt": "JP",
+  "ticker": "6317",
+  "name": "北川鉄工所 (Kitagawa)",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "가이던스 상향 (TDnet 9/11) — 공작기계 척·반도체 부문",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "JP:6336": {
+  "mkt": "JP",
+  "ticker": "6336",
+  "name": "石井表記 (Ishii Hyoki)",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "산업지표 급등 → 수혜 벤더 (AI 패키지 기판 장비·소모품) + 가이던스 상향",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "KR:417840": {
+  "mkt": "KR",
+  "ticker": "417840",
+  "name": "저스템",
+  "first": "2026-09-12",
+  "last": "2026-09-12",
+  "spot": "영업 레버리지 발동 + 실적 가속 (반도체 장비)",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
  }
 }
