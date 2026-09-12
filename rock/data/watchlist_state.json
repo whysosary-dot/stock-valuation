@@ -570,5 +570,27 @@
   "status": "관찰",
   "hits": 1,
   "memo": ""
+ },
+ "US:ELMT": {
+  "mkt": "US",
+  "ticker": "ELMT",
+  "name": "The Elmet Group",
+  "first": "2026-09-13",
+  "last": "2026-09-13",
+  "spot": "커버리지 0→1 (2026-04 IPO) + 수주잔고 급증 + 실적 가속 vs 주가 정체",
+  "status": "관찰",
+  "hits": 4,
+  "memo": ""
+ },
+ "US:CDNL": {
+  "mkt": "US",
+  "ticker": "CDNL",
+  "name": "Cardinal Infrastructure Group",
+  "first": "2026-09-13",
+  "last": "2026-09-13",
+  "spot": "내부자 클러스터 매수(임원 7인) + 상장 6~18개월 + 수주잔고 급증 + 실적 가속 vs 주가 하락",
+  "status": "관찰",
+  "hits": 4,
+  "memo": ""
  }
 }
