@@ -592,5 +592,16 @@
   "status": "관찰",
   "hits": 4,
   "memo": ""
+ },
+ "US:MRCY": {
+  "mkt": "US",
+  "ticker": "MRCY",
+  "name": "Mercury Systems",
+  "first": "2026-09-13",
+  "last": "2026-09-13",
+  "spot": "수주잔고 급증 + 실적 가속 vs 주가 정체 (SEC 8-K 'record backlog' 전문검색)",
+  "status": "관찰",
+  "hits": 3,
+  "memo": ""
  }
 }
