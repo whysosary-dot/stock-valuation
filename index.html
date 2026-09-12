@@ -1242,7 +1242,6 @@ td input, td textarea{border-radius:8px}
   <button class="page-tab-btn" data-page="etfmonitor">📡 ETF Monitor</button>
   <button class="page-tab-btn" data-page="interest">👀 Interest</button>
   <button class="page-tab-btn" data-page="rock">🪨 Stone</button>
-  <button class="page-tab-btn" id="npay-tab-btn" type="button" title="네이버페이 증권 새 창으로"><span style="display:inline-block;background:#03c75a;color:#fff;font-weight:800;border-radius:4px;width:15px;height:15px;line-height:15px;text-align:center;font-size:10.5px;vertical-align:middle;position:relative;top:-1px;margin-right:1px;">N</span> Npay</button>
   <button class="page-tab-btn" data-page="research">🔬 Research</button>
   <button class="page-tab-btn" data-page="sheet">📁 Folder</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
@@ -2603,11 +2602,6 @@ document.querySelectorAll('.page-tab-btn').forEach(btn => {
     activatePage(btn.dataset.page);
   });
 });
-// Npay — 네이버페이 증권 새 창
-document.getElementById('npay-tab-btn')?.addEventListener('click', () => {
-  window.open('https://m.stock.naver.com', '_blank', 'noopener');
-});
-
 // 탭 접기/펼치기
 (function initTabsCollapse() {
   const nav = document.getElementById('page-tabs-nav');
