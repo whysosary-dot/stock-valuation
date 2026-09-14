@@ -587,10 +587,10 @@
   "ticker": "CDNL",
   "name": "Cardinal Infrastructure Group",
   "first": "2026-09-13",
-  "last": "2026-09-13",
-  "spot": "내부자 클러스터 매수(임원 7인) + 상장 6~18개월 + 수주잔고 급증 + 실적 가속 vs 주가 하락",
+  "last": "2026-09-15",
+  "spot": "내부자 클러스터 매수 × 신규 상장(커버리지 0→1 이전 구간)",
   "status": "관찰",
-  "hits": 4,
+  "hits": 2,
   "memo": ""
  },
  "US:MRCY": {
@@ -646,6 +646,83 @@
   "spot": "조용한 축적(스크린 15, S등급) × 영업 레버리지 발동(스크린 3) × 실적 가속 vs 주가 정체(스크린 12)",
   "status": "관찰",
   "hits": 1,
+  "memo": ""
+ },
+ "JP:7811": {
+  "mkt": "JP",
+  "ticker": "7811",
+  "name": "中本パックス (Nakamoto Packs)",
+  "first": "2026-09-15",
+  "last": "2026-09-15",
+  "spot": "가이던스 상향(TDnet 上方修正) × 영업 레버리지 발동 × 실적 가속 vs 주가 정체",
+  "status": "관찰",
+  "hits": 3,
+  "memo": ""
+ },
+ "US:APTV": {
+  "mkt": "US",
+  "ticker": "APTV",
+  "name": "Aptiv PLC",
+  "first": "2026-09-15",
+  "last": "2026-09-15",
+  "spot": "스핀오프 / 분할 상장 × 내부자 클러스터 매수 × 영업 레버리지 발동",
+  "status": "관찰",
+  "hits": 3,
+  "memo": ""
+ },
+ "JP:5136": {
+  "mkt": "JP",
+  "ticker": "5136",
+  "name": "tripla",
+  "first": "2026-09-15",
+  "last": "2026-09-15",
+  "spot": "가이던스 상향(TDnet) × 영업 레버리지 발동 × 실적 가속",
+  "status": "관찰",
+  "hits": 3,
+  "memo": ""
+ },
+ "KR:052400": {
+  "mkt": "KR",
+  "ticker": "052400",
+  "name": "코나아이",
+  "first": "2026-09-15",
+  "last": "2026-09-15",
+  "spot": "자사주 매입·소각 + 성장 × 실적 가속 vs 주가 정체",
+  "status": "관찰",
+  "hits": 2,
+  "memo": ""
+ },
+ "JP:3657": {
+  "mkt": "JP",
+  "ticker": "3657",
+  "name": "ポールトゥウィンHD (Pole To Win)",
+  "first": "2026-09-15",
+  "last": "2026-09-15",
+  "spot": "흑자전환 첫 분기 × 영업 레버리지 발동 (TDnet 업적예상-실적 차이)",
+  "status": "관찰",
+  "hits": 2,
+  "memo": ""
+ },
+ "US:NNBR": {
+  "mkt": "US",
+  "ticker": "NNBR",
+  "name": "NN Inc",
+  "first": "2026-09-15",
+  "last": "2026-09-15",
+  "spot": "흑자전환 첫 분기 × 가이던스 상향 (8-K 전문검색 'raising guidance')",
+  "status": "관찰",
+  "hits": 2,
+  "memo": ""
+ },
+ "KR:475460": {
+  "mkt": "KR",
+  "ticker": "475460",
+  "name": "미트박스글로벌",
+  "first": "2026-09-15",
+  "last": "2026-09-15",
+  "spot": "흑자전환 첫 분기 × 내부자 매수 (대량보유보고) — 단 추격 구간",
+  "status": "관찰",
+  "hits": 2,
   "memo": ""
  }
 }
