@@ -4381,9 +4381,16 @@ function makeTargetPortfolioCard(heldItems) {
   const alignCashPct = () => {
     if (!cashNmEl || !cashRowEl || cashRowEl.style.display === 'none') return;
     try {
-      const v0 = cashRowEl.parentElement && cashRowEl.parentElement.querySelector('.pf-vals');
-      const w = (v0 && window.innerWidth > 640) ? Math.round(v0.getBoundingClientRect().width) : 0;
-      if (w > 0) { cashNmEl.style.flex = '0 0 ' + w + 'px'; cashNmEl.style.width = w + 'px'; }
+      if (window.innerWidth <= 640) { cashNmEl.style.flex = ''; cashNmEl.style.width = ''; return; }
+      // 종목 행의 목표% 왼쪽 좌표를 기준으로 현금 이름칸 폭을 역산한다.
+      // (.pf-vals 는 display:contents 라 박스가 없어 폭을 잴 수 없다 — 실제 배치된 요소로 잰다)
+      const par = cashRowEl.parentElement;
+      const stockRow = par && [...par.querySelectorAll('.pf-row')].find(r => r !== cashRowEl && r.querySelector('.pf-pct'));
+      if (!stockRow) { cashNmEl.style.flex = ''; cashNmEl.style.width = ''; return; }
+      const pctL = stockRow.querySelector('.pf-pct').getBoundingClientRect().left;
+      const rowL = stockRow.getBoundingClientRect().left;
+      const w = Math.round(pctL - rowL - 10 - 8 - 8);   // ● 10px + gap 8 + gap 8
+      if (w > 40) { cashNmEl.style.flex = '0 0 ' + w + 'px'; cashNmEl.style.width = w + 'px'; }
       else { cashNmEl.style.flex = ''; cashNmEl.style.width = ''; }
     } catch (_) {}
   };
