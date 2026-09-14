@@ -4376,6 +4376,18 @@ function makeTargetPortfolioCard(heldItems) {
 
   const pctEls = [], dotEls = [], curEls = [], amtEls = [];
   let cashRowEl = null, cashDotEl = null, cashPctEl = null, cashInfoEl = null, sumDiv = null, cashNmEl = null;
+
+  // 현금 행의 '목표 %' 를 종목 행(● + .pf-vals + 목표%)과 같은 x 위치로 맞춘다
+  const alignCashPct = () => {
+    if (!cashNmEl || !cashRowEl || cashRowEl.style.display === 'none') return;
+    try {
+      const v0 = cashRowEl.parentElement && cashRowEl.parentElement.querySelector('.pf-vals');
+      const w = (v0 && window.innerWidth > 640) ? Math.round(v0.getBoundingClientRect().width) : 0;
+      if (w > 0) { cashNmEl.style.flex = '0 0 ' + w + 'px'; cashNmEl.style.width = w + 'px'; }
+      else { cashNmEl.style.flex = ''; cashNmEl.style.width = ''; }
+    } catch (_) {}
+  };
+  window.addEventListener('resize', () => { try { alignCashPct(); } catch (_) {} });
   const budget = () => Number(diary.data.pfTargetTotal) || 0;
   const segWon = (p) => budget() > 0 && p > 0 ? ` <span style="opacity:.65">(${fmtWon(Math.round(budget() * p / 100))}원)</span>` : '';
   // 좁은 칸용 압축 금액 표기: 1.53억 / 2,500만 / 5,000원
@@ -4510,15 +4522,10 @@ function makeTargetPortfolioCard(heldItems) {
       if (cashPct) {
         cashRowEl.style.display = '';
         cashDotEl.style.background = CASH_GRAY;
-        // 목표 % 를 종목 행과 같은 x 위치에 둔다 (종목 행 = ● + .pf-vals + 목표%)
-        if (cashNmEl) {
-          try {
-            const v0 = rows.querySelector('.pf-vals');
-            const w = (v0 && window.innerWidth > 640) ? Math.round(v0.getBoundingClientRect().width) : 0;
-            if (w > 0) { cashNmEl.style.flex = '0 0 ' + w + 'px'; cashNmEl.style.width = w + 'px'; }
-            else { cashNmEl.style.flex = ''; cashNmEl.style.width = ''; }
-          } catch (_) {}
-        }
+        // 목표 % 를 종목 행과 같은 x 위치에 둔다 (카드가 DOM 에 붙은 뒤라야 폭을 잴 수 있음)
+        alignCashPct();
+        requestAnimationFrame(alignCashPct);
+        setTimeout(alignCashPct, 60);
         cashPctEl.textContent = '목표 ' + cashPct.toFixed(1) + '%';
         const curCash = curW['현금'] || 0;
         const dCash = curCash - cashPct;   // 현재 − 목표: 부족하면 −, 초과하면 +
