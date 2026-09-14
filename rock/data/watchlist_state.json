@@ -554,10 +554,10 @@
   "ticker": "DY",
   "name": "Dycom Industries",
   "first": "2026-09-12",
-  "last": "2026-09-12",
-  "spot": "실적 가속 vs 주가 정체 + 내부자 클러스터 매수 + record backlog (8-K 전문검색)",
+  "last": "2026-09-14",
+  "spot": "실적 가속 vs 주가 정체(스크린 12) × 가이던스 상향·record backlog 8-K(스크린 4) × 내부자 클러스터 매수(스크린 8) 3중 교차",
   "status": "관찰",
-  "hits": 3,
+  "hits": 1,
   "memo": ""
  },
  "US:AMRZ": {
@@ -622,6 +622,28 @@
   "first": "2026-09-14",
   "last": "2026-09-14",
   "spot": "내부자 클러스터 매수 (OpenInsider latest-cluster-buys, CEO 포함 2인)",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "KR:108230": {
+  "mkt": "KR",
+  "ticker": "108230",
+  "name": "톱텍",
+  "first": "2026-09-14",
+  "last": "2026-09-14",
+  "spot": "조용한 축적(스크린 15, S등급) × 단일판매·공급계약(스크린 13) 교차 히트",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "KR:071090": {
+  "mkt": "KR",
+  "ticker": "071090",
+  "name": "하이스틸",
+  "first": "2026-09-14",
+  "last": "2026-09-14",
+  "spot": "조용한 축적(스크린 15, S등급) × 영업 레버리지 발동(스크린 3) × 실적 가속 vs 주가 정체(스크린 12)",
   "status": "관찰",
   "hits": 1,
   "memo": ""
