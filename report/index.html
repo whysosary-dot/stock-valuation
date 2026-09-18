@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>📑 Report — 증권사 리포트 정리</title>
+<style>
+  :root{--bg:#f6f7fb;--panel:#fff;--border:#e5e7eb;--text:#111827;--dim:#6b7280;--accent:#2563eb;--up:#dc2626;--down:#2563eb;--gold:#b45309;--green:#16a34a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;font-size:14px}
+  .wrap{max-width:1180px;margin:0 auto;padding:16px 16px 60px}
+  header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+  h1{font-size:18px;margin:0;font-weight:800}
+  h1 small{font-size:12px;color:var(--dim);font-weight:500;margin-left:6px}
+  .dates{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px}
+  .dbtn{border:1px solid var(--border);background:var(--panel);border-radius:999px;padding:5px 12px;font-size:12.5px;cursor:pointer;color:var(--text)}
+  .dbtn.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+  .dbtn small{color:inherit;opacity:.7;margin-left:4px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:14px}
+  .stat{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 12px}
+  .stat b{display:block;font-size:20px;font-weight:800}
+  .stat span{font-size:11.5px;color:var(--dim)}
+  .stat.up b{color:var(--up)} .stat.down b{color:var(--down)} .stat.new b{color:var(--green)}
+  .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .tools input[type=search]{flex:1;min-width:180px;border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:13.5px;background:var(--panel)}
+  .chip{border:1px solid var(--border);background:var(--panel);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;color:var(--dim)}
+  .chip.on{border-color:var(--accent);color:var(--accent);background:rgba(37,99,235,.06);font-weight:700}
+  .sec{margin:18px 0 8px;font-size:14px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .sec .cnt{font-size:11.5px;color:var(--dim);font-weight:600}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+  .card.watch{border-color:#a78bfa;box-shadow:0 0 0 1px rgba(167,139,250,.35)}
+  .card.held{border-color:var(--gold);box-shadow:0 0 0 1px rgba(180,83,9,.35)}
+  .top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .nm{font-size:15px;font-weight:800}
+  .nm a{color:inherit;text-decoration:none}
+  .code{font-size:11px;color:var(--dim)}
+  .tag{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:6px;color:#fff;background:#94a3b8}
+  .tag.up{background:var(--up)} .tag.down{background:var(--down)} .tag.new{background:var(--green)} .tag.watch{background:#7c3aed} .tag.held{background:var(--gold)}
+  .meta{font-size:12px;color:var(--dim);display:flex;gap:10px;flex-wrap:wrap}
+  .meta b{color:var(--text)}
+  .tp{font-weight:800}
+  .tp.up{color:var(--up)} .tp.down{color:var(--down)}
+  .title{font-size:13.5px;font-weight:700;line-height:1.4}
+  ul.sum{margin:0;padding-left:16px;font-size:12.5px;color:#374151;line-height:1.55}
+  ul.sum li{margin:1px 0}
+  .multi{font-size:11px;color:var(--accent);font-weight:700}
+  .empty{color:var(--dim);padding:30px;text-align:center;background:var(--panel);border:1px dashed var(--border);border-radius:12px}
+  .foot{margin-top:24px;font-size:11.5px;color:var(--dim);line-height:1.6}
+  .foot a{color:var(--accent)}
+  .ind .nm{font-size:14px}
+  @media (max-width:640px){ .wrap{padding:12px 10px 50px} .grid{grid-template-columns:1fr} .stat b{font-size:17px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📑 Report <small>증권사 리포트 정리 · FnGuide WiseReport 리포트서머리</small></h1>
+  </header>
+  <div class="dates" id="dates"></div>
+  <div class="stats" id="stats"></div>
+  <div class="tools">
+    <input type="search" id="q" placeholder="기업명 · 코드 · 증권사 · 제목 · 요약 검색">
+    <button class="chip on" data-f="all">전체</button>
+    <button class="chip" data-f="watch">⭐ 관심·보유</button>
+    <button class="chip" data-f="change">🎯 목표가·의견 변경</button>
+    <button class="chip" data-f="new">🆕 신규 커버</button>
+    <button class="chip" data-f="multi">👥 복수 증권사</button>
+  </div>
+  <div id="body"></div>
+  <div class="foot" id="foot"></div>
+</div>
+<script>
+const DATA_BASE = './data/';
+let INDEX = null, CUR = null, FILTER = 'all', Q = '';
+let WATCH = new Map();   // code -> {name, held}
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const won = n => n == null ? '-' : Number(n).toLocaleString();
+
+/* ── 관심·보유 종목 (부모 대시보드의 PAT 로 invest-private 읽기 — 없으면 강조만 생략) ── */
+async function loadWatch() {
+  try {
+    let pat = '';
+    try { pat = (localStorage.getItem('sv_github_pat') || '').trim(); } catch (_) {}
+    if (!pat) return;
+    const get = async p => {
+      const r = await fetch(`https://api.github.com/repos/whysosary-dot/invest-private/contents/${p}?ref=main`, {
+        headers: { Authorization: 'token ' + pat, Accept: 'application/vnd.github.raw' } });
+      return r.ok ? r.json() : null;
+    };
+    const [st, di] = await Promise.all([get('sv/stocks.json'), get('sv/diary.json')]);
+    const held = new Set();
+    ((di && di.scenario) || []).forEach(s => { if (s && s.held && !s.archived && s.name) held.add(String(s.name).replace(/\s+/g, '').toLowerCase()); });
+    ((st && st.stocks) || []).forEach(s => {
+      const code = String(s.ticker || '').split('.')[0];
+      if (/^\d{6}$/.test(code)) WATCH.set(code, { name: s.name, held: held.has(String(s.name).replace(/\s+/g, '').toLowerCase()) });
+    });
+  } catch (e) { console.warn('watch load', e); }
+}
+
+async function loadIndex() {
+  const r = await fetch(DATA_BASE + 'index.json?cb=' + Date.now());
+  if (!r.ok) throw new Error('index ' + r.status);
+  INDEX = await r.json();
+}
+async function loadDate(d) {
+  const r = await fetch(DATA_BASE + d + '.json?cb=' + Date.now());
+  if (!r.ok) throw new Error(d + ' ' + r.status);
+  CUR = await r.json();
+  render();
+}
+
+function pickDefault() {
+  // 최근 일자 중 기업 리포트 5건 이상인 첫 번째 (월요일자 선발간 2건짜리는 건너뜀)
+  const ds = INDEX.dates || [];
+  return (ds.find(e => (e.company || 0) >= 5) || ds[0] || {}).date;
+}
+
+function renderDates() {
+  const ds = (INDEX.dates || []).slice(0, 10);
+  $('#dates').innerHTML = ds.map(e => `<button class="dbtn ${CUR && CUR.date === e.date ? 'on' : ''}" data-d="${e.date}">${e.date.slice(5).replace('-', '/')} <small>${e.company}</small></button>`).join('');
+  $('#dates').querySelectorAll('.dbtn').forEach(b => b.onclick = () => loadDate(b.dataset.d));
+}
+
+function matches(c) {
+  if (Q) {
+    const hay = [c.name, c.code, c.broker, c.analysts, c.title, ...(c.summary || [])].join(' ').toLowerCase();
+    if (!hay.includes(Q)) return false;
+  }
+  const w = WATCH.get(c.code);
+  if (FILTER === 'watch') return !!w;
+  if (FILTER === 'change') return ['up', 'down'].includes(c.tp_flag) || ['up', 'down'].includes(c.opinion_flag);
+  if (FILTER === 'new') return c.tp_flag === 'new' || c.opinion_flag === 'new';
+  if (FILTER === 'multi') return (c._n || 1) >= 2;
+  return true;
+}
+
+function card(c) {
+  const w = WATCH.get(c.code);
+  const tags = [];
+  if (w && w.held) tags.push('<span class="tag held">보유</span>');
+  else if (w) tags.push('<span class="tag watch">관심</span>');
+  if (c.tp_flag === 'up') tags.push('<span class="tag up">목표가 ↑</span>');
+  if (c.tp_flag === 'down') tags.push('<span class="tag down">목표가 ↓</span>');
+  if (c.opinion_flag === 'up') tags.push('<span class="tag up">의견 ↑</span>');
+  if (c.opinion_flag === 'down') tags.push('<span class="tag down">의견 ↓</span>');
+  if (c.tp_flag === 'new' || c.opinion_flag === 'new') tags.push('<span class="tag new">신규</span>');
+  const upside = (c.tp && c.close) ? ((c.tp / c.close - 1) * 100) : null;
+  return `<div class="card ${w ? (w.held ? 'held' : 'watch') : ''}">
+    <div class="top"><span class="nm"><a href="https://m.stock.naver.com/domestic/stock/${c.code}/total" target="_blank" rel="noopener">${esc(c.name)}</a></span><span class="code">${c.code}</span>${tags.join('')}${(c._n || 1) >= 2 ? `<span class="multi">+${c._n - 1}곳 더</span>` : ''}</div>
+    <div class="meta"><span>${esc(c.broker)}${c.analysts ? ' · ' + esc(c.analysts) : ''}</span>
+      <span>의견 <b>${esc(c.opinion || '-')}</b></span>
+      <span>목표 <b class="tp ${c.tp_flag}">${won(c.tp)}</b>${upside != null ? ` <span style="color:${upside >= 0 ? 'var(--up)' : 'var(--down)'}">(${upside >= 0 ? '+' : ''}${upside.toFixed(0)}%)</span>` : ''}</span>
+      <span>전일 <b>${won(c.close)}</b></span></div>
+    <div class="title">${esc(c.title)}</div>
+    ${(c.summary || []).length ? `<ul class="sum">${c.summary.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
+  </div>`;
+}
+
+function indCard(c) {
+  const chg = c.prev_opinion && c.opinion && c.prev_opinion !== c.opinion;
+  return `<div class="card ind">
+    <div class="top"><span class="nm">${esc(c.sector)}</span>${c.opinion ? `<span class="tag ${chg ? 'up' : ''}">${esc(c.opinion)}${chg ? ' ← ' + esc(c.prev_opinion) : ''}</span>` : ''}</div>
+    <div class="meta"><span>${esc(c.broker)}${c.analysts ? ' · ' + esc(c.analysts) : ''}</span></div>
+    <div class="title">${esc(c.title)}</div>
+    ${(c.summary || []).length ? `<ul class="sum">${c.summary.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
+  </div>`;
+}
+
+function render() {
+  if (!CUR) return;
+  renderDates();
+  const comp = CUR.company || [], ind = CUR.industry || [];
+  // 같은 종목에 여러 증권사 → 묶음 수
+  const byCode = {};
+  comp.forEach(c => { byCode[c.code] = (byCode[c.code] || 0) + 1; });
+  comp.forEach(c => { c._n = byCode[c.code]; });
+  const k = CUR.counts || {};
+  const watchN = comp.filter(c => WATCH.has(c.code)).length;
+  $('#stats').innerHTML = `
+    <div class="stat"><b>${comp.length}</b><span>기업 리포트</span></div>
+    <div class="stat"><b>${ind.length}</b><span>산업 리포트</span></div>
+    <div class="stat up"><b>${k.tp_up || 0}</b><span>목표가 상향</span></div>
+    <div class="stat down"><b>${k.tp_down || 0}</b><span>목표가 하향</span></div>
+    <div class="stat up"><b>${(k.op_up || 0)}</b><span>의견 상향 / 하향 ${(k.op_down || 0)}</span></div>
+    <div class="stat new"><b>${k.new || 0}</b><span>신규 커버</span></div>
+    ${WATCH.size ? `<div class="stat" style="border-color:#a78bfa"><b style="color:#7c3aed">${watchN}</b><span>관심·보유 종목</span></div>` : ''}`;
+
+  // 정렬: 보유 → 관심 → 변경(상향/하향/신규) → 복수 증권사 → 이름
+  const rank = c => {
+    const w = WATCH.get(c.code);
+    return (w && w.held ? 0 : w ? 1 : 2) * 100
+      + (['up', 'down', 'new'].includes(c.tp_flag) || ['up', 'down', 'new'].includes(c.opinion_flag) ? 0 : 10)
+      + ((c._n || 1) >= 2 ? 0 : 1);
+  };
+  const list = comp.filter(matches).sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, 'ko') || a.broker.localeCompare(b.broker, 'ko'));
+  const changes = comp.filter(c => ['up', 'down', 'new'].includes(c.tp_flag) || ['up', 'down', 'new'].includes(c.opinion_flag));
+
+  let h = '';
+  // 오늘의 변화 요약 (필터 '전체' 일 때만)
+  if (FILTER === 'all' && !Q && changes.length) {
+    const line = changes.map(c => {
+      const f = c.tp_flag !== 'same' && c.tp_flag !== 'none' ? c.tp_flag : c.opinion_flag;
+      const sym = f === 'up' ? '↑' : f === 'down' ? '↓' : '🆕';
+      return `<span style="white-space:nowrap"><b>${esc(c.name)}</b> ${sym}${c.tp ? ' ' + won(c.tp) : ''} <span style="color:var(--dim)">(${esc(c.broker)})</span></span>`;
+    }).join(' · ');
+    h += `<div class="card" style="margin-bottom:6px;border-color:#fde68a;background:#fffbeb"><div class="title">🎯 목표가·의견 변경 ${changes.length}건</div><div style="font-size:12.5px;line-height:1.8">${line}</div></div>`;
+  }
+  h += `<div class="sec">🏢 기업 리포트 <span class="cnt">${list.length} / ${comp.length}</span></div>`;
+  h += list.length ? `<div class="grid">${list.map(card).join('')}</div>` : `<div class="empty">조건에 맞는 리포트가 없습니다</div>`;
+  const il = ind.filter(c => !Q || [c.sector, c.broker, c.analysts, c.title, ...(c.summary || [])].join(' ').toLowerCase().includes(Q));
+  if (FILTER === 'all' || FILTER === 'change') {
+    const il2 = FILTER === 'change' ? il.filter(c => c.prev_opinion && c.opinion && c.prev_opinion !== c.opinion) : il;
+    h += `<div class="sec">🏭 산업 리포트 <span class="cnt">${il2.length}</span></div>`;
+    h += il2.length ? `<div class="grid">${il2.map(indCard).join('')}</div>` : `<div class="empty">산업 리포트 없음</div>`;
+  }
+  $('#body').innerHTML = h;
+  $('#foot').innerHTML = `발간일 ${CUR.date} · 수집 ${(CUR.collected_at || '').replace('T', ' ').slice(0, 16)} · 원본 <a href="${CUR.source || '#'}" target="_blank" rel="noopener">WiseReport 리포트서머리</a><br>
+    평일 07:20 자동 수집(최근 5개 발간일 재확인). 종목명을 누르면 네이버 종목 페이지. 관심·보유 표시는 대시보드에 GitHub PAT 가 설정된 기기에서만 나타납니다.`;
+}
+
+document.querySelectorAll('.chip').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.chip').forEach(x => x.classList.remove('on')); b.classList.add('on');
+  FILTER = b.dataset.f; render();
+});
+$('#q').addEventListener('input', e => { Q = e.target.value.trim().toLowerCase(); render(); });
+
+(async () => {
+  try {
+    await Promise.all([loadIndex(), loadWatch()]);
+    const d = pickDefault();
+    if (!d) { $('#body').innerHTML = '<div class="empty">아직 수집된 리포트가 없습니다. 평일 07:20 에 자동 생성됩니다.</div>'; return; }
+    await loadDate(d);
+  } catch (e) {
+    $('#body').innerHTML = `<div class="empty">데이터를 불러오지 못했습니다 (${esc(e.message)})</div>`;
+  }
+})();
+</script>
+</body>
+</html>
