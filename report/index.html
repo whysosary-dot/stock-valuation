@@ -63,7 +63,8 @@
     <input type="search" id="q" placeholder="기업명 · 코드 · 증권사 · 제목 · 요약 검색">
     <button class="chip on" data-f="all">전체</button>
     <button class="chip" data-f="watch">⭐ 관심·보유</button>
-    <button class="chip" data-f="change">🎯 목표가·의견 변경</button>
+    <button class="chip" data-f="up">📈 목표가·의견 상향</button>
+    <button class="chip" data-f="down">📉 목표가·의견 하향</button>
     <button class="chip" data-f="new">🆕 신규 커버</button>
     <button class="chip" data-f="multi">👥 복수 증권사</button>
   </div>
@@ -130,7 +131,8 @@ function matches(c) {
   }
   const w = WATCH.get(c.code);
   if (FILTER === 'watch') return !!w;
-  if (FILTER === 'change') return ['up', 'down'].includes(c.tp_flag) || ['up', 'down'].includes(c.opinion_flag);
+  if (FILTER === 'up') return c.tp_flag === 'up' || c.opinion_flag === 'up';
+  if (FILTER === 'down') return c.tp_flag === 'down' || c.opinion_flag === 'down';
   if (FILTER === 'new') return c.tp_flag === 'new' || c.opinion_flag === 'new';
   if (FILTER === 'multi') return (c._n || 1) >= 2;
   return true;
@@ -190,9 +192,10 @@ function render() {
   // 정렬: 보유 → 관심 → 변경(상향/하향/신규) → 복수 증권사 → 이름
   const rank = c => {
     const w = WATCH.get(c.code);
-    return (w && w.held ? 0 : w ? 1 : 2) * 100
-      + (['up', 'down', 'new'].includes(c.tp_flag) || ['up', 'down', 'new'].includes(c.opinion_flag) ? 0 : 10)
-      + ((c._n || 1) >= 2 ? 0 : 1);
+    const chg = (c.tp_flag === 'up' || c.opinion_flag === 'up') ? 0
+              : (c.tp_flag === 'down' || c.opinion_flag === 'down') ? 1
+              : (c.tp_flag === 'new' || c.opinion_flag === 'new') ? 2 : 10;
+    return (w && w.held ? 0 : w ? 1 : 2) * 100 + chg * 3 + ((c._n || 1) >= 2 ? 0 : 1);
   };
   const list = comp.filter(matches).sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, 'ko') || a.broker.localeCompare(b.broker, 'ko'));
   const changes = comp.filter(c => ['up', 'down', 'new'].includes(c.tp_flag) || ['up', 'down', 'new'].includes(c.opinion_flag));
@@ -200,18 +203,23 @@ function render() {
   let h = '';
   // 오늘의 변화 요약 (필터 '전체' 일 때만)
   if (FILTER === 'all' && !Q && changes.length) {
-    const line = changes.map(c => {
-      const f = c.tp_flag !== 'same' && c.tp_flag !== 'none' ? c.tp_flag : c.opinion_flag;
-      const sym = f === 'up' ? '↑' : f === 'down' ? '↓' : '🆕';
-      return `<span style="white-space:nowrap"><b>${esc(c.name)}</b> ${sym}${c.tp ? ' ' + won(c.tp) : ''} <span style="color:var(--dim)">(${esc(c.broker)})</span></span>`;
-    }).join(' · ');
-    h += `<div class="card" style="margin-bottom:6px;border-color:#fde68a;background:#fffbeb"><div class="title">🎯 목표가·의견 변경 ${changes.length}건</div><div style="font-size:12.5px;line-height:1.8">${line}</div></div>`;
+    const item = c => `<span style="white-space:nowrap"><b>${esc(c.name)}</b>${c.tp ? ' ' + won(c.tp) : ''}${c.opinion_flag === 'up' || c.opinion_flag === 'down' ? ' <i style="font-style:normal;font-size:11px">[의견 ' + esc(c.opinion) + ']</i>' : ''} <span style="color:var(--dim)">(${esc(c.broker)})</span></span>`;
+    const ups = changes.filter(c => c.tp_flag === 'up' || c.opinion_flag === 'up');
+    const downs = changes.filter(c => c.tp_flag === 'down' || c.opinion_flag === 'down');
+    const news = changes.filter(c => (c.tp_flag === 'new' || c.opinion_flag === 'new') && !ups.includes(c) && !downs.includes(c));
+    const row = (label, color, bg, arr) => arr.length
+      ? `<div style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-top:1px solid ${bg}"><span style="flex:0 0 96px;font-weight:800;color:${color};font-size:12.5px">${label} ${arr.length}</span><span style="font-size:12.5px;line-height:1.8">${arr.map(item).join(' · ')}</span></div>` : '';
+    h += `<div class="card" style="margin-bottom:6px;border-color:#fde68a;background:#fffbeb"><div class="title">🎯 목표가·의견 변경 ${changes.length}건</div>`
+       + row('📈 상향', 'var(--up)', '#fde68a', ups)
+       + row('📉 하향', 'var(--down)', '#fde68a', downs)
+       + row('🆕 신규', 'var(--green)', '#fde68a', news)
+       + `</div>`;
   }
   h += `<div class="sec">🏢 기업 리포트 <span class="cnt">${list.length} / ${comp.length}</span></div>`;
   h += list.length ? `<div class="grid">${list.map(card).join('')}</div>` : `<div class="empty">조건에 맞는 리포트가 없습니다</div>`;
   const il = ind.filter(c => !Q || [c.sector, c.broker, c.analysts, c.title, ...(c.summary || [])].join(' ').toLowerCase().includes(Q));
-  if (FILTER === 'all' || FILTER === 'change') {
-    const il2 = FILTER === 'change' ? il.filter(c => c.prev_opinion && c.opinion && c.prev_opinion !== c.opinion) : il;
+  if (FILTER === 'all' || FILTER === 'up' || FILTER === 'down') {
+    const il2 = FILTER === 'all' ? il : il.filter(c => c.prev_opinion && c.opinion && c.prev_opinion !== c.opinion);
     h += `<div class="sec">🏭 산업 리포트 <span class="cnt">${il2.length}</span></div>`;
     h += il2.length ? `<div class="grid">${il2.map(indCard).join('')}</div>` : `<div class="empty">산업 리포트 없음</div>`;
   }
