@@ -21,6 +21,9 @@
   .stat b{display:block;font-size:20px;font-weight:800}
   .stat span{font-size:11.5px;color:var(--dim)}
   .stat.up b{color:var(--up)} .stat.down b{color:var(--down)} .stat.new b{color:var(--green)}
+  .stat{cursor:pointer;transition:border-color .15s,box-shadow .15s;user-select:none}
+  .stat:hover{border-color:#9ca3af}
+  .stat.on{border-color:var(--accent);box-shadow:0 0 0 2px rgba(37,99,235,.18);background:rgba(37,99,235,.04)}
   .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
   .tools input[type=search]{flex:1;min-width:180px;border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:13.5px;background:var(--panel)}
   .chip{border:1px solid var(--border);background:var(--panel);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;color:var(--dim)}
@@ -131,6 +134,8 @@ function matches(c) {
   }
   const w = WATCH.get(c.code);
   if (FILTER === 'watch') return !!w;
+  if (FILTER === 'industry') return false;
+  if (FILTER === 'opchg') return c.opinion_flag === 'up' || c.opinion_flag === 'down';
   if (FILTER === 'up') return c.tp_flag === 'up' || c.opinion_flag === 'up';
   if (FILTER === 'down') return c.tp_flag === 'down' || c.opinion_flag === 'down';
   if (FILTER === 'new') return c.tp_flag === 'new' || c.opinion_flag === 'new';
@@ -180,14 +185,16 @@ function render() {
   comp.forEach(c => { c._n = byCode[c.code]; });
   const k = CUR.counts || {};
   const watchN = comp.filter(c => WATCH.has(c.code)).length;
-  $('#stats').innerHTML = `
-    <div class="stat"><b>${comp.length}</b><span>기업 리포트</span></div>
-    <div class="stat"><b>${ind.length}</b><span>산업 리포트</span></div>
-    <div class="stat up"><b>${k.tp_up || 0}</b><span>목표가 상향</span></div>
-    <div class="stat down"><b>${k.tp_down || 0}</b><span>목표가 하향</span></div>
-    <div class="stat up"><b>${(k.op_up || 0)}</b><span>의견 상향 / 하향 ${(k.op_down || 0)}</span></div>
-    <div class="stat new"><b>${k.new || 0}</b><span>신규 커버</span></div>
-    ${WATCH.size ? `<div class="stat" style="border-color:#a78bfa"><b style="color:#7c3aed">${watchN}</b><span>관심·보유 종목</span></div>` : ''}`;
+  const st = (f, cls, n, label, extra) => `<div class="stat ${cls} ${FILTER === f ? 'on' : ''}" data-f="${f}" title="클릭하면 필터" ${extra || ''}><b>${n}</b><span>${label}</span></div>`;
+  $('#stats').innerHTML =
+    st('all', '', comp.length, '기업 리포트') +
+    st('industry', '', ind.length, '산업 리포트') +
+    st('up', 'up', k.tp_up || 0, '목표가 상향') +
+    st('down', 'down', k.tp_down || 0, '목표가 하향') +
+    st('opchg', 'up', `${k.op_up || 0}<small style="font-size:12px;color:var(--dim);font-weight:600"> / ${k.op_down || 0}</small>`, '의견 상향 / 하향') +
+    st('new', 'new', k.new || 0, '신규 커버') +
+    (WATCH.size ? st('watch', '', `<span style="color:#7c3aed">${watchN}</span>`, '관심·보유 종목', 'style="border-color:#a78bfa"') : '');
+  $('#stats').querySelectorAll('.stat').forEach(el => el.onclick = () => setFilter(el.dataset.f));
 
   // 정렬: 보유 → 관심 → 변경(상향/하향/신규) → 복수 증권사 → 이름
   const rank = c => {
@@ -215,11 +222,13 @@ function render() {
        + row('🆕 신규', 'var(--green)', '#fde68a', news)
        + `</div>`;
   }
-  h += `<div class="sec">🏢 기업 리포트 <span class="cnt">${list.length} / ${comp.length}</span></div>`;
-  h += list.length ? `<div class="grid">${list.map(card).join('')}</div>` : `<div class="empty">조건에 맞는 리포트가 없습니다</div>`;
+  if (FILTER !== 'industry') {
+    h += `<div class="sec">🏢 기업 리포트 <span class="cnt">${list.length} / ${comp.length}</span></div>`;
+    h += list.length ? `<div class="grid">${list.map(card).join('')}</div>` : `<div class="empty">조건에 맞는 리포트가 없습니다</div>`;
+  }
   const il = ind.filter(c => !Q || [c.sector, c.broker, c.analysts, c.title, ...(c.summary || [])].join(' ').toLowerCase().includes(Q));
-  if (FILTER === 'all' || FILTER === 'up' || FILTER === 'down') {
-    const il2 = FILTER === 'all' ? il : il.filter(c => c.prev_opinion && c.opinion && c.prev_opinion !== c.opinion);
+  if (['all', 'industry', 'up', 'down', 'opchg'].includes(FILTER)) {
+    const il2 = (FILTER === 'all' || FILTER === 'industry') ? il : il.filter(c => c.prev_opinion && c.opinion && c.prev_opinion !== c.opinion);
     h += `<div class="sec">🏭 산업 리포트 <span class="cnt">${il2.length}</span></div>`;
     h += il2.length ? `<div class="grid">${il2.map(indCard).join('')}</div>` : `<div class="empty">산업 리포트 없음</div>`;
   }
@@ -228,10 +237,12 @@ function render() {
     평일 07:20 자동 수집(최근 5개 발간일 재확인). 종목명을 누르면 네이버 종목 페이지. 관심·보유 표시는 대시보드에 GitHub PAT 가 설정된 기기에서만 나타납니다.`;
 }
 
-document.querySelectorAll('.chip').forEach(b => b.onclick = () => {
-  document.querySelectorAll('.chip').forEach(x => x.classList.remove('on')); b.classList.add('on');
-  FILTER = b.dataset.f; render();
-});
+function setFilter(f) {
+  FILTER = (FILTER === f && f !== 'all') ? 'all' : f;   // 같은 걸 다시 누르면 해제
+  document.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x.dataset.f === FILTER));
+  render();
+}
+document.querySelectorAll('.chip').forEach(b => b.onclick = () => setFilter(b.dataset.f));
 $('#q').addEventListener('input', e => { Q = e.target.value.trim().toLowerCase(); render(); });
 
 (async () => {
