@@ -26,8 +26,6 @@
   .stat.on{border-color:var(--accent);box-shadow:0 0 0 2px rgba(37,99,235,.18);background:rgba(37,99,235,.04)}
   .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
   .tools input[type=search]{flex:1;min-width:180px;border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:13.5px;background:var(--panel)}
-  .chip{border:1px solid var(--border);background:var(--panel);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;color:var(--dim)}
-  .chip.on{border-color:var(--accent);color:var(--accent);background:rgba(37,99,235,.06);font-weight:700}
   .sec{margin:18px 0 8px;font-size:14px;font-weight:800;display:flex;align-items:center;gap:8px}
   .sec .cnt{font-size:11.5px;color:var(--dim);font-weight:600}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px}
@@ -63,13 +61,7 @@
   <div class="dates" id="dates"></div>
   <div class="stats" id="stats"></div>
   <div class="tools">
-    <input type="search" id="q" placeholder="기업명 · 코드 · 증권사 · 제목 · 요약 검색">
-    <button class="chip on" data-f="all">전체</button>
-    <button class="chip" data-f="watch">⭐ 관심·보유</button>
-    <button class="chip" data-f="up">📈 목표가·의견 상향</button>
-    <button class="chip" data-f="down">📉 목표가·의견 하향</button>
-    <button class="chip" data-f="new">🆕 신규 커버</button>
-    <button class="chip" data-f="multi">👥 복수 증권사</button>
+    <input type="search" id="q" placeholder="기업명 · 코드 · 증권사 · 제목 · 요약 검색  (필터는 위 숫자 카드 클릭)">
   </div>
   <div id="body"></div>
   <div class="foot" id="foot"></div>
@@ -193,6 +185,7 @@ function render() {
     st('down', 'down', k.tp_down || 0, '목표가 하향') +
     st('opchg', 'up', `${k.op_up || 0}<small style="font-size:12px;color:var(--dim);font-weight:600"> / ${k.op_down || 0}</small>`, '의견 상향 / 하향') +
     st('new', 'new', k.new || 0, '신규 커버') +
+    st('multi', '', Object.values(byCode).filter(n => n >= 2).length, '복수 증권사 종목') +
     (WATCH.size ? st('watch', '', `<span style="color:#7c3aed">${watchN}</span>`, '관심·보유 종목', 'style="border-color:#a78bfa"') : '');
   $('#stats').querySelectorAll('.stat').forEach(el => el.onclick = () => setFilter(el.dataset.f));
 
@@ -239,10 +232,8 @@ function render() {
 
 function setFilter(f) {
   FILTER = (FILTER === f && f !== 'all') ? 'all' : f;   // 같은 걸 다시 누르면 해제
-  document.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x.dataset.f === FILTER));
   render();
 }
-document.querySelectorAll('.chip').forEach(b => b.onclick = () => setFilter(b.dataset.f));
 $('#q').addEventListener('input', e => { Q = e.target.value.trim().toLowerCase(); render(); });
 
 (async () => {
