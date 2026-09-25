@@ -922,5 +922,27 @@
   "status": "관찰",
   "hits": 1,
   "memo": ""
+ },
+ "JP:7610": {
+  "mkt": "JP",
+  "ticker": "7610",
+  "name": "テイツー (Tay Two)",
+  "first": "2026-09-26",
+  "last": "2026-09-26",
+  "spot": "가이던스 상향 + 실적 가속 vs 주가 정체",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "US:ADC": {
+  "mkt": "US",
+  "ticker": "ADC",
+  "name": "Agree Realty",
+  "first": "2026-09-26",
+  "last": "2026-09-26",
+  "spot": "내부자 클러스터 매수 + 실적 가속 vs 주가 정체",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
  }
 }
