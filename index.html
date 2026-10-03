@@ -723,6 +723,7 @@
   .pf-vals { display: contents; }
   /* 목표 포트 모바일 전용 보조 요소 — 데스크톱에선 숨김 */
   .pf-tgt-break, .pf-tgt-lab { display: none; }
+  .pf-target-card .pf-row > .pf-pct { flex: 0 0 72px; }
 
   /* ── 모바일(아이폰) 포트 비중 레이아웃 ── */
   @media (max-width: 640px) {
@@ -4463,7 +4464,17 @@ function makeTargetPortfolioCard(heldItems) {
       // %-모드: 입력한 목표 %를 그대로 (정규화하지 않음 — 나머지는 현금)
       // 금액-모드: 금액 비율
       const share = useAmt ? (sum && data[i].v ? data[i].v / sum * 100 : 0) : (Number(it.pct) || 0);
-      if (pctEls[i]) pctEls[i].textContent = share ? '목표 ' + share.toFixed(1) + '%' : '';
+      if (pctEls[i]) {
+        // 오른쪽 라벨: 목표 % + 금액, 그 아래 실제 % + 금액 (실제 칸이 입력된 경우)
+        const enA0 = Number(it.entryAct) || 0, coA0 = Number(it.coreAct) || 0, alA0 = Number(it.alphaAct) || 0;
+        const actSum0 = +(enA0 + coA0 + alA0).toFixed(2);
+        const b = budget();
+        const amtLine = (p) => b > 0 && p > 0 ? `<div style="font-size:10.5px;font-weight:600;opacity:.75;line-height:1.2">${fmtEok(Math.round(b * p / 100))}</div>` : '';
+        pctEls[i].innerHTML = share
+          ? `<div style="line-height:1.15">목표 ${share.toFixed(1)}%</div>${amtLine(share)}`
+            + (actSum0 > 0 ? `<div style="margin-top:4px;line-height:1.15;color:#dc2626">실제 ${actSum0.toFixed(1)}%</div>${amtLine(actSum0).replace('opacity:.75', 'opacity:.85;color:#dc2626')}` : '')
+          : '';
+      }
       if (dotEls[i]) dotEls[i].style.background = data[i].v ? data[i].color : 'var(--border)';
       if (curEls[i]) {
         const cur = curW[String(it.name || '').toLowerCase().replace(/\s+/g, '')] || 0;
