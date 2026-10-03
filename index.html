@@ -724,6 +724,15 @@
   /* 목표 포트 모바일 전용 보조 요소 — 데스크톱에선 숨김 */
   .pf-tgt-break, .pf-tgt-lab { display: none; }
   .pf-target-card .pf-row > .pf-pct { flex: 0 0 72px; }
+  /* 태블릿(아이패드): 행이 카드 폭을 넘쳐 오른쪽 라벨이 잘림 → 파이를 위로 올리고 행은 전체 폭 사용, 입력칸 축소 */
+  @media (min-width: 641px) and (max-width: 1100px) {
+    .pf-target-card .pf-body { flex-wrap: wrap; }
+    .pf-target-card .pf-chart { flex: 1 1 100%; display: flex; justify-content: center; }
+    .pf-target-card .pf-rows { flex: 1 1 100%; min-width: 0; overflow-x: auto; }
+    .pf-target-card .pf-vals > input[placeholder="종목명"] { width: 104px !important; }
+    .pf-target-card .pf-vals > input[placeholder="금액(원)"] { width: 108px !important; flex: 0 0 108px !important; }
+    .pf-target-card .pf-row > .pf-pct { flex: 0 0 66px; }
+  }
 
   /* ── 모바일(아이폰) 포트 비중 레이아웃 ── */
   @media (max-width: 640px) {
