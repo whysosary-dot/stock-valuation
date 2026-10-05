@@ -2578,10 +2578,10 @@ const IFRAME_TAB_SRC = {
   index:     'https://whysosary-dot.github.io/invest-index/',
   screener:  'https://whysosary-dot.github.io/stock-screener/daily.html',   // 최신 일자 바로 (날짜는 페이지 안 드롭다운)
   dart:      'https://whysosary-dot.github.io/dart-monitoring/',
-  usmarket:  './view/index.html?src=us',
-  krmarket:  './view/index.html?src=kr',
-  awake:     './view/index.html?src=awake',
-  interest:  './view/index.html?src=interest',
+  usmarket:  './view/index.html?src=us&v=' + Math.floor(Date.now()/600000),
+  krmarket:  './view/index.html?src=kr&v=' + Math.floor(Date.now()/600000),
+  awake:     './view/index.html?src=awake&v=' + Math.floor(Date.now()/600000),
+  interest:  './view/index.html?src=interest&v=' + Math.floor(Date.now()/600000),
   research:  'https://whysosary-dot.github.io/investment-notes/',
   report:    './report/index.html?v=' + Date.now(),  // 증권사 리포트 정리 (same-origin)
   telegram:  './telegram/index.html?v=' + Date.now(),  // 텔레그램 채널 언급 종목 (same-origin)
