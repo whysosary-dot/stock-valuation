@@ -16,7 +16,14 @@ from pathlib import Path
 
 BASE = Path(__file__).parent.resolve()
 KST = timezone(timedelta(hours=9))
-API_ID, API_HASH = 37363162, "30cd2adb1edfe44f20929ff77bc87053"
+def _tg_api():
+    """텔레그램 API 자격은 저장소 밖(.tg_api, gitignore) 에 둔다: 1행 api_id, 2행 api_hash"""
+    f = BASE / ".tg_api"
+    if not f.exists():
+        raise SystemExit(f"텔레그램 API 파일 없음: {f} (1행 api_id, 2행 api_hash)")
+    a, b = [x.strip() for x in f.read_text().splitlines()[:2]]
+    return int(a), b
+API_ID, API_HASH = _tg_api()
 SRC_SESSION = BASE.parent / "AWAKE 전자 공시" / "awake_session.session"
 WORK = Path("/tmp/tg"); WORK.mkdir(parents=True, exist_ok=True)
 SESSION = WORK / "sess"
