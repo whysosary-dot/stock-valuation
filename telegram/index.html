@@ -11,7 +11,10 @@
   .wrap{max-width:1180px;margin:0 auto;padding:16px 16px 60px}
   h1{font-size:18px;margin:0 0 6px;font-weight:800}
   h1 small{font-size:12px;color:var(--dim);font-weight:500;margin-left:6px}
-  .dates{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px}
+  .dates{display:flex;gap:6px;align-items:center;margin:8px 0 14px}
+  .dates select{font:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text);max-width:260px}
+  .dates button{font:inherit;font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text);cursor:pointer}
+  .dates button:disabled{opacity:.35;cursor:default}
   .dbtn{border:1px solid var(--border);background:var(--panel);border-radius:999px;padding:5px 12px;font-size:12.5px;cursor:pointer;color:var(--text)}
   .dbtn.on{background:var(--tg);border-color:var(--tg);color:#fff;font-weight:700}
   .dbtn small{opacity:.7;margin-left:4px}
@@ -59,7 +62,7 @@
 <body>
 <div class="wrap">
   <h1>📨 Telegram <small>내 텔레그램 채널에서 오늘 언급된 종목 · 매일 23:50 수집</small></h1>
-  <div class="dates" id="dates"></div>
+  <div class="dates"><button id="dprev" title="이전 날">◀</button><select id="dsel" title="날짜 선택"></select><button id="dnext" title="다음 날">▶</button></div>
   <div class="stats" id="stats"></div>
   <div class="tools">
     <input type="search" id="q" placeholder="종목명 · 코드 · 채널 · 요약 검색">
@@ -106,9 +109,17 @@ async function loadIndex() { const r = await fetch(DATA_BASE + 'index.json?cb=' 
 async function loadDate(d) { const r = await fetch(DATA_BASE + d + '.json?cb=' + Date.now()); if (!r.ok) throw new Error(d + ' ' + r.status); CUR = await r.json(); CH = ''; render(); }
 
 function renderDates() {
-  const ds = (INDEX.dates || []).slice(0, 12);
-  $('#dates').innerHTML = ds.map(e => `<button class="dbtn ${CUR && CUR.date === e.date ? 'on' : ''}" data-d="${e.date}">${e.date.slice(5).replace('-', '/')} <small>${e.stocks}</small></button>`).join('');
-  $('#dates').querySelectorAll('.dbtn').forEach(b => b.onclick = () => loadDate(b.dataset.d));
+  const ds = (INDEX.dates || []);
+  const sel = $('#dsel');
+  const cur = CUR ? CUR.date : '';
+  sel.innerHTML = ds.map(e => `<option value="${e.date}">${e.date} (종목 ${e.stocks || 0}건)</option>`).join('');
+  sel.value = cur;
+  sel.onchange = () => loadDate(sel.value);
+  const k = ds.findIndex(e => e.date === cur);
+  $('#dprev').disabled = !(k >= 0 && k < ds.length - 1);   // 목록은 최신순 → 이전 날 = 다음 인덱스
+  $('#dnext').disabled = !(k > 0);
+  $('#dprev').onclick = () => { if (k < ds.length - 1) loadDate(ds[k + 1].date); };
+  $('#dnext').onclick = () => { if (k > 0) loadDate(ds[k - 1].date); };
 }
 function setFilter(f) { FILTER = (FILTER === f && f !== 'all') ? 'all' : f; render(); }
 
