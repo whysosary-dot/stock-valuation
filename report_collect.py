@@ -153,6 +153,61 @@ def parse_industry(h):
     return out
 
 
+# ── 밸류에이션 (네이버 증권) — Telegram 탭과 같은 항목 ──
+def _num(s):
+    if s is None:
+        return None
+    s = re.sub(r"[^\d.\-]", "", str(s).replace(",", ""))
+    try:
+        return float(s) if s not in ("", "-", ".") else None
+    except ValueError:
+        return None
+
+
+def _mcap_krw(s):
+    if not s:
+        return None
+    t = str(s).replace(",", "")
+    jo = re.search(r"(\d+)조", t); eok = re.search(r"(\d+)억", t)
+    v = (int(jo.group(1)) * 10000 if jo else 0) + (int(eok.group(1)) if eok else 0)
+    return v or None
+
+
+def _get_json(url):
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers=H), timeout=20) as r:
+            return json.loads(r.read().decode())
+    except Exception:
+        return None
+
+
+def val_kr(code):
+    d = _get_json(f"https://m.stock.naver.com/api/stock/{code}/integration")
+    b = _get_json(f"https://m.stock.naver.com/api/stock/{code}/basic")
+    if not d and not b:
+        return {}
+    info = {x.get("code"): x.get("value") for x in (d or {}).get("totalInfos", [])}
+    out = {"price": _num((b or {}).get("closePrice")) or _num(info.get("lastClosePrice")),
+           "chg": _num((b or {}).get("fluctuationsRatio")), "mcap": _mcap_krw(info.get("marketValue")),
+           "per": _num(info.get("per")), "cns_per": _num(info.get("cnsPer")), "pbr": _num(info.get("pbr")),
+           "eps": _num(info.get("eps")), "div": _num(info.get("dividendYieldRatio")), "foreign": _num(info.get("foreignRate")),
+           "hi52": _num(info.get("highPriceOf52Weeks")), "lo52": _num(info.get("lowPriceOf52Weeks")), "cur": "KRW"}
+    if out["price"] and out["hi52"] and out["lo52"] and out["hi52"] > out["lo52"]:
+        out["pos52"] = round((out["price"] - out["lo52"]) / (out["hi52"] - out["lo52"]) * 100)
+    return out
+
+
+def attach_valuation(comp):
+    from concurrent.futures import ThreadPoolExecutor
+    codes = sorted({c["code"] for c in comp if c.get("code")})
+    if not codes:
+        return
+    with ThreadPoolExecutor(6) as ex:
+        vals = dict(zip(codes, ex.map(val_kr, codes)))
+    for c in comp:
+        c["val"] = vals.get(c["code"]) or {}
+
+
 def dates_from(h):
     return [f"{d[:4]}-{d[4:6]}-{d[6:]}" for d in re.findall(r'<option[^>]*value="(\d{8})"', h)]
 
@@ -215,6 +270,7 @@ def main():
         hc = fetch(1, d); time.sleep(0.6)
         hi = fetch(2, d); time.sleep(0.6)
         comp, ind = parse_company(hc), parse_industry(hi)
+        attach_valuation(comp)
         counts = {
             "company": len(comp), "industry": len(ind),
             "tp_up": sum(1 for x in comp if x["tp_flag"] == "up"),
