@@ -115,3 +115,6 @@ html[data-skin="etf"] .gh-commit-btn{font-size:12px !important;padding:7px 14px 
 /* ETF 인사이트 버튼: 노란 강조 대신 일반 버튼(Stock Valuation 과 동일) */
 html[data-skin="etf"] .btn.insights-btn{background:var(--panel) !important;border-color:var(--border) !important;color:var(--text) !important}
 html[data-skin="etf"] .btn.insights-btn:hover{background:var(--accent-soft) !important;border-color:var(--accent) !important;color:var(--accent) !important}
+/* 버튼 텍스트 가운데 정렬 (ETF 전체 분류·전체 섹터·그룹·즐겨찾기·인사이트 등) */
+html[data-skin="etf"] .btn,html[data-skin="etf"] button,html[data-skin="etf"] select{display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.2}
+html[data-skin="etf"] select{display:inline-block;text-align:center;text-align-last:center}
