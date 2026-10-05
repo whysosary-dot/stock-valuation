@@ -71,15 +71,24 @@ function show(d) {
 // 같은 출처의 리포트 문서에 공통 테마 + 스킨을 주입 (Telegram·Report 탭과 같은 톤). 끄려면 ?raw=1
 // 예전 화면이 잠깐 보이지 않도록: 문서 head 가 생기는 즉시(본문 렌더 전) 주입하고, 그때까지 iframe 은 숨긴다.
 let _injected = false, _watch = null;
+const SKIN_V = Math.floor(Date.now() / 600000);   // 10분 단위 캐시 (매번 새로 받지 않도록)
 function injectSkin() {
   if (q.get('raw')) return true;
   try {
     const d = $('#fr').contentDocument; if (!d || !d.head) return false;
     if (d.documentElement.getAttribute('data-skin') === key) return true;
     d.documentElement.setAttribute('data-skin', key);
-    for (const href of ['https://whysosary-dot.github.io/stock-valuation/theme.css', 'https://whysosary-dot.github.io/stock-valuation/skin.css?v=' + Date.now()]) {
-      const l = d.createElement('link'); l.rel = 'stylesheet'; l.href = href; d.head.appendChild(l);
+    // 링크 다운로드를 기다리지 않도록 핵심 규칙은 인라인으로 먼저
+    const s = d.createElement('style');
+    s.textContent = 'html{background:#eef1f7}body{background:#eef1f7!important;visibility:hidden}' +
+      (key === 'awake' ? '.cover,.page-header{display:none!important}' : '');
+    d.head.appendChild(s);
+    let pending = 2;
+    const done = () => { if (--pending <= 0) { try { const r = d.createElement('style'); r.textContent = 'body{visibility:visible!important}'; d.head.appendChild(r); } catch (_) {} } };
+    for (const href of ['https://whysosary-dot.github.io/stock-valuation/theme.css?v=' + SKIN_V, 'https://whysosary-dot.github.io/stock-valuation/skin.css?v=' + SKIN_V]) {
+      const l = d.createElement('link'); l.rel = 'stylesheet'; l.href = href; l.onload = done; l.onerror = done; d.head.appendChild(l);
     }
+    setTimeout(done, 1500); setTimeout(done, 1500);   // 네트워크 실패 대비 — 늦어도 1.5초 뒤엔 보이게
     return true;
   } catch (_) { return false; }
 }
