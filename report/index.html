@@ -46,11 +46,16 @@
   ul.sum{margin:0;padding-left:16px;font-size:12.5px;color:#374151;line-height:1.55}
   ul.sum li{margin:1px 0}
   .multi{font-size:11px;color:var(--accent);font-weight:700}
+  .val{display:grid;grid-template-columns:repeat(4,1fr);gap:4px 8px;font-size:11px;color:var(--dim);border-top:1px dashed var(--border);padding-top:7px;margin-top:2px}
+  .val div span{display:block;font-size:12.5px;font-weight:700;color:var(--text)}
+  .val .u{color:var(--up)} .val .d{color:var(--down)}
+  .bar{height:4px;background:#eef2f7;border-radius:3px;overflow:hidden;margin-top:2px}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,#60a5fa,#f87171)}
   .empty{color:var(--dim);padding:30px;text-align:center;background:var(--panel);border:1px dashed var(--border);border-radius:12px}
   .foot{margin-top:24px;font-size:11.5px;color:var(--dim);line-height:1.6}
   .foot a{color:var(--accent)}
   .ind .nm{font-size:14px}
-  @media (max-width:640px){ .wrap{padding:12px 10px 50px} .grid{grid-template-columns:1fr} .stat b{font-size:17px} }
+  @media (max-width:640px){ .wrap{padding:12px 10px 50px} .grid{grid-template-columns:1fr} .stat b{font-size:17px} .val{grid-template-columns:repeat(3,1fr)} }
 </style>
 </head>
 <body>
@@ -160,7 +165,25 @@ function card(c) {
       <span>전일 <b>${won(c.close)}</b></span></div>
     <div class="title">${esc(c.title)}</div>
     ${(c.summary || []).length ? `<ul class="sum">${c.summary.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
+    ${valGrid(c.val)}
   </div>`;
+}
+/* 밸류에이션 8칸 — Telegram 탭과 같은 항목·형식 */
+const fmtN = (n, d) => (n == null || isNaN(n)) ? '-' : Number(n).toLocaleString('ko-KR', { maximumFractionDigits: d ?? 0 });
+const eok = v => v == null ? '-' : v >= 10000 ? (v / 10000).toFixed(v >= 100000 ? 0 : 1) + '조' : fmtN(v) + '억';
+function valGrid(v) {
+  if (!v || v.price == null) return '';
+  const chgCls = v.chg > 0 ? 'u' : v.chg < 0 ? 'd' : '';
+  return `<div class="val">
+      <div>주가<span class="${chgCls}">${fmtN(v.price)}원 ${v.chg != null ? `<small>(${v.chg > 0 ? '+' : ''}${fmtN(v.chg, 2)}%)</small>` : ''}</span></div>
+      <div>시총<span>${eok(v.mcap)}</span></div>
+      <div>PER${v.cns_per ? ' / 추정' : ''}<span>${v.per ? fmtN(v.per, 1) : '-'}${v.cns_per ? ` / ${fmtN(v.cns_per, 1)}` : ''}</span></div>
+      <div>PBR<span>${v.pbr ? fmtN(v.pbr, 2) : '-'}</span></div>
+      <div>EPS<span>${v.eps != null ? fmtN(v.eps) : '-'}</span></div>
+      <div>배당<span>${v.div != null ? fmtN(v.div, 2) + '%' : '-'}</span></div>
+      <div>외인<span>${v.foreign != null ? fmtN(v.foreign, 1) + '%' : '-'}</span></div>
+      <div>52주 위치<span>${v.pos52 != null ? v.pos52 + '%' : '-'}</span>${v.pos52 != null ? `<div class="bar"><i style="width:${v.pos52}%"></i></div>` : ''}</div>
+    </div>`;
 }
 
 function indCard(c) {
