@@ -1172,9 +1172,41 @@ select.sector-filter,.sector-filter-btn{border-radius:12px !important;border-col
   box-shadow:0 3px 10px rgba(48,86,240,.32);
   border-bottom-color:transparent;
 }
-.page-tabs.collapsed{padding:8px 14px 4px}
-.page-tabs.collapsed .page-tab-btn.active{opacity:1;font-size:13px}
-.tabs-collapse-btn{border:1px solid var(--border);border-radius:999px;background:var(--panel);padding:7px 12px;font-weight:600}
+/* ── 그룹형 네비게이션: 1행 그룹(포트폴리오·시장·발굴·공시) / 2행 그룹 안 탭 ── */
+.page-tabs{display:block;padding:0;gap:0;background:var(--panel);border-bottom:1px solid var(--border)}
+.tab-groups{display:flex;align-items:center;gap:2px;padding:6px 14px 0;overflow-x:auto;scrollbar-width:none}
+.tab-groups::-webkit-scrollbar{display:none}
+.brand-mark{font-size:12px;font-weight:800;letter-spacing:.04em;color:#fff;background:#111827;border-radius:7px;padding:4px 7px;margin-right:10px;flex-shrink:0}
+.tab-group-btn{
+  background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;
+  padding:9px 12px 8px;font-size:14px;font-weight:600;color:var(--text-dim);
+  white-space:nowrap;flex-shrink:0;transition:color .15s,border-color .15s;border-radius:0;
+}
+.tab-group-btn:hover{color:var(--text)}
+.tab-group-btn.active{color:var(--text);border-bottom-color:#111827}
+.tab-sub{display:flex;align-items:center;gap:4px;padding:6px 14px 8px;overflow-x:auto;scrollbar-width:none;background:var(--panel-2,#f3f4f8)}
+.tab-sub::-webkit-scrollbar{display:none}
+.tab-sub .page-tab-btn{display:none}
+.tab-sub .page-tab-btn.g-on{display:inline-flex;align-items:center;gap:4px}
+.tab-sub .page-tab-btn{
+  border:1px solid transparent;border-radius:8px;background:transparent;box-shadow:none;
+  padding:6px 11px;font-size:13px;font-weight:600;color:var(--text-dim);
+}
+.tab-sub .page-tab-btn:hover:not(.active){background:var(--panel);border-color:var(--border);color:var(--text)}
+.tab-sub .page-tab-btn.active{background:var(--panel);border-color:var(--border);color:var(--accent);box-shadow:0 1px 2px rgba(20,27,45,.06)}
+.tab-sub .page-tab-btn .ext{font-size:11px;opacity:.6}
+.npay-n{display:inline-block;background:#03c75a;color:#fff;font-weight:800;border-radius:4px;width:15px;height:15px;line-height:15px;text-align:center;font-size:10.5px;margin-right:3px}
+.tabs-spacer{flex:1;min-width:8px}
+.tab-groups .gh-commit-btn{margin-left:6px;padding:7px 14px;font-size:12.5px}
+.tab-groups .gh-settings-btn{flex-shrink:0}
+@media (max-width:640px){
+  .tab-groups{padding:4px 10px 0}
+  .tab-group-btn{padding:8px 9px 7px;font-size:13.5px}
+  .brand-mark{display:none}
+  .tab-groups .gh-commit-btn{padding:6px 10px;font-size:12px}
+  .tab-sub{padding:5px 10px 7px}
+  .tab-sub .page-tab-btn{padding:5px 9px;font-size:12.5px}
+}
 .gh-commit-btn{
   border-radius:999px;padding:8px 16px;
   background:linear-gradient(135deg,#111827,#2b3648);
@@ -1240,26 +1272,34 @@ td input, td textarea{border-radius:8px}
 <body>
 
 <nav class="page-tabs" id="page-tabs-nav">
-  <button id="tabs-collapse-btn" class="tabs-collapse-btn" title="탭 접기/펼치기">▲ 접기</button>
-  <button class="page-tab-btn active" data-page="valuation">📊 Stock Valuation</button>
-  <button class="page-tab-btn" data-page="calendar">📅 Calendar</button>
-  <button class="page-tab-btn" data-page="index">📈 Index</button>
-  <button class="page-tab-btn" data-page="screener">🔍 KR Screener</button>
-  <button class="page-tab-btn" data-page="dart">📋 Dart</button>
-  <button class="page-tab-btn" data-page="usmarket">🇺🇸 US Market</button>
-  <button class="page-tab-btn" data-page="krmarket">🇰🇷 KR Market</button>
-  <button class="page-tab-btn" data-page="awake">🔔 Awake</button>
-  <button class="page-tab-btn" data-page="etfmonitor">📡 ETF Monitor</button>
-  <button class="page-tab-btn" data-page="interest">👀 Interest</button>
-  <button class="page-tab-btn" data-page="report">📑 Report</button>
-  <button class="page-tab-btn" data-page="telegram">📨 Telegram</button>
-  <button class="page-tab-btn" id="npay-tab-btn" type="button" title="네이버페이 증권 새 창으로"><span style="display:inline-block;background:#03c75a;color:#fff;font-weight:800;border-radius:4px;width:15px;height:15px;line-height:15px;text-align:center;font-size:10.5px;vertical-align:middle;position:relative;top:-1px;margin-right:1px;">N</span> Npay</button>
-  <button class="page-tab-btn" data-page="research">🔬 Research</button>
-  <button class="page-tab-btn" data-page="sheet">📁 Folder</button>
-  <button class="page-tab-btn" data-page="diary">📔 Diary</button>
-  <div class="tabs-spacer"></div>
-  <button id="gh-settings-btn" class="gh-settings-btn" title="GitHub 토큰 설정">⚙️</button>
-  <button id="gh-commit-btn" class="gh-commit-btn" title="밸류에이션 + 다이어리 GitHub에 커밋">☁️ 커밋 &amp; 푸시</button>
+  <div class="tab-groups" id="tab-groups">
+    <span class="brand-mark" title="Stock Valuation Dashboard">SV</span>
+    <button class="tab-group-btn" data-group="pf">포트폴리오</button>
+    <button class="tab-group-btn" data-group="mkt">시장</button>
+    <button class="tab-group-btn" data-group="find">발굴</button>
+    <button class="tab-group-btn" data-group="disc">공시</button>
+    <div class="tabs-spacer"></div>
+    <button id="gh-settings-btn" class="gh-settings-btn" title="GitHub 토큰 설정">⚙️</button>
+    <button id="gh-commit-btn" class="gh-commit-btn" title="밸류에이션 + 다이어리 GitHub에 커밋">☁️ 커밋 &amp; 푸시</button>
+  </div>
+  <div class="tab-sub" id="tab-sub">
+    <button class="page-tab-btn active" data-page="valuation" data-group="pf">Stock Valuation</button>
+    <button class="page-tab-btn" data-page="diary" data-group="pf">Diary</button>
+    <button class="page-tab-btn" data-page="sheet" data-group="pf">Folder</button>
+    <button class="page-tab-btn" id="npay-tab-btn" type="button" data-group="pf" title="네이버페이 증권 새 창으로"><span class="npay-n">N</span>Npay <span class="ext">↗</span></button>
+    <button class="page-tab-btn" data-page="usmarket" data-group="mkt">US Market</button>
+    <button class="page-tab-btn" data-page="krmarket" data-group="mkt">KR Market</button>
+    <button class="page-tab-btn" data-page="index" data-group="mkt">Index</button>
+    <button class="page-tab-btn" data-page="etfmonitor" data-group="mkt">ETF Monitor</button>
+    <button class="page-tab-btn" data-page="calendar" data-group="mkt">Calendar</button>
+    <button class="page-tab-btn" data-page="screener" data-group="find">KR Screener</button>
+    <button class="page-tab-btn" data-page="telegram" data-group="find">Telegram</button>
+    <button class="page-tab-btn" data-page="report" data-group="find">Report</button>
+    <button class="page-tab-btn" data-page="interest" data-group="find">Interest</button>
+    <button class="page-tab-btn" data-page="research" data-group="find">Research</button>
+    <button class="page-tab-btn" data-page="dart" data-group="disc">Dart</button>
+    <button class="page-tab-btn" data-page="awake" data-group="disc">Awake</button>
+  </div>
 </nav>
 
 <div id="page-valuation" class="page active">
@@ -2591,6 +2631,7 @@ function activatePage(page, opts = {}) {
   if (!btn) return;
   document.querySelectorAll('.page-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
+  try { syncTabGroup(btn.dataset.group, page); } catch (_) {}
   // ⚠️ 마지막 탭 기록은 다른 어떤 작업보다 먼저. markTabVisited()는 localStorage에 쓰는데
   //    용량 초과(QuotaExceededError) 시 throw 되어 activatePage 전체가 중단된다.
   //    그 아래에 있으면 탭 전환은 되는데 마지막 탭이 영영 저장되지 않는다.
@@ -2620,6 +2661,28 @@ document.querySelectorAll('.page-tab-btn').forEach(btn => {
     activatePage(btn.dataset.page);
   });
 });
+// ── 그룹형 네비: 그룹 버튼 ↔ 서브탭 동기화 ──
+const TAB_GROUP_FIRST = { pf: 'valuation', mkt: 'usmarket', find: 'screener', disc: 'dart' };
+function syncTabGroup(group, page) {
+  if (!group) return;
+  document.querySelectorAll('.tab-group-btn').forEach(b => b.classList.toggle('active', b.dataset.group === group));
+  document.querySelectorAll('.tab-sub .page-tab-btn').forEach(b => b.classList.toggle('g-on', b.dataset.group === group));
+  if (page) { try { localStorage.setItem('sv_grp_' + group, page); } catch (_) {} }
+  // 활성 서브탭이 화면 밖이면 보이게
+  const a = document.querySelector('.tab-sub .page-tab-btn.active.g-on');
+  if (a && a.scrollIntoView) { try { a.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (_) {} }
+}
+document.querySelectorAll('.tab-group-btn').forEach(gb => {
+  gb.addEventListener('click', () => {
+    const g = gb.dataset.group;
+    let last = null;
+    try { last = localStorage.getItem('sv_grp_' + g); } catch (_) {}
+    const target = (last && document.querySelector(`.page-tab-btn[data-page="${last}"]`)) ? last : TAB_GROUP_FIRST[g];
+    window._svUserPicked = true;
+    activatePage(target);
+  });
+});
+
 // Npay — 네이버페이 증권 새 창
 document.getElementById('npay-tab-btn')?.addEventListener('click', () => {
   window.open('https://m.stock.naver.com', '_blank', 'noopener');
