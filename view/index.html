@@ -97,6 +97,56 @@ function skinWatch() {
   _watch = setInterval(() => { n++; if (injectSkin() && n > 2 || n > 400) clearInterval(_watch); }, 25);
 }
 
+// Awake 리포트: 종목 페이지마다 밸류에이션 8칸 (KR Screener 일별 JSON 에서 — 같은 출처라 주입 가능)
+let _valMap = null;
+async function loadValMap() {
+  if (_valMap) return _valMap;
+  const base = 'https://whysosary-dot.github.io/stock-screener/';
+  const idx = await (await fetch(base + 'daily/index.json?t=' + Date.now())).json();
+  const day = await (await fetch(base + 'daily/' + idx.latest_date + '.json?t=' + Date.now())).json();
+  _valMap = { date: idx.latest_date, by: Object.fromEntries((day.stocks || []).map(s => [s.ticker, s])) };
+  return _valMap;
+}
+const fmtN = (n, d) => (n == null || isNaN(n)) ? '-' : Number(n).toLocaleString('ko-KR', { maximumFractionDigits: d ?? 0 });
+const eok = v => v == null ? '-' : v >= 10000 ? (v / 10000).toFixed(v >= 100000 ? 0 : 1) + '조' : fmtN(v) + '억';
+function valGridHtml(s, date) {
+  if (!s) return '';
+  const pos52 = (s.price && s.hi52 && s.lo52 && s.hi52 > s.lo52) ? Math.round((s.price - s.lo52) / (s.hi52 - s.lo52) * 100) : null;
+  const chg = s.change_rate, chgCls = chg > 0 ? 'u' : chg < 0 ? 'd' : '';
+  return `<div class="sv-val" title="KR Screener ${date} 마감 기준 (네이버 증권)">
+    <div>주가<span class="${chgCls}">${fmtN(s.price)}원 ${chg != null ? `<small>(${chg > 0 ? '+' : ''}${fmtN(chg, 2)}%)</small>` : ''}</span></div>
+    <div>시총<span>${eok(s.market_cap)}</span></div>
+    <div>PER${s.cns_per ? ' / 추정' : ''}<span>${s.per ? fmtN(s.per, 1) : '-'}${s.cns_per ? ` / ${fmtN(s.cns_per, 1)}` : ''}</span></div>
+    <div>PBR<span>${s.pbr ? fmtN(s.pbr, 2) : '-'}</span></div>
+    <div>EPS<span>${s.eps != null ? fmtN(s.eps) : '-'}</span></div>
+    <div>배당<span>${s.div != null ? fmtN(s.div, 2) + '%' : '-'}</span></div>
+    <div>외인<span>${s.foreign != null ? fmtN(s.foreign, 1) + '%' : '-'}</span></div>
+    <div>52주 위치<span>${pos52 != null ? pos52 + '%' : '-'}</span>${pos52 != null ? `<div class="bar"><i style="width:${pos52}%"></i></div>` : ''}</div>
+  </div>`;
+}
+async function awakeValuation() {
+  try {
+    const d = $('#fr').contentDocument; if (!d) return;
+    const m = await loadValMap();
+    let n = 0;
+    d.querySelectorAll('.page[id^="stock-"]').forEach(pg => {
+      if (pg.querySelector('.sv-val')) return;
+      const code = (pg.id.match(/^stock-(\d{6})-/) || [])[1]; const s = code && m.by[code]; if (!s) return;
+      const anchor = pg.querySelector('.stock-meta') || pg.querySelector('.page-body');
+      if (!anchor) return;
+      anchor.insertAdjacentHTML('afterend', valGridHtml(s, m.date)); n++;
+    });
+    if (n && !d.getElementById('sv-val-css')) {
+      const st = d.createElement('style'); st.id = 'sv-val-css';
+      st.textContent = '.sv-val{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 10px;font-size:13px;color:#69738a;border:1px solid #e5e9f1;border-radius:12px;padding:12px 14px;margin:10px 0 14px;background:#f4f6fb}' +
+        '.sv-val div span{display:block;font-size:16px;font-weight:800;color:#141b26}.sv-val .u{color:#d3273e}.sv-val .d{color:#2f56e8}' +
+        '.sv-val .bar{height:4px;background:#e5e9f1;border-radius:3px;overflow:hidden;margin-top:3px}.sv-val .bar i{display:block;height:100%;background:linear-gradient(90deg,#60a5fa,#f87171)}' +
+        '@media (max-width:640px){.sv-val{grid-template-columns:repeat(3,1fr)}}';
+      d.head.appendChild(st);
+    }
+  } catch (e) { console.warn('awake valuation', e); }
+}
+
 (async () => {
   $('#ttl').textContent = S.title; $('#sub').textContent = S.sub; $('#list').href = S.base + S.list;
   try {
@@ -111,7 +161,7 @@ function skinWatch() {
   } catch (e) {
     document.body.insertAdjacentHTML('beforeend', `<div class="msg">목록을 불러오지 못했습니다 (${e.message}). <a href="${S.base}" target="_top">목록 페이지로</a></div>`);
   }
-  $('#fr').addEventListener('load', () => { injectSkin(); setTimeout(() => $('#fr').classList.add('ready'), 60); });
+  $('#fr').addEventListener('load', () => { injectSkin(); setTimeout(() => $('#fr').classList.add('ready'), 60); if (key === 'awake') awakeValuation(); });
   $('#sel').onchange = e => show(e.target.value);
   $('#prev').onclick = () => { const k = DATES.indexOf(CUR); if (k < DATES.length - 1) show(DATES[k + 1]); };
   $('#next').onclick = () => { const k = DATES.indexOf(CUR); if (k > 0) show(DATES[k - 1]); };
