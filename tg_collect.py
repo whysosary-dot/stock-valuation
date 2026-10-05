@@ -66,6 +66,9 @@ ALIAS_KR = {
     "카카오": "카카오", "현대로템": "현대로템", "한화에어로": "한화에어로스페이스", "에어로": "한화에어로스페이스",
     "LIG넥스원": "LIG넥스원", "두산에너": "두산에너빌리티", "두산에너빌": "두산에너빌리티",
 }
+# 직접 수집하지 않는 채널 (이름 부분 일치). AWAKE 실시간 공시는 Awake 탭이 따로 있고 종목이 너무 많아 제외.
+SKIP_CHANNELS = ["AWAKE - 실시간 주식 공시"]
+
 # 너무 흔한 말이라 단독 매칭을 금지하는 종목명 (뒤에 (코드) 가 붙은 경우만 인정)
 BLOCK = {"동양", "한화", "삼성", "현대", "우리", "미래", "성장", "한국", "대성", "서울", "경남", "전북", "대한",
          "동부", "신한", "하나", "KB", "SK", "LG", "GS", "CJ", "한진", "태양", "기업", "리더", "신라", "부산",
@@ -126,6 +129,10 @@ def main():
     total_msgs = 0
     for dlg in client.iter_dialogs():
         if not (dlg.is_channel or dlg.is_group):
+            continue
+        # 제외 채널: 직접 수집하지 않는다. 다른 채널이 전달(forward)한 글은 그 채널에서 읽히므로 자연히 포함된다.
+        if any(s in (dlg.name or "") for s in SKIP_CHANNELS):
+            print(f"  · 제외: {dlg.name}")
             continue
         cnt = 0
         for m in client.iter_messages(dlg.entity, limit=2000):
