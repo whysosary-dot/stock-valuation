@@ -1253,7 +1253,6 @@ td input, td textarea{border-radius:8px}
   <button class="page-tab-btn" data-page="interest">👀 Interest</button>
   <button class="page-tab-btn" data-page="report">📑 Report</button>
   <button class="page-tab-btn" data-page="telegram">📨 Telegram</button>
-  <button class="page-tab-btn" data-page="rock">🪨 Stone</button>
   <button class="page-tab-btn" id="npay-tab-btn" type="button" title="네이버페이 증권 새 창으로"><span style="display:inline-block;background:#03c75a;color:#fff;font-weight:800;border-radius:4px;width:15px;height:15px;line-height:15px;text-align:center;font-size:10.5px;vertical-align:middle;position:relative;top:-1px;margin-right:1px;">N</span> Npay</button>
   <button class="page-tab-btn" data-page="research">🔬 Research</button>
   <button class="page-tab-btn" data-page="sheet">📁 Folder</button>
@@ -1389,15 +1388,6 @@ td input, td textarea{border-radius:8px}
   ></iframe>
 </div><!-- /page-report -->
 
-<div id="page-rock" class="page">
-  <!-- 돌뒤집기(성장주 발굴) — same-origin ./rock/ , 데이터는 rock/data/*.json (매일 07:00 KST 자동 갱신) -->
-  <iframe
-    id="rock-frame"
-    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
-    loading="lazy"
-    title="Stone"
-  ></iframe>
-</div><!-- /page-rock -->
 
 
 <div id="page-research" class="page">
@@ -2593,7 +2583,6 @@ const IFRAME_TAB_SRC = {
   research:  'https://whysosary-dot.github.io/investment-notes/',
   report:    './report/index.html?v=' + Date.now(),  // 증권사 리포트 정리 (same-origin)
   telegram:  './telegram/index.html?v=' + Date.now(),  // 텔레그램 채널 언급 종목 (same-origin)
-  rock:      './rock/index.html?v=' + Date.now(),   // 돌뒤집기 (same-origin, 캐시 무력화)
   // sheet 은 X-Frame-Options 로 iframe 차단되어 안내 페이지로 대체 (IFRAME_TAB_SRC 등록 X)
 };
 
@@ -2661,6 +2650,7 @@ document.getElementById('npay-tab-btn')?.addEventListener('click', () => {
 // 마지막으로 활성화됐던 탭 (앱을 껐다 켜면 이 탭으로 복원). 저장된 탭이 없거나
 // 더 이상 존재하지 않는 탭(예: 삭제된 탭)이면 Diary로 대체.
 function getDefaultTab() {
+  try { if (localStorage.getItem('sv_last_tab') === 'rock') localStorage.removeItem('sv_last_tab'); } catch (_) {}
   try {
     const saved = localStorage.getItem('sv_last_tab');
     if (saved && document.querySelector(`.page-tab-btn[data-page="${saved}"]`)) return saved;
