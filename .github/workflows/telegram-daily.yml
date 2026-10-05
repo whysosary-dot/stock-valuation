@@ -1,0 +1,55 @@
+name: telegram-daily
+# 매일 23:50 KST — 텔레그램 채널 당일(00:00~23:50) 언급 종목 수집 → 요약 → 밸류에이션 → telegram/data 푸시
+on:
+  schedule:
+    - cron: '50 14 * * *'   # 23:50 KST (UTC+9)
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '수집 날짜 (YYYY-MM-DD, 비우면 오늘 KST)'
+        required: false
+        default: ''
+permissions:
+  contents: write
+  pages: write
+concurrency:
+  group: telegram-daily
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: deps
+        run: |
+          pip install -q telethon
+          npm install -g @anthropic-ai/claude-code
+      - name: collect
+        env:
+          TG_SESSION: ${{ secrets.TG_SESSION }}
+          TG_API_ID: ${{ secrets.TG_API_ID }}
+          TG_API_HASH: ${{ secrets.TG_API_HASH }}
+          TZ: Asia/Seoul
+        run: python tg_collect.py ${{ inputs.date }}
+      - name: summarize
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TZ: Asia/Seoul
+        run: python tg_summarize.py ${{ inputs.date }}
+      - name: build & push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TZ: Asia/Seoul
+        run: python tg_build.py ${{ inputs.date }}
+      - name: rebuild pages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api -X POST repos/${{ github.repository }}/pages/builds || true
