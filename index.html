@@ -427,6 +427,11 @@
   }
   .tabs-collapse-btn:hover { color: var(--accent); background: var(--accent-soft); }
   .page-tabs .tabs-spacer { flex: 1; min-width: 8px; }
+  .val-cell { white-space: nowrap; font-size: 13px; }
+  .pos52 { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; min-width: 56px; }
+  .pos52 b { font-weight: 700; }
+  .pos52 i { display: block; width: 56px; height: 4px; background: #e5e9f1; border-radius: 3px; overflow: hidden; }
+  .pos52 i em { display: block; height: 100%; background: linear-gradient(90deg, #60a5fa, #f87171); }
   .page iframe.skin-wait { opacity: 0; }
   .page iframe { transition: opacity .15s; }
   .gh-commit-btn {
@@ -1152,6 +1157,7 @@ select.sector-filter,.sector-filter-btn{border-radius:12px !important;border-col
 .btn{
   border-radius:12px;font-weight:600;font-size:13.5px;
   border-color:var(--border);box-shadow:0 1px 2px rgba(20,27,45,.04);
+  display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.2;
 }
 .btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
 .btn.toggle-on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
@@ -1538,14 +1544,19 @@ const COLS = [
   { key: 'name',            label: '기업명',        type: 'ro-text', sortable: true,  align: 'left' },
   { key: 'sector',          label: '섹터',          type: 'sector',  sortable: true,  align: 'center' },
   { key: 'market_cap_oku',  label: '현재시총 (억)',  type: 'current', sortable: true, capCol: true },
-  { key: 'price_change_pct', label: '등락률',        type: 'change-pct',  sortable: true,  align: 'center' },
-  { key: '_trend',          label: '월별 추세 M3·M2·M1', type: 'trend', sortable: true, align: 'center' },
   { key: '_upside',         label: '상방 %',        type: 'calc',    sortable: true },
   { key: '_downside',       label: '하방 %',        type: 'calc',    sortable: true },
   { key: '_chart3y',        label: '3년 차트',       type: 'chart3y', sortable: false, align: 'center' },
   { key: '_chart',          label: '1년 차트',       type: 'chart',   sortable: false, align: 'center' },
   { key: '_chart3m',        label: '3개월 차트',     type: 'chart3m', sortable: false, align: 'center' },
   { key: 'price_native',    label: '현재주가',      type: 'current-price', sortable: true },
+  { key: 'price_change_pct', label: '등락률',        type: 'change-pct',  sortable: true,  align: 'center' },
+  { key: '_per',            label: 'PER / 추정',     type: 'val', sortable: true, align: 'center' },
+  { key: '_pbr',            label: 'PBR',           type: 'val', sortable: true, align: 'center' },
+  { key: '_eps',            label: 'EPS',           type: 'val', sortable: true, align: 'center' },
+  { key: '_div',            label: '배당',           type: 'val', sortable: true, align: 'center' },
+  { key: '_foreign',        label: '외인',           type: 'val', sortable: true, align: 'center' },
+  { key: '_pos52',          label: '52주 위치',      type: 'val', sortable: true, align: 'center' },
   { key: 'target_cap_oku',  label: '목표시총 (억)',  type: 'num',     sortable: true, capCol: true },
   { key: 'safety_cap_oku',  label: '안전시총 (억)',  type: 'num',     sortable: true, capCol: true },
   { key: '_op_sum',         label: '영업이익 합',    type: 'calc',    sortable: false, toggle: 'quarterly' },
@@ -1758,9 +1769,20 @@ function priceDecimals(s) {
   return 2;
 }
 
+function pos52(s) {
+  const v = s.val || {}; const px = parseNum(s.price_native);
+  if (px == null || v.hi52 == null || v.lo52 == null || v.hi52 <= v.lo52) return null;
+  return Math.max(0, Math.min(100, Math.round((px - v.lo52) / (v.hi52 - v.lo52) * 100)));
+}
 function sortValue(s, k) {
   switch (k) {
     case 'price_change_pct': return parseNum(s.price_change_pct);
+    case '_per': { const v = s.val || {}; return v.per != null ? v.per : (v.cns_per != null ? v.cns_per : null); }
+    case '_pbr': return (s.val || {}).pbr ?? null;
+    case '_eps': return (s.val || {}).eps ?? null;
+    case '_div': return (s.val || {}).div ?? null;
+    case '_foreign': return (s.val || {}).foreign ?? null;
+    case '_pos52': return pos52(s);
     case '_upside': return upside(s);
     case '_downside': return downside(s);
     // 정렬은 '개선폭'(최근 달 − 그 이전 달) 기준 — 턴어라운드가 위로 올라온다
@@ -1922,6 +1944,25 @@ function renderRow(s) {
                  + `누적: 1개월 ${fmt(r1,1)}% · 2개월 ${fmt(r2,1)}% · 3개월 ${fmt(t.r3,1)}%\n`
                  + `개선폭(M1−M2) ${fmt(t.M1 - t.M2, 1)}%p`;
       }
+    } else if (c.type === 'val') {
+      // 밸류에이션 (val_update.py 가 네이버 증권에서 채움: s.val = {per,cns_per,pbr,eps,div,foreign,hi52,lo52,asof})
+      const v = s.val || {};
+      const dec = priceDecimals(s);
+      let txt = '—', cls = 'dim', html = null;
+      if (c.key === '_per') {
+        if (v.per != null || v.cns_per != null) { txt = (v.per != null ? fmt(v.per, 1) : '—') + (v.cns_per != null ? ' / ' + fmt(v.cns_per, 1) : ''); cls = ''; }
+      } else if (c.key === '_pbr') { if (v.pbr != null) { txt = fmt(v.pbr, 2); cls = ''; } }
+      else if (c.key === '_eps') { if (v.eps != null) { txt = fmt(v.eps, dec); cls = ''; } }
+      else if (c.key === '_div') { if (v.div != null) { txt = fmt(v.div, 2) + '%'; cls = ''; } }
+      else if (c.key === '_foreign') { if (v.foreign != null) { txt = fmt(v.foreign, 1) + '%'; cls = ''; } }
+      else if (c.key === '_pos52') {
+        const p = pos52(s);
+        if (p != null) { html = `<span class="pos52"><b>${p}%</b><i><em style="width:${p}%"></em></i></span>`; cls = ''; }
+      }
+      if (html) td.innerHTML = html; else td.textContent = txt;
+      if (cls) td.classList.add(cls);
+      td.classList.add('text-center', 'val-cell');
+      if (v.asof) td.title = (c.key === '_pos52' ? '(현재가 − 52주 최저) ÷ (52주 최고 − 최저) · ' : '') + '네이버 증권 ' + v.asof;
     } else if (c.type === 'chart3y') {
       td.classList.add('chart-cell');
       td.innerHTML = renderSparkline(s.price_history_3y);
