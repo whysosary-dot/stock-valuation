@@ -1087,5 +1087,38 @@
   "status": "관찰",
   "hits": 1,
   "memo": ""
+ },
+ "JP:3186": {
+  "mkt": "JP",
+  "ticker": "3186",
+  "name": "ネクステージ (Nextage)",
+  "first": "2026-10-06",
+  "last": "2026-10-06",
+  "spot": "실적 가속 vs 주가 정체",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "JP:6474": {
+  "mkt": "JP",
+  "ticker": "6474",
+  "name": "不二越 (Nachi-Fujikoshi)",
+  "first": "2026-10-06",
+  "last": "2026-10-06",
+  "spot": "영업 레버리지 발동",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
+ },
+ "JP:7134": {
+  "mkt": "JP",
+  "ticker": "7134",
+  "name": "アップガレージグループ (Up Garage)",
+  "first": "2026-10-06",
+  "last": "2026-10-06",
+  "spot": "산업지표 급등 → 수혜 벤더",
+  "status": "관찰",
+  "hits": 1,
+  "memo": ""
  }
 }
