@@ -13,7 +13,8 @@
   --font:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif;
 }
 html,body{margin:0}
-body{font-family:var(--font);letter-spacing:-.01em;background:var(--bg);color:var(--text);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font);letter-spacing:-.01em;background:var(--bg);color:var(--text);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;zoom:1.08}
+/* 전체 배율 1.08 — 글자가 작다는 피드백(2026-10-05). 페이지별 스킨에서 .page zoom 과 중복되지 않게 조정 */
 a{color:var(--accent)}
 button,input,select,textarea{font-family:inherit}
 
