@@ -92,3 +92,16 @@ html[data-skin="screener"] .date-nav-btn{border-radius:8px !important}
 
 /* ── Research ── */
 html[data-skin="research"] body{padding:14px 16px !important}
+
+/* Awake: 산업별 공시 모멘텀(앞페이지)·종목 인덱스 페이지 글자를 본문(사업 BM 18px) 수준으로 */
+html[data-skin="awake"] .index-table{font-size:18px !important}
+html[data-skin="awake"] .index-table td{padding:10px 8px !important;font-size:18px !important}
+html[data-skin="awake"] .index-table th{font-size:15px !important;padding:11px 8px !important}
+html[data-skin="awake"] .idx-btn{font-size:16px !important;padding:7px 14px !important}
+html[data-skin="awake"] .sig-neutral,html[data-skin="awake"] .sig-buy,html[data-skin="awake"] [class^="sig-"]{font-size:14px !important;padding:4px 10px !important}
+html[data-skin="awake"] .nf-table{font-size:17px !important}
+html[data-skin="awake"] .nf-table td,html[data-skin="awake"] .nf-table th{font-size:16px !important;padding:10px 9px !important}
+html[data-skin="awake"] .industry-stat .lbl{font-size:16px !important}
+html[data-skin="awake"] .industry-stat .num{font-size:34px !important}
+html[data-skin="awake"] .industry-insight{font-size:18px !important}
+html[data-skin="awake"] .page-body td,html[data-skin="awake"] .page-body th{font-size:16px !important}
