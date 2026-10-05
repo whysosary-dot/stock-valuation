@@ -1,0 +1,54 @@
+/* ── Stock Valuation 공통 테마 — 모든 탭 페이지가 같은 토큰·타이포·헤더를 쓴다 ──
+   사용: <link rel="stylesheet" href="https://whysosary-dot.github.io/stock-valuation/theme.css">
+   페이지별 CSS 는 이 변수들만 참조하고 색을 직접 쓰지 않는다. */
+:root{
+  --bg:#eef1f7; --panel:#ffffff; --panel-2:#f4f6fb;
+  --border:#e5e9f1; --border-strong:#d3d9e5;
+  --text:#141b26; --text-dim:#69738a; --dim:#69738a;
+  --accent:#3056f0; --accent-soft:#e9edfe; --focus:#dbe4ff;
+  --up:#d3273e; --down:#2f56e8; --green:#15803d; --gold:#b45309;
+  --tg:#229ED9;
+  --radius:10px; --radius-lg:14px;
+  --shadow:0 1px 2px rgba(20,27,45,.05),0 4px 14px rgba(20,27,45,.05);
+  --font:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif;
+}
+html,body{margin:0}
+body{font-family:var(--font);letter-spacing:-.01em;background:var(--bg);color:var(--text);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button,input,select,textarea{font-family:inherit}
+
+/* 페이지 헤더: 제목(16px) + 보조설명(12px) — 이모지 없이, 한 줄 */
+.sv-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 10px}
+.sv-head h1{font-size:16px;font-weight:800;margin:0;letter-spacing:-.01em}
+.sv-head .sub{font-size:12px;color:var(--text-dim);font-weight:500}
+.sv-head .right{margin-left:auto;display:flex;gap:6px;align-items:center}
+
+/* 날짜 선택: ◀ [select] ▶ */
+.sv-dates{display:flex;gap:6px;align-items:center;margin:0 0 14px}
+.sv-dates select,.sv-dates button{font:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text)}
+.sv-dates button{cursor:pointer;padding:6px 9px}
+.sv-dates button:disabled{opacity:.35;cursor:default}
+.sv-dates select{max-width:280px}
+
+/* 숫자 카드 (클릭 필터) */
+.sv-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-bottom:12px}
+.sv-stat{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 12px;cursor:pointer;user-select:none;transition:border-color .15s,box-shadow .15s}
+.sv-stat:hover{border-color:var(--border-strong)}
+.sv-stat.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--focus);background:var(--accent-soft)}
+.sv-stat b{display:block;font-size:20px;font-weight:800;line-height:1.15}
+.sv-stat span{font-size:11.5px;color:var(--text-dim)}
+
+/* 공통 컨트롤 */
+.sv-input{border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:13.5px;background:var(--panel);color:var(--text)}
+.sv-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--focus)}
+.sv-chip{border:1px solid var(--border);background:var(--panel);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--text-dim)}
+.sv-chip.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);font-weight:700}
+.sv-tag{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:6px;color:#fff;background:#94a3b8}
+
+/* 카드·그리드 */
+.sv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px}
+.sv-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;display:flex;flex-direction:column;gap:7px;box-shadow:var(--shadow)}
+.sv-empty{color:var(--text-dim);padding:30px;text-align:center;background:var(--panel);border:1px dashed var(--border);border-radius:12px}
+.sv-foot{margin-top:24px;font-size:11.5px;color:var(--text-dim);line-height:1.6}
+.sv-wrap{max-width:1180px;margin:0 auto;padding:14px 16px 60px}
+@media (max-width:640px){ .sv-wrap{padding:10px 10px 50px} .sv-grid{grid-template-columns:1fr} .sv-stat b{font-size:17px} }
