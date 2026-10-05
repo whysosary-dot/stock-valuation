@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://whysosary-dot.github.io/stock-valuation/theme.css">
 <style>
   html,body{height:100%;margin:0;overflow:hidden}
+  body{zoom:1 !important}  /* 뷰어 자체는 배율 1 — 안쪽 문서가 자기 배율을 가짐 */
   body{display:flex;flex-direction:column}
   .bar{flex:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 16px 10px;background:var(--bg)}
   .bar h1{font-size:16px;font-weight:800;margin:0;letter-spacing:-.01em}
@@ -19,7 +20,8 @@
   .nav .right{margin-left:auto;display:flex;gap:6px}
   .nav .right a{font-size:12px;color:var(--text-dim);text-decoration:none;border:1px solid var(--border);border-radius:8px;padding:6px 10px;background:var(--panel)}
   .nav .right a:hover{color:var(--accent);border-color:var(--accent)}
-  iframe{flex:1;width:100%;border:none;display:block;background:var(--bg);min-height:0}
+  iframe{flex:1;width:100%;border:none;display:block;background:var(--bg);min-height:0;opacity:0;transition:opacity .15s}
+  iframe.ready{opacity:1}
   .msg{padding:30px;color:var(--text-dim);text-align:center}
   @media (max-width:640px){ .bar{padding:10px 10px 8px} .nav select{max-width:170px} }
 </style>
@@ -58,12 +60,34 @@ function show(d) {
   $('#prev').disabled = !(k >= 0 && k < DATES.length - 1);
   $('#next').disabled = !(k > 0);
   const url = S.base + S.file(d);
+  $('#fr').classList.remove('ready');
   $('#fr').src = url;
+  skinWatch();
   $('#open').href = url;
   document.title = `${S.title} ${d}`;
   try { localStorage.setItem(LS, d); } catch (_) {}
   try { history.replaceState(null, '', `?src=${key}&d=${d}`); } catch (_) {}
 }
+// 같은 출처의 리포트 문서에 공통 테마 + 스킨을 주입 (Telegram·Report 탭과 같은 톤). 끄려면 ?raw=1
+// 예전 화면이 잠깐 보이지 않도록: 문서 head 가 생기는 즉시(본문 렌더 전) 주입하고, 그때까지 iframe 은 숨긴다.
+let _injected = false, _watch = null;
+function injectSkin() {
+  if (q.get('raw')) return true;
+  try {
+    const d = $('#fr').contentDocument; if (!d || !d.head) return false;
+    if (d.documentElement.getAttribute('data-skin') === key) return true;
+    d.documentElement.setAttribute('data-skin', key);
+    for (const href of ['https://whysosary-dot.github.io/stock-valuation/theme.css', 'https://whysosary-dot.github.io/stock-valuation/skin.css?v=' + Date.now()]) {
+      const l = d.createElement('link'); l.rel = 'stylesheet'; l.href = href; d.head.appendChild(l);
+    }
+    return true;
+  } catch (_) { return false; }
+}
+function skinWatch() {
+  clearInterval(_watch); let n = 0;
+  _watch = setInterval(() => { n++; if (injectSkin() && n > 2 || n > 400) clearInterval(_watch); }, 25);
+}
+
 (async () => {
   $('#ttl').textContent = S.title; $('#sub').textContent = S.sub; $('#list').href = S.base + S.list;
   try {
@@ -78,17 +102,7 @@ function show(d) {
   } catch (e) {
     document.body.insertAdjacentHTML('beforeend', `<div class="msg">목록을 불러오지 못했습니다 (${e.message}). <a href="${S.base}" target="_top">목록 페이지로</a></div>`);
   }
-  // 같은 출처의 리포트 문서에 공통 테마 + 스킨을 주입 (Telegram·Report 탭과 같은 톤). 끄려면 ?raw=1
-  $('#fr').addEventListener('load', () => {
-    if (q.get('raw')) return;
-    try {
-      const d = $('#fr').contentDocument; if (!d || !d.head) return;
-      d.documentElement.setAttribute('data-skin', key);
-      for (const href of ['https://whysosary-dot.github.io/stock-valuation/theme.css', 'https://whysosary-dot.github.io/stock-valuation/skin.css?v=' + Date.now()]) {
-        const l = d.createElement('link'); l.rel = 'stylesheet'; l.href = href; d.head.appendChild(l);
-      }
-    } catch (_) {}
-  });
+  $('#fr').addEventListener('load', () => { injectSkin(); setTimeout(() => $('#fr').classList.add('ready'), 60); });
   $('#sel').onchange = e => show(e.target.value);
   $('#prev').onclick = () => { const k = DATES.indexOf(CUR); if (k < DATES.length - 1) show(DATES[k + 1]); };
   $('#next').onclick = () => { const k = DATES.indexOf(CUR); if (k > 0) show(DATES[k - 1]); };
