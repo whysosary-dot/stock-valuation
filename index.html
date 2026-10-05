@@ -2620,6 +2620,23 @@ document.querySelectorAll('.page-tab-btn').forEach(btn => {
     activatePage(btn.dataset.page);
   });
 });
+// ── 같은 출처(whysosary-dot.github.io) 탭 페이지에 공통 테마·스킨 주입 (Telegram·Report 톤으로 통일) ──
+// 끄려면 localStorage sv_skin_off=1. 뷰어(view/)로 여는 탭(US/KR Market·Awake·Interest)은 뷰어가 직접 주입한다.
+const SKIN_KEY = { 'etfmonitor-frame': 'etf', 'dart-frame': 'dart', 'index-frame': 'index', 'calendar-frame': 'calendar',
+                   'research-frame': 'research', 'screener-frame': 'screener' };
+function svInjectSkin(fr) {
+  try {
+    if (localStorage.getItem('sv_skin_off') === '1') return;
+    const key = SKIN_KEY[fr.id]; if (!key) return;
+    const d = fr.contentDocument; if (!d || !d.head || d.documentElement.getAttribute('data-skin') === key) return;
+    d.documentElement.setAttribute('data-skin', key);
+    for (const href of ['https://whysosary-dot.github.io/stock-valuation/theme.css', 'https://whysosary-dot.github.io/stock-valuation/skin.css?v=' + Date.now()]) {
+      const l = d.createElement('link'); l.rel = 'stylesheet'; l.href = href; d.head.appendChild(l);
+    }
+  } catch (_) {}
+}
+document.querySelectorAll('.page iframe').forEach(fr => fr.addEventListener('load', () => svInjectSkin(fr)));
+
 // Npay — 네이버페이 증권 새 창
 document.getElementById('npay-tab-btn')?.addEventListener('click', () => {
   window.open('https://m.stock.naver.com', '_blank', 'noopener');
