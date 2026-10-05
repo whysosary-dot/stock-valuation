@@ -12,7 +12,7 @@
 
 사용: python3 tg_build.py [YYYY-MM-DD] [--dry-run]
 """
-import sys, re, json, base64, time, urllib.request, urllib.error
+import sys, os, re, json, base64, time, urllib.request, urllib.error
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
@@ -157,7 +157,7 @@ def main():
         vals = dict(ex.map(work, stocks))
 
     # 최근 30일 등장 이력 → 신규 여부
-    tok = None if DRY else (BASE / ".github_token").read_text().strip()
+    tok = None if DRY else (os.environ.get("GITHUB_TOKEN") or (BASE / ".github_token").read_text().strip())
     idx = None
     if tok:
         cur = gh("telegram/data/index.json", tok)
