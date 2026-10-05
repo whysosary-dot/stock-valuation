@@ -42,7 +42,7 @@ const SRC = {
               dates: h => [...h.matchAll(/\bd:\s*"(\d{4}-\d{2}-\d{2})"/g)].map(m => m[1]), file: d => `briefings/kr-market-closing-${d}.html?v=${d.replace(/-/g, '')}` },
   awake:    { title: 'Awake',      sub: '전자공시 일일 리포트',  base: 'https://whysosary-dot.github.io/awake-disclosure/', list: 'index.html',
               dates: h => { const seg = h.slice(h.indexOf('const reports'), h.indexOf('];', h.indexOf('const reports'))); return [...seg.matchAll(/\bd:\s*"(\d{4}-\d{2}-\d{2})"/g)].map(m => m[1]); },
-              file: d => `reports/AWAKE_${d}.html?v=${Date.now()}` },
+              file: d => `reports/AWAKE_${d}.html?v=${Math.floor(Date.now() / 600000)}` },   // 10분 단위 캐시 — 2.7MB 를 매번 다시 받지 않도록
   interest: { title: 'Interest',   sub: '관심종목 모닝 브리프',  base: 'https://whysosary-dot.github.io/watchlist-briefing/', list: 'index.html', json: 'briefings/manifest.json',
               dates: j => (j.briefings || []).map(b => b.date), file: d => `briefings/watchlist-brief-${d}.html` },
 };
@@ -84,7 +84,8 @@ function injectSkin() {
       (key === 'awake' ? '.cover,.page-header{display:none!important}' : '');
     d.head.appendChild(s);
     let pending = 2;
-    const done = () => { if (--pending <= 0) { try { const r = d.createElement('style'); r.textContent = 'body{visibility:visible!important}'; d.head.appendChild(r); } catch (_) {} } };
+    // 테마·스킨이 로드되면 즉시 보여준다 (문서 전체 로드를 기다리지 않음 → 긴 리포트도 점진적으로 렌더)
+    const done = () => { if (--pending <= 0) { try { const r = d.createElement('style'); r.textContent = 'body{visibility:visible!important}'; d.head.appendChild(r); } catch (_) {} $('#fr').classList.add('ready'); } };
     for (const href of ['https://whysosary-dot.github.io/stock-valuation/theme.css?v=' + SKIN_V, 'https://whysosary-dot.github.io/stock-valuation/skin.css?v=' + SKIN_V]) {
       const l = d.createElement('link'); l.rel = 'stylesheet'; l.href = href; l.onload = done; l.onerror = done; d.head.appendChild(l);
     }
