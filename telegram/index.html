@@ -4,13 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>📨 Telegram — 채널 언급 종목</title>
+<link rel="stylesheet" href="https://whysosary-dot.github.io/stock-valuation/theme.css">
 <style>
-  :root{--bg:#f6f7fb;--panel:#fff;--border:#e5e7eb;--text:#111827;--dim:#6b7280;--accent:#2563eb;--up:#dc2626;--down:#2563eb;--gold:#b45309;--green:#16a34a;--tg:#229ED9}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;font-size:14px}
   .wrap{max-width:1180px;margin:0 auto;padding:16px 16px 60px}
-  h1{font-size:18px;margin:0 0 6px;font-weight:800}
-  h1 small{font-size:12px;color:var(--dim);font-weight:500;margin-left:6px}
   .dates{display:flex;gap:6px;align-items:center;margin:8px 0 14px}
   .dates select{font:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text);max-width:260px}
   .dates button{font:inherit;font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text);cursor:pointer}
@@ -64,7 +61,7 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>📨 Telegram <small>내 텔레그램 채널에서 오늘 언급된 종목 · 매일 23:50 수집</small></h1>
+  <div class="sv-head"><h1>Telegram</h1><span class="sub">내 텔레그램 채널에서 오늘 언급된 종목 · 매일 23:50 수집</span></div>
   <div class="dates"><button id="dprev" title="이전 날">◀</button><select id="dsel" title="날짜 선택"></select><button id="dnext" title="다음 날">▶</button></div>
   <div class="stats" id="stats"></div>
   <div class="tools">
