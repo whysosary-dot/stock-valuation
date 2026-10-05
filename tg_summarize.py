@@ -5,13 +5,14 @@
   입력  /tmp/tg/mentions_<date>.json   (tg_collect.py)
   출력  /tmp/tg/summaries_<date>.json  {"KR:005930": "한 줄 요약", ...}
 
-- ANTHROPIC_API_KEY 가 있으면 Claude API 로 발췌(snips)만 근거로 60~120자 한국어 요약을 쓴다.
-- 키가 없거나 API 가 실패하면 첫 발췌를 다듬어 넣는다 (fallback, 'ⓘ 발췌:' 접두).
+- CLAUDE_CODE_OAUTH_TOKEN(구독, `claude setup-token`) 이 있으면 Claude Code CLI(`claude -p`)로,
+  ANTHROPIC_API_KEY 가 있으면 Messages API 로 발췌(snips)만 근거로 60~120자 한국어 요약을 쓴다.
+- 둘 다 없거나 호출이 실패하면 첫 발췌를 다듬어 넣는다 (fallback, 'ⓘ 발췌:' 접두).
 - 종목이 120개를 넘으면 채널 수·언급 수 상위 120개만 요약한다.
 
 사용: python3 tg_summarize.py [YYYY-MM-DD]
 """
-import sys, os, re, json, time, urllib.request, urllib.error
+import sys, os, re, json, time, subprocess, shutil, urllib.request, urllib.error
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -64,6 +65,34 @@ def call_claude(key, stocks):
     return {}
 
 
+def call_claude_cli(stocks):
+    """Claude Code CLI (구독 OAuth 토큰) — 도구 없이 텍스트 응답만 받는다."""
+    payload = [{"key": s["key"], "name": s["name"], "mkt": s["mkt"], "mentions": s["mentions"],
+                "channels": s["channels"], "snips": s["snips"]} for s in stocks]
+    prompt = RULES + "\n\n오늘 날짜: " + DATE + "\n\n종목 목록:\n" + json.dumps(payload, ensure_ascii=False)
+    exe = shutil.which("claude")
+    if not exe:
+        print("  ⚠ claude CLI 없음"); return {}
+    for attempt in range(2):
+        try:
+            r = subprocess.run([exe, "-p", "--output-format", "json", "--model", os.environ.get("TG_SUMMARY_CLI_MODEL", "sonnet"),
+                                "--tools", ""], input=prompt, capture_output=True, text=True, timeout=300,
+                               env={**os.environ, "CI": "1"})
+            if r.returncode != 0:
+                print(f"  ⚠ claude CLI rc={r.returncode}: {(r.stderr or r.stdout)[:300]}")
+                if attempt == 0: time.sleep(10); continue
+                return {}
+            d = json.loads(r.stdout)
+            text = d.get("result", "") if isinstance(d, dict) else ""
+            m = re.search(r"\{.*\}", text, re.S)
+            return json.loads(m.group(0)) if m else {}
+        except Exception as e:
+            print(f"  ⚠ claude CLI 오류: {e}")
+            if attempt == 0: time.sleep(5); continue
+            return {}
+    return {}
+
+
 def fallback(s):
     if not s["snips"]:
         return "커뮤니티 언급(집계)"
@@ -81,17 +110,19 @@ def main():
     stocks = json.loads(mp.read_text())["stocks"]
     stocks = sorted(stocks, key=lambda s: (-len(s["channels"]), -s["mentions"]))[:MAX_STOCKS]
     key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    oauth = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
     out = {}
-    if key:
+    if key or oauth:
+        print("  요약 엔진:", "Claude Code CLI(구독)" if oauth and not key else "Messages API")
         for i in range(0, len(stocks), BATCH):
             chunk = stocks[i:i + BATCH]
-            res = call_claude(key, chunk)
+            res = call_claude(key, chunk) if key else call_claude_cli(chunk)
             for s in chunk:
                 v = (res.get(s["key"]) or "").strip()
                 out[s["key"]] = v if v else fallback(s)
             print(f"  Claude 요약 {i + len(chunk)}/{len(stocks)} (응답 {sum(1 for s in chunk if res.get(s['key']))}건)")
     else:
-        print("⚠ ANTHROPIC_API_KEY 없음 — 발췌 기반 fallback 요약")
+        print("⚠ CLAUDE_CODE_OAUTH_TOKEN / ANTHROPIC_API_KEY 없음 — 발췌 기반 fallback 요약")
         for s in stocks:
             out[s["key"]] = fallback(s)
     sp = WORK / f"summaries_{DATE}.json"
