@@ -92,3 +92,8 @@ html[data-skin="screener"] .date-nav-btn{border-radius:8px !important}
 
 /* ── Research ── */
 html[data-skin="research"] body{padding:14px 16px !important}
+
+/* Awake 종목 인덱스 표: 본문 글자를 머리행(13px)과 같게 (원본은 12px 로 더 작았음) */
+html[data-skin="awake"] .index-table{font-size:13px !important}
+html[data-skin="awake"] .index-table td{font-size:13px !important}
+html[data-skin="awake"] .index-table td[style*="font-size:12px"]{font-size:13px !important}
