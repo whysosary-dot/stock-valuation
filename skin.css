@@ -1,0 +1,48 @@
+/* ── 리포트 스킨: 뷰어(view/)가 같은 출처의 리포트 문서에 주입한다. Telegram·Report 탭과 같은 톤으로.
+   html[data-skin=us|kr|awake|interest] 로 가족별 규칙을 나눈다. 원복: 뷰어에서 주입만 끄면 된다. ── */
+html{font-size:14px}
+body{font-family:var(--font) !important;background:var(--bg) !important;color:var(--text) !important;letter-spacing:-.01em}
+a{color:var(--accent)}
+::selection{background:var(--accent-soft)}
+
+/* ── US / KR Market 브리핑 (A4 IB 스타일 → 카드) ── */
+html[data-skin="us"] body,html[data-skin="kr"] body{padding:12px 16px !important;margin:0 !important;font-size:14px !important;line-height:1.55 !important}
+html[data-skin="us"] .page,html[data-skin="kr"] .page{
+  zoom:.8;background:var(--panel) !important;border:1px solid var(--border);border-radius:14px !important;
+  box-shadow:var(--shadow) !important;padding:24px 28px !important;margin:0 0 14px !important;width:100% !important;max-width:1180px !important;
+}
+html[data-skin="us"] .hdr,html[data-skin="kr"] .hdr{background:var(--panel) !important;background-image:none !important;border:1px solid var(--border);color:var(--text) !important;border-radius:12px !important}
+html[data-skin="us"] .hdr h1,html[data-skin="kr"] .hdr h1{color:var(--text) !important;font-weight:800 !important;letter-spacing:-.01em !important}
+html[data-skin="us"] .hdr .sub,html[data-skin="kr"] .hdr .sub{color:var(--text-dim) !important}
+html[data-skin="us"] .hdr .dt,html[data-skin="kr"] .hdr .dt{background:var(--accent-soft) !important;border-color:transparent !important;color:var(--accent) !important}
+html[data-skin="us"] .summ-hdr,html[data-skin="kr"] .summ-hdr,html[data-skin="us"] .kr-hdr,html[data-skin="kr"] .kr-hdr,html[data-skin="kr"] .flow-hdr{background:var(--accent-soft) !important;background-image:none !important;color:var(--accent) !important}
+html[data-skin="us"] .strat,html[data-skin="kr"] .strat{background:var(--panel) !important;background-image:none !important;color:var(--text) !important;border:1px solid var(--border)}
+html[data-skin="us"] .strat-list li,html[data-skin="kr"] .strat-list li{color:var(--text) !important}
+html[data-skin="us"] .strat-mode,html[data-skin="kr"] .strat-mode{background:var(--accent-soft) !important;color:var(--accent) !important}
+html[data-skin="us"] .sent,html[data-skin="kr"] .sent,html[data-skin="us"] .dcard,html[data-skin="kr"] .dcard,html[data-skin="us"] .ins,html[data-skin="kr"] .ins,html[data-skin="us"] .kr-card,html[data-skin="kr"] .flow-card,html[data-skin="us"] .summ,html[data-skin="kr"] .summ{border-radius:12px !important;border-color:var(--border) !important}
+html[data-skin="us"] .kpi,html[data-skin="kr"] .kpi,html[data-skin="us"] .ix,html[data-skin="kr"] .ix{border-radius:10px !important;border-color:var(--border) !important;background:var(--panel-2) !important}
+html[data-skin="us"] .tbl th,html[data-skin="kr"] .tbl th{background:var(--panel-2) !important;color:var(--text-dim) !important}
+
+/* ── Awake 전자공시 리포트 (A4 인쇄 레이아웃 → 카드, 표지·머리띠 숨김) ── */
+html[data-skin="awake"] body{padding:12px 16px !important;margin:0 !important;font-size:14px !important;line-height:1.6 !important;background:var(--bg) !important}
+html[data-skin="awake"] .cover,html[data-skin="awake"] .page-header{display:none !important}
+html[data-skin="awake"] .page{
+  zoom:.8;width:100% !important;max-width:1180px !important;min-height:0 !important;margin:0 auto 14px !important;
+  padding:24px 28px !important;background:var(--panel) !important;border:1px solid var(--border);border-radius:14px !important;
+  box-shadow:var(--shadow) !important;page-break-after:auto !important;
+}
+html[data-skin="awake"] .section-title{font-size:17px !important;border-left-color:var(--accent) !important;color:var(--text) !important}
+html[data-skin="awake"] .co-name{color:var(--text) !important}
+html[data-skin="awake"] [class*="box"],html[data-skin="awake"] [class*="card"]{border-radius:12px !important}
+
+/* ── Interest 관심종목 브리프 ── */
+html[data-skin="interest"] .wrap{max-width:1180px !important;padding:14px 16px !important}
+html[data-skin="interest"] .back{display:none !important}
+html[data-skin="interest"] .hdr{border:1px solid var(--border) !important;box-shadow:var(--shadow) !important;border-radius:14px !important}
+html[data-skin="interest"] .hdr h1{font-size:16px !important;font-weight:800 !important}
+html[data-skin="interest"] .hdr .meta{font-size:12px !important;color:var(--text-dim) !important}
+html[data-skin="interest"] .hdr .headline{font-size:13.5px !important}
+html[data-skin="interest"] .sector,html[data-skin="interest"] .macro-box{border-radius:12px !important;box-shadow:var(--shadow) !important}
+html[data-skin="interest"] .sector-hdr{font-size:14px !important}
+html[data-skin="interest"] .stock-name{font-size:14px !important}
+html[data-skin="interest"] .news-text{font-size:13px !important}
