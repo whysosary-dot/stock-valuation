@@ -97,3 +97,12 @@ html[data-skin="research"] body{padding:14px 16px !important}
 html[data-skin="awake"] .index-table{font-size:13px !important}
 html[data-skin="awake"] .index-table td{font-size:13px !important}
 html[data-skin="awake"] .index-table td[style*="font-size:12px"]{font-size:13px !important}
+
+/* 본문 폭·안쪽 여백 통일: Telegram·Report = max-width 1180px, 좌우 16px */
+html[data-skin="screener"] .main{max-width:1180px !important;padding:14px 16px !important}
+html[data-skin="screener"] .topbar,html[data-skin="screener"] .header{padding-left:16px !important;padding-right:16px !important}
+html[data-skin="research"] .wrap{max-width:1180px !important;padding:0 16px !important}
+html[data-skin="research"] .topbar{padding:14px 0 10px !important;border-bottom:none !important;background:var(--bg) !important;background-image:none !important}
+html[data-skin="research"] .topbar h1{font-size:17px !important}
+html[data-skin="research"] .topbar .subtitle{font-size:12px !important}
+html[data-skin="research"] body{padding:0 !important}
