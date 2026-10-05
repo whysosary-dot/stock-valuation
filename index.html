@@ -1336,7 +1336,7 @@ td input, td textarea{border-radius:8px}
 <div id="page-usmarket" class="page">
   <iframe
     id="usmarket-frame"
-    src="https://whysosary-dot.github.io/us-market-briefing/"
+    src="./view/index.html?src=us"
     style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
     loading="lazy"
     title="US Market Briefing"
@@ -1346,7 +1346,7 @@ td input, td textarea{border-radius:8px}
 <div id="page-krmarket" class="page">
   <iframe
     id="krmarket-frame"
-    src="https://whysosary-dot.github.io/kr-market-briefing/"
+    src="./view/index.html?src=kr"
     style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
     loading="lazy"
     title="KR Market Briefing"
@@ -1356,7 +1356,7 @@ td input, td textarea{border-radius:8px}
 <div id="page-awake" class="page">
   <iframe
     id="awake-frame"
-    src="https://whysosary-dot.github.io/awake-disclosure/"
+    src="./view/index.html?src=awake"
     style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
     loading="lazy"
     title="Awake Disclosure"
@@ -1366,7 +1366,7 @@ td input, td textarea{border-radius:8px}
 <div id="page-interest" class="page">
   <iframe
     id="interest-frame"
-    src="https://whysosary-dot.github.io/watchlist-briefing/"
+    src="./view/index.html?src=interest"
     style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
     loading="lazy"
     title="Interest Briefing"
@@ -2576,10 +2576,10 @@ const IFRAME_TAB_SRC = {
   index:     'https://whysosary-dot.github.io/invest-index/',
   screener:  'https://whysosary-dot.github.io/stock-screener/daily.html',   // 최신 일자 바로 (날짜는 페이지 안 드롭다운)
   dart:      'https://whysosary-dot.github.io/dart-monitoring/',
-  usmarket:  'https://whysosary-dot.github.io/us-market-briefing/',
-  krmarket:  'https://whysosary-dot.github.io/kr-market-briefing/',
-  awake:     'https://whysosary-dot.github.io/awake-disclosure/',
-  interest:  'https://whysosary-dot.github.io/watchlist-briefing/',
+  usmarket:  './view/index.html?src=us',
+  krmarket:  './view/index.html?src=kr',
+  awake:     './view/index.html?src=awake',
+  interest:  './view/index.html?src=interest',
   research:  'https://whysosary-dot.github.io/investment-notes/',
   report:    './report/index.html?v=' + Date.now(),  // 증권사 리포트 정리 (same-origin)
   telegram:  './telegram/index.html?v=' + Date.now(),  // 텔레그램 채널 언급 종목 (same-origin)
