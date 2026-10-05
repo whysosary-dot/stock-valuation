@@ -17,7 +17,9 @@ from pathlib import Path
 BASE = Path(__file__).parent.resolve()
 KST = timezone(timedelta(hours=9))
 def _tg_api():
-    """텔레그램 API 자격은 저장소 밖(.tg_api, gitignore) 에 둔다: 1행 api_id, 2행 api_hash"""
+    """텔레그램 API 자격: 환경변수 TG_API_ID/TG_API_HASH (GitHub Actions) 또는 저장소 밖 .tg_api (gitignore): 1행 api_id, 2행 api_hash"""
+    if os.environ.get("TG_API_ID") and os.environ.get("TG_API_HASH"):
+        return int(os.environ["TG_API_ID"]), os.environ["TG_API_HASH"]
     f = BASE / ".tg_api"
     if not f.exists():
         raise SystemExit(f"텔레그램 API 파일 없음: {f} (1행 api_id, 2행 api_hash)")
@@ -32,7 +34,7 @@ date_arg = next((a for a in sys.argv[1:] if re.fullmatch(r"\d{4}-\d{2}-\d{2}", a
 since_h = next((int(a.split("=")[1]) for a in sys.argv if a.startswith("--since-hours=")), None)
 today = datetime.strptime(date_arg, "%Y-%m-%d").date() if date_arg else datetime.now(KST).date()
 day_start = datetime(today.year, today.month, today.day, tzinfo=KST)
-day_end = day_start + timedelta(days=1)
+day_end = day_start + timedelta(hours=23, minutes=50)  # 00:00 ~ 23:50 KST
 if since_h:
     day_start = datetime.now(KST) - timedelta(hours=since_h)
 
@@ -109,17 +111,23 @@ def load_kr_universe():
 
 
 def main():
-    if not SESSION.with_suffix(".session").exists():
-        if not SRC_SESSION.exists():
-            raise SystemExit(f"텔레그램 세션 없음: {SRC_SESSION}")
-        shutil.copy(SRC_SESSION, SESSION.with_suffix(".session"))
     from telethon.sync import TelegramClient
+    tg_session = os.environ.get("TG_SESSION")  # GitHub Actions: StringSession (secret)
+    if tg_session:
+        from telethon.sessions import StringSession
+        sess = StringSession(tg_session.strip())
+    else:
+        if not SESSION.with_suffix(".session").exists():
+            if not SRC_SESSION.exists():
+                raise SystemExit(f"텔레그램 세션 없음: {SRC_SESSION}")
+            shutil.copy(SRC_SESSION, SESSION.with_suffix(".session"))
+        sess = str(SESSION)
 
     uni = load_kr_universe()
     names = sorted(uni.keys(), key=len, reverse=True)
     print(f"한국 종목 사전 {len(uni)}개 · 미국 별칭 {len(ALIAS_US)}개 · 기간 {day_start:%m-%d %H:%M} ~ {min(day_end, datetime.now(KST)):%m-%d %H:%M} KST")
 
-    client = TelegramClient(str(SESSION), API_ID, API_HASH)
+    client = TelegramClient(sess, API_ID, API_HASH)
     client.connect()
     if not client.is_user_authorized():
         raise SystemExit("텔레그램 세션 미인증")
