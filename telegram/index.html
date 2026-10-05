@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>📨 Telegram — 채널 언급 종목</title>
+<style>
+  :root{--bg:#f6f7fb;--panel:#fff;--border:#e5e7eb;--text:#111827;--dim:#6b7280;--accent:#2563eb;--up:#dc2626;--down:#2563eb;--gold:#b45309;--green:#16a34a;--tg:#229ED9}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;font-size:14px}
+  .wrap{max-width:1180px;margin:0 auto;padding:16px 16px 60px}
+  h1{font-size:18px;margin:0 0 6px;font-weight:800}
+  h1 small{font-size:12px;color:var(--dim);font-weight:500;margin-left:6px}
+  .dates{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px}
+  .dbtn{border:1px solid var(--border);background:var(--panel);border-radius:999px;padding:5px 12px;font-size:12.5px;cursor:pointer;color:var(--text)}
+  .dbtn.on{background:var(--tg);border-color:var(--tg);color:#fff;font-weight:700}
+  .dbtn small{opacity:.7;margin-left:4px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-bottom:12px}
+  .stat{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 12px;cursor:pointer;user-select:none;transition:border-color .15s}
+  .stat:hover{border-color:#9ca3af}
+  .stat.on{border-color:var(--tg);box-shadow:0 0 0 2px rgba(34,158,217,.18);background:rgba(34,158,217,.04)}
+  .stat b{display:block;font-size:20px;font-weight:800}
+  .stat span{font-size:11.5px;color:var(--dim)}
+  .stat.new b{color:var(--green)} .stat.kr b{color:#b91c1c} .stat.us b{color:#1d4ed8} .stat.watch{border-color:#a78bfa} .stat.watch b{color:#7c3aed}
+  .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .tools input[type=search]{flex:1;min-width:180px;border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:13.5px;background:var(--panel)}
+  select{border:1px solid var(--border);border-radius:10px;padding:7px 10px;font-size:12.5px;background:var(--panel);color:var(--text)}
+  .chs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .ch{border:1px solid var(--border);background:var(--panel);border-radius:8px;padding:4px 9px;font-size:11.5px;cursor:pointer;color:var(--dim)}
+  .ch.on{border-color:var(--tg);color:var(--tg);font-weight:700;background:rgba(34,158,217,.06)}
+  .ch small{opacity:.7}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:10px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:7px}
+  .card.new{border-color:rgba(22,163,74,.55)}
+  .card.watch{border-color:#a78bfa;box-shadow:0 0 0 1px rgba(167,139,250,.35)}
+  .card.held{border-color:var(--gold);box-shadow:0 0 0 1px rgba(180,83,9,.35)}
+  .top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .nm{font-size:15px;font-weight:800}
+  .nm a{color:inherit;text-decoration:none}
+  .code{font-size:11px;color:var(--dim)}
+  .tag{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:6px;color:#fff;background:#94a3b8}
+  .tag.new{background:var(--green)} .tag.kr{background:#b91c1c} .tag.us{background:#1d4ed8} .tag.watch{background:#7c3aed} .tag.held{background:var(--gold)}
+  .cnt{margin-left:auto;font-size:11.5px;color:var(--dim);white-space:nowrap}
+  .cnt b{color:var(--tg);font-size:13px}
+  .sum{font-size:13px;line-height:1.5;color:#1f2937}
+  .sum.none{color:var(--dim);font-style:italic}
+  .val{display:grid;grid-template-columns:repeat(4,1fr);gap:4px 8px;font-size:11px;color:var(--dim);border-top:1px dashed var(--border);padding-top:7px}
+  .val div span{display:block;font-size:12.5px;font-weight:700;color:var(--text)}
+  .val .u{color:var(--up)} .val .d{color:var(--down)}
+  .chl{font-size:11px;color:var(--dim);line-height:1.5}
+  .chl b{color:#374151;font-weight:600}
+  .bar{height:4px;background:#eef2f7;border-radius:3px;overflow:hidden;margin-top:2px}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,#60a5fa,#f87171)}
+  .empty{color:var(--dim);padding:30px;text-align:center;background:var(--panel);border:1px dashed var(--border);border-radius:12px}
+  .foot{margin-top:24px;font-size:11.5px;color:var(--dim);line-height:1.6}
+  @media (max-width:640px){ .wrap{padding:12px 10px 50px} .grid{grid-template-columns:1fr} .stat b{font-size:17px} .val{grid-template-columns:repeat(3,1fr)} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📨 Telegram <small>내 텔레그램 채널에서 오늘 언급된 종목 · 매일 23:50 수집</small></h1>
+  <div class="dates" id="dates"></div>
+  <div class="stats" id="stats"></div>
+  <div class="tools">
+    <input type="search" id="q" placeholder="종목명 · 코드 · 채널 · 요약 검색">
+    <select id="sort">
+      <option value="ch">채널 수 → 언급 수</option>
+      <option value="mentions">언급 수</option>
+      <option value="mcap">시총 큰 순</option>
+      <option value="mcap_asc">시총 작은 순</option>
+      <option value="per">PER 낮은 순</option>
+      <option value="pbr">PBR 낮은 순</option>
+      <option value="pos52">52주 위치 낮은 순</option>
+      <option value="chg">당일 등락 순</option>
+    </select>
+  </div>
+  <div class="chs" id="chs"></div>
+  <div id="body"></div>
+  <div class="foot" id="foot"></div>
+</div>
+<script>
+const DATA_BASE = './data/';
+let INDEX = null, CUR = null, FILTER = 'all', Q = '', SORT = 'ch', CH = '';
+let WATCH = new Map();
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = (n, d) => (n == null || isNaN(n)) ? '-' : Number(n).toLocaleString('ko-KR', { maximumFractionDigits: d ?? 0, minimumFractionDigits: 0 });
+const eok = v => v == null ? '-' : v >= 10000 ? (v / 10000).toFixed(v >= 100000 ? 0 : 1) + '조' : fmt(v) + '억';
+
+async function loadWatch() {
+  try {
+    let pat = ''; try { pat = (localStorage.getItem('sv_github_pat') || '').trim(); } catch (_) {}
+    if (!pat) return;
+    const get = async p => { const r = await fetch(`https://api.github.com/repos/whysosary-dot/invest-private/contents/${p}?ref=main`, { headers: { Authorization: 'token ' + pat, Accept: 'application/vnd.github.raw' } }); return r.ok ? r.json() : null; };
+    const [st, di] = await Promise.all([get('sv/stocks.json'), get('sv/diary.json')]);
+    const held = new Set(); const norm = s => String(s || '').replace(/\s+/g, '').toLowerCase();
+    ((di && di.scenario) || []).forEach(s => { if (s && s.held && !s.archived && s.name) held.add(norm(s.name)); });
+    ((st && st.stocks) || []).forEach(s => {
+      const t = String(s.ticker || ''); const code = t.split('.')[0];
+      const key = /^\d{6}$/.test(code) ? 'KR:' + code : (/^[A-Z.\-]+$/.test(t) && !t.includes('.KS') && !t.includes('.KQ')) ? 'US:' + t.replace(/\.[A-Z]+$/, '') : null;
+      if (key) WATCH.set(key, { name: s.name, held: held.has(norm(s.name)) });
+    });
+  } catch (e) { console.warn('watch', e); }
+}
+async function loadIndex() { const r = await fetch(DATA_BASE + 'index.json?cb=' + Date.now()); if (!r.ok) throw new Error('index ' + r.status); INDEX = await r.json(); }
+async function loadDate(d) { const r = await fetch(DATA_BASE + d + '.json?cb=' + Date.now()); if (!r.ok) throw new Error(d + ' ' + r.status); CUR = await r.json(); CH = ''; render(); }
+
+function renderDates() {
+  const ds = (INDEX.dates || []).slice(0, 12);
+  $('#dates').innerHTML = ds.map(e => `<button class="dbtn ${CUR && CUR.date === e.date ? 'on' : ''}" data-d="${e.date}">${e.date.slice(5).replace('-', '/')} <small>${e.stocks}</small></button>`).join('');
+  $('#dates').querySelectorAll('.dbtn').forEach(b => b.onclick = () => loadDate(b.dataset.d));
+}
+function setFilter(f) { FILTER = (FILTER === f && f !== 'all') ? 'all' : f; render(); }
+
+function matches(it) {
+  if (Q) { const hay = [it.name, it.code, it.summary, ...(it.channels || [])].join(' ').toLowerCase(); if (!hay.includes(Q)) return false; }
+  if (CH && !(it.channels || []).includes(CH)) return false;
+  const w = WATCH.get(it.key);
+  if (FILTER === 'new') return !!it.new;
+  if (FILTER === 'kr') return it.mkt === 'KR';
+  if (FILTER === 'us') return it.mkt === 'US';
+  if (FILTER === 'watch') return !!w;
+  if (FILTER === 'multi') return (it.channels || []).length >= 2;
+  return true;
+}
+function sortItems(a) {
+  const v = (it, k) => (it.val && it.val[k] != null) ? it.val[k] : null;
+  const cmpNum = (x, y, asc) => { if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1; return asc ? x - y : y - x; };
+  switch (SORT) {
+    case 'mentions': return a.sort((x, y) => y.mentions - x.mentions);
+    case 'mcap': return a.sort((x, y) => cmpNum(v(x, 'mcap'), v(y, 'mcap'), false));
+    case 'mcap_asc': return a.sort((x, y) => cmpNum(v(x, 'mcap'), v(y, 'mcap'), true));
+    case 'per': return a.sort((x, y) => cmpNum(v(x, 'per') > 0 ? v(x, 'per') : null, v(y, 'per') > 0 ? v(y, 'per') : null, true));
+    case 'pbr': return a.sort((x, y) => cmpNum(v(x, 'pbr') > 0 ? v(x, 'pbr') : null, v(y, 'pbr') > 0 ? v(y, 'pbr') : null, true));
+    case 'pos52': return a.sort((x, y) => cmpNum(v(x, 'pos52'), v(y, 'pos52'), true));
+    case 'chg': return a.sort((x, y) => cmpNum(v(x, 'chg'), v(y, 'chg'), false));
+    default: return a.sort((x, y) => (y.channels.length - x.channels.length) || (y.mentions - x.mentions) || x.name.localeCompare(y.name, 'ko'));
+  }
+}
+
+function card(it) {
+  const v = it.val || {}, w = WATCH.get(it.key);
+  const tags = [`<span class="tag ${it.mkt.toLowerCase()}">${it.mkt === 'KR' ? (it.market || 'KR') : (v.exchange || 'US')}</span>`];
+  if (it.new) tags.push('<span class="tag new">신규</span>');
+  if (w && w.held) tags.push('<span class="tag held">보유</span>'); else if (w) tags.push('<span class="tag watch">관심</span>');
+  const link = it.mkt === 'KR' ? `https://m.stock.naver.com/domestic/stock/${it.code}/total` : `https://m.stock.naver.com/worldstock/stock/${it.code}${v.exchange === 'NASDAQ' ? '.O' : ''}/total`;
+  const px = v.price == null ? '-' : (it.mkt === 'KR' ? fmt(v.price) + '원' : '$' + fmt(v.price, 2));
+  const chgCls = v.chg > 0 ? 'u' : v.chg < 0 ? 'd' : '';
+  const chs = (it.channels || []).map(c => `<b>${esc(c)}</b>`).join(' · ');
+  return `<div class="card ${it.new ? 'new' : ''} ${w ? (w.held ? 'held' : 'watch') : ''}">
+    <div class="top"><span class="nm"><a href="${link}" target="_blank" rel="noopener">${esc(it.name)}</a></span><span class="code">${esc(it.code)}</span>${tags.join('')}
+      <span class="cnt">채널 <b>${it.channels.length}</b> · 언급 <b>${it.mentions}</b>${it.last_seen ? ` · 최근 ${it.last_seen.slice(5)}` : ''}</span></div>
+    <div class="sum ${it.summary ? '' : 'none'}">${it.summary ? esc(it.summary) : '(요약 없음)'}</div>
+    <div class="val">
+      <div>주가<span class="${chgCls}">${px} ${v.chg != null ? `<small>(${v.chg > 0 ? '+' : ''}${fmt(v.chg, 2)}%)</small>` : ''}</span></div>
+      <div>시총<span>${eok(v.mcap)}</span></div>
+      <div>PER${v.cns_per ? ' / 추정' : ''}<span>${v.per ? fmt(v.per, 1) : '-'}${v.cns_per ? ` / ${fmt(v.cns_per, 1)}` : ''}</span></div>
+      <div>PBR<span>${v.pbr ? fmt(v.pbr, 2) : '-'}</span></div>
+      <div>EPS<span>${v.eps != null ? (it.mkt === 'KR' ? fmt(v.eps) : fmt(v.eps, 2)) : '-'}</span></div>
+      <div>배당<span>${v.div != null ? fmt(v.div, 2) + '%' : '-'}</span></div>
+      <div>${it.mkt === 'KR' ? '외인' : '업종'}<span>${it.mkt === 'KR' ? (v.foreign != null ? fmt(v.foreign, 1) + '%' : '-') : esc(v.industry || '-')}</span></div>
+      <div>52주 위치<span>${v.pos52 != null ? v.pos52 + '%' : '-'}</span>${v.pos52 != null ? `<div class="bar"><i style="width:${v.pos52}%"></i></div>` : ''}</div>
+    </div>
+    <div class="chl">${chs}</div>
+  </div>`;
+}
+
+function render() {
+  if (!CUR) return;
+  renderDates();
+  const items = CUR.items || [], k = CUR.counts || {};
+  const watchN = items.filter(i => WATCH.has(i.key)).length;
+  const multi = items.filter(i => (i.channels || []).length >= 2).length;
+  const st = (f, cls, n, label) => `<div class="stat ${cls} ${FILTER === f ? 'on' : ''}" data-f="${f}"><b>${n}</b><span>${label}</span></div>`;
+  $('#stats').innerHTML = st('all', '', items.length, '언급 종목') + st('new', 'new', k.new || 0, '신규 (30일 내 첫 등장)')
+    + st('kr', 'kr', k.kr || 0, '한국') + st('us', 'us', k.us || 0, '미국') + st('multi', '', multi, '2개 채널 이상')
+    + (WATCH.size ? st('watch', 'watch', watchN, '관심·보유') : '')
+    + `<div class="stat" style="cursor:default"><b style="color:var(--dim)">${CUR.total_msgs || 0}</b><span>메시지 · 채널 ${(CUR.channels || []).length}</span></div>`;
+  $('#stats').querySelectorAll('.stat[data-f]').forEach(el => el.onclick = () => setFilter(el.dataset.f));
+  // 채널 칩
+  const chCount = {};
+  items.forEach(i => (i.channels || []).forEach(c => { chCount[c] = (chCount[c] || 0) + 1; }));
+  $('#chs').innerHTML = Object.entries(chCount).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<span class="ch ${CH === c ? 'on' : ''}" data-c="${esc(c)}">${esc(c)} <small>${n}</small></span>`).join('');
+  $('#chs').querySelectorAll('.ch').forEach(el => el.onclick = () => { CH = CH === el.dataset.c ? '' : el.dataset.c; render(); });
+  const list = sortItems(items.filter(matches));
+  $('#body').innerHTML = list.length ? `<div class="grid">${list.map(card).join('')}</div>` : '<div class="empty">조건에 맞는 종목이 없습니다</div>';
+  $('#foot').innerHTML = `수집 ${CUR.date} · 빌드 ${(CUR.built_at || '').replace('T', ' ').slice(0, 16)} · 요약은 Claude 가 채널 메시지를 읽고 한 줄로 정리한 것(원문은 공개 저장소에 올리지 않음) · 밸류에이션은 네이버 증권 기준 · 종목명 클릭 시 네이버 종목 페이지. 관심·보유 표시는 대시보드에 GitHub PAT 가 설정된 기기에서만.`;
+}
+
+$('#q').addEventListener('input', e => { Q = e.target.value.trim().toLowerCase(); render(); });
+$('#sort').addEventListener('change', e => { SORT = e.target.value; render(); });
+(async () => {
+  try {
+    await Promise.all([loadIndex(), loadWatch()]);
+    const d = (INDEX.dates || [])[0]?.date;
+    if (!d) { $('#body').innerHTML = '<div class="empty">아직 수집된 날이 없습니다. 매일 23:50 자동 생성됩니다.</div>'; return; }
+    await loadDate(d);
+  } catch (e) { $('#body').innerHTML = `<div class="empty">데이터를 불러오지 못했습니다 (${esc(e.message)})</div>`; }
+})();
+</script>
+</body>
+</html>
