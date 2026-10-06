@@ -3997,6 +3997,23 @@ function makeScenarioCard(item) {
 
 /* ── 포트 비중 카드: 종목별 금액 입력 → 원형 차트 (시나리오 상단 고정) ── */
 const PF_COLORS = ['#7c3aed','#dc2626','#2563eb','#059669','#d97706','#0891b2','#be185d','#65a30d','#9333ea','#e11d48','#0d9488','#a16207','#4f46e5','#c2410c'];
+const PF_CASH_GRAY = '#94a3b8';
+/* 종목명 → 색 고정 매핑. 매수 목표 카드와 포트 비중 카드가 같은 종목에 같은 색을 쓰도록.
+   처음 보는 이름은 아직 안 쓴 색을 배정해 diary.data.pfColors 에 저장(다른 기기에도 동기화). 현금은 항상 회색 */
+function pfColorFor(name) {
+  const key = String(name || '').toLowerCase().replace(/\s+/g, '');
+  if (!key) return 'var(--border)';
+  if (key === '현금' || key === 'cash') return PF_CASH_GRAY;
+  if (!diary.data.pfColors || typeof diary.data.pfColors !== 'object') diary.data.pfColors = {};
+  const map = diary.data.pfColors;
+  if (map[key]) return map[key];
+  const used = new Set(Object.values(map));
+  let c = PF_COLORS.find(x => !used.has(x));
+  if (!c) c = PF_COLORS[Object.keys(map).length % PF_COLORS.length];
+  map[key] = c;
+  clearTimeout(pfColorFor._t); pfColorFor._t = setTimeout(() => { try { saveDiaryData(diary.data); } catch (e) {} }, 800);
+  return c;
+}
 const pfEsc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 /* 파이 조각 툴팁 — 데스크톱: 마우스 올리면 / 터치(아이패드·아이폰): 탭하면 표시, 다른 곳 탭하면 닫힘 */
 function pfPieTip(chartWrap) {
@@ -4177,7 +4194,7 @@ function makePortfolioCard(activeItemsRaw) {
   const pctEls = [], dotEls = [];
 
   const updatePie = () => {
-    const data = activeItems.map((it, i) => ({ v: Number(it.amt) || 0, color: PF_COLORS[i % PF_COLORS.length], name: it.name }));
+    const data = activeItems.map((it, i) => ({ v: Number(it.amt) || 0, color: pfColorFor(it.name), name: it.name }));
     const sum = data.reduce((a, b) => a + b.v, 0);
     total.textContent = sum ? '합계 ' + fmtWon(sum) + '원' : '';
     activeItems.forEach((it, i) => {
@@ -4479,14 +4496,14 @@ function makeTargetPortfolioCard(heldItems) {
     const useAmt = !(pctSum > 0);
     const data = list.map((it, i) => ({
       v: useAmt ? (Number(it.amt) || 0) : (Number(it.pct) || 0),
-      color: PF_COLORS[i % PF_COLORS.length],
+      color: pfColorFor(it.name),
       name: it.name,
       act: +((Number(it.entryAct) || 0) + (Number(it.coreAct) || 0) + (Number(it.alphaAct) || 0)).toFixed(2)
     }));
     const sum = data.reduce((a, b) => a + b.v, 0);
     const amtSum = list.reduce((a, b) => a + (Number(b.amt) || 0), 0);
     // %-모드에서 100% 미달분은 '현금'으로 간주 (초과만 경고)
-    const CASH_GRAY = '#94a3b8';
+    const CASH_GRAY = PF_CASH_GRAY;
     const cashPct = (!useAmt && pctSum > 0 && pctSum < 100 - 0.05) ? (100 - pctSum) : 0;
     const parts = [];
     if (pctSum > 0) {
