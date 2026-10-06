@@ -170,7 +170,7 @@ function card(it) {
       <div>EPS<span>${v.eps != null ? (it.mkt === 'KR' ? fmt(v.eps) : fmt(v.eps, 2)) : '-'}</span></div>
       <div>배당<span>${v.div != null ? fmt(v.div, 2) + '%' : '-'}</span></div>
       <div>${it.mkt === 'KR' ? '외인' : '업종'}<span>${it.mkt === 'KR' ? (v.foreign != null ? fmt(v.foreign, 1) + '%' : '-') : esc(v.industry || '-')}</span></div>
-      <div>52주 위치<span>${v.pos52 != null ? v.pos52 + '%' : '-'}</span>${v.pos52 != null ? `<div class="bar"><i style="width:${v.pos52}%"></i></div>` : ''}</div>
+      <div>52주 위치<span>${v.pos52 != null ? Math.max(0, Math.min(100, v.pos52)) + '%' + (v.pos52 > 100 ? ' <small style="color:#dc2626;font-weight:700">신고가</small>' : v.pos52 < 0 ? ' <small style="color:#2563eb;font-weight:700">신저가</small>' : '') : '-'}</span>${v.pos52 != null ? `<div class="bar"><i style="width:${Math.max(0, Math.min(100, v.pos52))}%"></i></div>` : ''}</div>
     </div>
   </div>`;
 }
