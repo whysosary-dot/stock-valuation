@@ -4580,7 +4580,9 @@ function makeTargetPortfolioCard(heldItems) {
         alignCashPct();
         requestAnimationFrame(alignCashPct);
         setTimeout(alignCashPct, 60);
-        const curCash = curW['현금'] || 0;
+        // 현금 실제 = 100 − Σ종목 실제(입력값). 종목 실제를 하나도 안 적었으면 포트 비중 카드의 현금 비중으로 대체
+        const actTot = list.reduce((a, x) => a + (Number(x.entryAct) || 0) + (Number(x.coreAct) || 0) + (Number(x.alphaAct) || 0), 0);
+        const curCash = actTot > 0 ? Math.max(0, +(100 - actTot).toFixed(1)) : (curW['현금'] || 0);
         // 종목 행과 같은 형식: 목표 % + 금액 / 실제 % + 금액 (총 금액 × %)
         const bC = budget();
         const cashAmtLine = (p, extra = '') => bC > 0 && p > 0 ? `<div style="font-size:10.5px;font-weight:600;opacity:.75;line-height:1.2;${extra}">${fmtEok(Math.round(bC * p / 100))}</div>` : '';
