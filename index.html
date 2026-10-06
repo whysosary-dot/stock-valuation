@@ -731,6 +731,14 @@
   /* 목표 포트 모바일 전용 보조 요소 — 데스크톱에선 숨김 */
   .pf-tgt-break, .pf-tgt-lab { display: none; }
   .pf-target-card .pf-row > .pf-pct { flex: 0 0 72px; }
+  /* 데스크톱(넓은 화면): 행 묶음은 고정폭이라 오른쪽이 비어 보임 → 파이를 오른쪽 빈 공간에 크게, 스크롤해도 따라오게 */
+  @media (min-width: 1101px) {
+    .pf-body { align-items: flex-start; }
+    .pf-rows { flex: 0 1 auto; }
+    .pf-chart { order: 2; flex: 1 1 260px; display: flex; justify-content: center; position: sticky; top: 12px; align-self: flex-start; padding-top: 8px; }
+    .pf-chart svg { width: min(100%, 320px); height: auto; }
+    .pf-chart .pf-empty { padding-top: 40px !important; }
+  }
   /* 태블릿(아이패드): 행이 카드 폭을 넘쳐 오른쪽 라벨이 잘림 → 파이를 위로 올리고 행은 전체 폭 사용, 입력칸 축소 */
   @media (min-width: 641px) and (max-width: 1100px) {
     .pf-target-card .pf-body { flex-wrap: wrap; }
