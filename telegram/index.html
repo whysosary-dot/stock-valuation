@@ -50,8 +50,6 @@
   .val{display:grid;grid-template-columns:repeat(4,1fr);gap:4px 8px;font-size:11px;color:var(--dim);border-top:1px dashed var(--border);padding-top:7px}
   .val div span{display:block;font-size:12.5px;font-weight:700;color:var(--text)}
   .val .u{color:var(--up)} .val .d{color:var(--down)}
-  .chl{font-size:11px;color:var(--dim);line-height:1.5}
-  .chl b{color:#374151;font-weight:600}
   .bar{height:4px;background:#eef2f7;border-radius:3px;overflow:hidden;margin-top:2px}
   .bar i{display:block;height:100%;background:linear-gradient(90deg,#60a5fa,#f87171)}
   .empty{color:var(--dim);padding:30px;text-align:center;background:var(--panel);border:1px dashed var(--border);border-radius:12px}
@@ -160,7 +158,6 @@ function card(it) {
   const link = it.mkt === 'KR' ? `https://m.stock.naver.com/domestic/stock/${it.code}/total` : `https://m.stock.naver.com/worldstock/stock/${it.code}${v.exchange === 'NASDAQ' ? '.O' : ''}/total`;
   const px = v.price == null ? '-' : (it.mkt === 'KR' ? fmt(v.price) + '원' : '$' + fmt(v.price, 2));
   const chgCls = v.chg > 0 ? 'u' : v.chg < 0 ? 'd' : '';
-  const chs = (it.channels || []).map(c => `<b>${esc(c)}</b>`).join(' · ');
   return `<div class="card ${it.new ? 'new' : ''} ${w ? (w.held ? 'held' : 'watch') : ''}">
     <div class="top"><span class="nm"><a href="${link}" target="_blank" rel="noopener">${esc(it.name)}</a></span><span class="code">${esc(it.code)}</span>${tags.join('')}
       <span class="cnt">채널 <b>${it.channels.length}</b> · 언급 <b>${it.mentions}</b>${it.last_seen ? ` · 최근 ${it.last_seen.slice(5)}` : ''}</span></div>
@@ -175,7 +172,6 @@ function card(it) {
       <div>${it.mkt === 'KR' ? '외인' : '업종'}<span>${it.mkt === 'KR' ? (v.foreign != null ? fmt(v.foreign, 1) + '%' : '-') : esc(v.industry || '-')}</span></div>
       <div>52주 위치<span>${v.pos52 != null ? v.pos52 + '%' : '-'}</span>${v.pos52 != null ? `<div class="bar"><i style="width:${v.pos52}%"></i></div>` : ''}</div>
     </div>
-    <div class="chl">${chs}</div>
   </div>`;
 }
 
