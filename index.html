@@ -735,6 +735,7 @@
   @media (min-width: 1101px) {
     .pf-body { align-items: flex-start; }
     .pf-rows { flex: 0 1 auto; }
+    .pf-body > :not(.pf-chart):not(.pf-rows) { order: 3; }   /* 메모·보관 기록은 파이 뒤(다음 줄)로 */
     .pf-chart { order: 2; flex: 1 1 260px; display: flex; justify-content: center; position: sticky; top: 12px; align-self: flex-start; padding-top: 8px; }
     .pf-chart svg { width: min(100%, 320px); height: auto; }
     .pf-chart .pf-empty { padding-top: 40px !important; }
