@@ -35,6 +35,10 @@ FLAG = {"typ0": "none", "typ1": "up", "typ2": "same", "typ3": "down", "typ4": "n
 
 
 def token():
+    import os
+    t = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_PAT")
+    if t:
+        return t.strip()
     f = BASE / ".github_token"
     if not f.exists():
         raise SystemExit("깃허브 토큰 없음")
