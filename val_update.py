@@ -19,6 +19,10 @@ UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit
 
 
 def tok():
+    import os
+    t = os.environ.get("GH_PAT") or os.environ.get("GITHUB_TOKEN")
+    if t:
+        return t.strip()
     return (BASE / ".github_token").read_text().strip()
 
 
