@@ -4579,8 +4579,12 @@ function makeTargetPortfolioCard(heldItems) {
         alignCashPct();
         requestAnimationFrame(alignCashPct);
         setTimeout(alignCashPct, 60);
-        cashPctEl.textContent = '목표 ' + cashPct.toFixed(1) + '%';
         const curCash = curW['현금'] || 0;
+        // 종목 행과 같은 형식: 목표 % + 금액 / 실제 % + 금액 (총 금액 × %)
+        const bC = budget();
+        const cashAmtLine = (p, extra = '') => bC > 0 && p > 0 ? `<div style="font-size:10.5px;font-weight:600;opacity:.75;line-height:1.2;${extra}">${fmtEok(Math.round(bC * p / 100))}</div>` : '';
+        cashPctEl.innerHTML = `<div style="line-height:1.15">목표 ${cashPct.toFixed(1)}%</div>${cashAmtLine(cashPct)}`
+          + (curCash > 0 ? `<div style="margin-top:4px;line-height:1.15;color:#dc2626">실제 ${curCash.toFixed(1)}%</div>${cashAmtLine(curCash, 'opacity:.85;color:#dc2626')}` : '');
         const dCash = curCash - cashPct;   // 현재 − 목표: 부족하면 −, 초과하면 +
         const cashFill = cashPct > 0 ? ` · 달성 <b>${(curCash / cashPct * 100).toFixed(1)}%</b>` : '';
         cashInfoEl.innerHTML = `현재 <span class="up">${curCash.toFixed(1)}%</span> · 차이 ${dCash >= 0 ? '+' : ''}${dCash.toFixed(1)}%p${cashFill}${segWon(cashPct)}`;
