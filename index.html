@@ -1433,7 +1433,6 @@ td input, td textarea{border-radius:8px}
     <div class="diary-tabs">
       <button class="dtab active" data-tab="daily">📔 일기<span class="dtab-cnt" id="cnt-daily">0</span></button>
       <button class="dtab" data-tab="scenario">🎯 시나리오<span class="dtab-cnt" id="cnt-scenario">0</span></button>
-      <button class="dtab" data-tab="weekly">📅 주간 전략<span class="dtab-cnt" id="cnt-weekly">0</span></button>
       <button class="dtab" data-tab="highlights">🔴 강조<span class="dtab-cnt" id="cnt-highlights">0</span></button>
     </div>
     <span class="spacer"></span>
@@ -1444,7 +1443,6 @@ td input, td textarea{border-radius:8px}
   <div class="diary-feed-wrap">
     <div id="feed-daily"  class="diary-feed active"></div>
     <div id="feed-scenario" class="diary-feed"></div>
-    <div id="feed-weekly" class="diary-feed"></div>
     <div id="feed-highlights" class="diary-feed"></div>
   </div>
 </div><!-- /page-diary -->
@@ -3284,13 +3282,10 @@ function updateTabCounts() {
   const d = diary.data;
   document.getElementById('cnt-daily').textContent =
     Object.keys(d.daily || {}).filter(k => d.daily[k]).length;
-  document.getElementById('cnt-weekly').textContent =
-    Object.keys(d.weekly || {}).filter(k => d.weekly[k]).length;
   // 강조 — _extractHighlights 사용 (마커 + 스타일 fallback 모두 인식)
   let hi = 0;
   const countIn = (html) => { hi += _extractHighlights(html).length; };
   Object.values(d.daily  || {}).forEach(countIn);
-  Object.values(d.weekly || {}).forEach(countIn);
   (d.scenario || []).forEach(it => { if (it) [it.buy, it.hold, it.sell, it.cmt].forEach(countIn); });
   countIn(d.pfMemo || '');
   countIn(d.pfTargetMemo || '');
@@ -3385,73 +3380,6 @@ function renderFeedDaily() {
     feed.appendChild(e); return;
   }
   keys.forEach(k => feed.appendChild(makeDailyCard(k, today)));
-}
-
-/* ── 주간 전략 피드 렌더 ── */
-function renderFeedWeekly() {
-  const feed = document.getElementById('feed-weekly'); feed.innerHTML = '';
-  const thisWeek = getWeekKey(todayDateStr());
-  const nextWeekDate = new Date(); nextWeekDate.setDate(nextWeekDate.getDate() + 7);
-  const nextWeek = getWeekKey(`${nextWeekDate.getFullYear()}-${String(nextWeekDate.getMonth()+1).padStart(2,'0')}-${String(nextWeekDate.getDate()).padStart(2,'0')}`);
-
-  const btnWrap = document.createElement('div');
-  btnWrap.style.cssText = 'display:flex; gap:8px; margin-bottom:0;';
-
-  const makeWeekBtn = (label, weekKey) => {
-    const btn = document.createElement('button'); btn.className = 'diary-new-card-btn';
-    btn.style.flex = '1'; btn.style.marginBottom = '16px'; btn.textContent = label;
-    btn.addEventListener('click', () => {
-      const ex = feed.querySelector(`[data-key="${weekKey}"] .dcard-edit`);
-      if (ex) { ex.focus(); return; }
-      if (!diary.data.weekly) diary.data.weekly = {};
-      if (diary.data.weekly[weekKey] === undefined) diary.data.weekly[weekKey] = '';
-      renderFeedWeekly();
-      setTimeout(() => { const ta = feed.querySelector(`[data-key="${weekKey}"] .dcard-edit`); if (ta) ta.focus(); }, 50);
-    });
-    return btn;
-  };
-  btnWrap.appendChild(makeWeekBtn('+ 이번 주 전략 작성', thisWeek));
-  btnWrap.appendChild(makeWeekBtn('+ 다음 주 전략 작성', nextWeek));
-  feed.appendChild(btnWrap);
-
-  const keys = Object.keys(diary.data.weekly || {}).sort().reverse();
-
-  if (!keys.length) {
-    const e = document.createElement('div'); e.className = 'diary-empty-state';
-    e.textContent = '아직 주간 전략이 없어요. 위 버튼으로 이번 주 전략을 정리해보세요!';
-    feed.appendChild(e); return;
-  }
-
-  keys.forEach(k => {
-    const card = document.createElement('div'); card.className = 'dcard'; card.dataset.key = k;
-    const header = document.createElement('div'); header.className = 'dcard-header';
-    const dateLabel = document.createElement('span'); dateLabel.className = 'dcard-date';
-    dateLabel.textContent = formatWeekHeader(k); header.appendChild(dateLabel);
-    if (k === thisWeek) {
-      const b = document.createElement('span'); b.className = 'dcard-today'; b.textContent = '이번 주'; header.appendChild(b);
-    } else if (k === nextWeek) {
-      const b = document.createElement('span'); b.className = 'dcard-today'; b.textContent = '다음 주'; header.appendChild(b);
-    }
-    const saveBadge = document.createElement('span'); saveBadge.className = 'diary-save-badge';
-    saveBadge.textContent = '저장됨 ✓'; header.appendChild(saveBadge);
-    const delBtn = document.createElement('button'); delBtn.className = 'dcard-del'; delBtn.title = '삭제'; delBtn.textContent = '×';
-    delBtn.addEventListener('click', () => {
-      if (!confirm('이 주간 전략을 삭제할까요?')) return;
-      delete diary.data.weekly[k]; saveDiaryData(diary.data); updateTabCounts(); renderFeedWeekly();
-    });
-    header.appendChild(delBtn); card.appendChild(header);
-
-    const ta = document.createElement('div');
-    ta.className = 'dcard-edit';
-    ta.contentEditable = 'true';
-    ta.setAttribute('data-placeholder', '이번 주 투자 전략을 정리하세요...');
-    ta.innerHTML = normalizeDiaryValue(diary.data.weekly[k] || '');
-    attachEditable(ta);
-    ta.addEventListener('input', () => {
-      diarySave(k, 'weekly', sanitizeDiaryHTML(ta.innerHTML), saveBadge);
-    });
-    card.appendChild(ta); feed.appendChild(card);
-  });
 }
 
 /* ── 매매 섹션 내부 렌더 ── */
@@ -3687,11 +3615,6 @@ function renderFeedHighlights() {
   Object.entries(diary.data.daily || {}).forEach(([k, v]) => {
     _extractHighlights(v).forEach(snippet => {
       items.push({ date: k, sortKey: _diaryDateSortKey(k), sectionKey: 'daily', sectionLabel: '일기', extraTag: '', htmlSnippet: snippet });
-    });
-  });
-  Object.entries(diary.data.weekly || {}).forEach(([k, v]) => {
-    _extractHighlights(v).forEach(snippet => {
-      items.push({ date: k, sortKey: _diaryDateSortKey(k), sectionKey: 'weekly', sectionLabel: '주간', extraTag: '', htmlSnippet: snippet });
     });
   });
   (diary.data.scenario || []).forEach(it => {
@@ -5312,7 +5235,7 @@ function renderAllDiaryFeeds() {
   try { migrateHoldToCmt(); } catch (e) { console.warn('[migrate] hold:', e); }
   try { migrateBuyPlanToBuy(); } catch (e) { console.warn('[migrate] buyPlan:', e); }
   try { migratePfHistQty(); } catch (e) { console.warn('[migrate] pfQty:', e); }
-  renderFeedDaily(); renderFeedScenario(); renderFeedWeekly(); renderFeedHighlights(); updateTabCounts();
+  renderFeedDaily(); renderFeedScenario(); renderFeedHighlights(); updateTabCounts();
 }
 
 /* ── (일회성) 매매일지 → 일기 통합 마이그레이션 ──
