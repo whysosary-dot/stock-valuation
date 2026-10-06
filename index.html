@@ -704,6 +704,8 @@
   .pf-card { border-color: #ddd6fe !important; margin-bottom: 16px; }
   .pf-body { display: flex; gap: 18px; padding: 14px 16px; align-items: center; flex-wrap: wrap; }
   .pf-chart { flex: 0 0 170px; }
+  .pf-chart path, .pf-chart circle { transition: opacity .12s; }
+  .pf-chart svg:has(.on) path:not(.on) { opacity: .45; }
   .pf-rows { flex: 1; min-width: 230px; }
   .pf-row { display: flex; align-items: center; gap: 8px; padding: 6px 0 4px; }
   .pf-dot { flex: 0 0 10px; width: 10px; height: 10px; border-radius: 50%; }
@@ -3995,6 +3997,36 @@ function makeScenarioCard(item) {
 
 /* ── 포트 비중 카드: 종목별 금액 입력 → 원형 차트 (시나리오 상단 고정) ── */
 const PF_COLORS = ['#7c3aed','#dc2626','#2563eb','#059669','#d97706','#0891b2','#be185d','#65a30d','#9333ea','#e11d48','#0d9488','#a16207','#4f46e5','#c2410c'];
+const pfEsc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+/* 파이 조각 툴팁 — 데스크톱: 마우스 올리면 / 터치(아이패드·아이폰): 탭하면 표시, 다른 곳 탭하면 닫힘 */
+function pfPieTip(chartWrap) {
+  const svg = chartWrap.querySelector('svg'); if (!svg) return;
+  let tip = document.getElementById('pf-pie-tip');
+  if (!tip) {
+    tip = document.createElement('div'); tip.id = 'pf-pie-tip';
+    tip.style.cssText = 'position:fixed; z-index:9999; display:none; pointer-events:none; background:#1f2937; color:#fff; font-size:12px; line-height:1.45; padding:6px 9px; border-radius:8px; box-shadow:0 4px 14px rgba(0,0,0,.25); max-width:240px; white-space:nowrap;';
+    document.body.appendChild(tip);
+    document.addEventListener('pointerdown', e => { if (!e.target.closest('.pf-chart')) hide(); }, true);
+  }
+  function hide() { tip.style.display = 'none'; document.querySelectorAll('.pf-chart path.on, .pf-chart circle.on').forEach(x => x.classList.remove('on')); }
+  function show(el, x, y) {
+    const t = el.getAttribute('data-tip'); if (!t) return;
+    tip.innerHTML = t; tip.style.display = 'block';
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    let L = x + 14, T = y + 14;
+    if (L + w > innerWidth - 8) L = x - w - 14;
+    if (T + h > innerHeight - 8) T = y - h - 14;
+    tip.style.left = L + 'px'; tip.style.top = T + 'px';
+    svg.querySelectorAll('.on').forEach(z => z.classList.remove('on')); el.classList.add('on');
+  }
+  svg.querySelectorAll('path, circle').forEach(el => {
+    el.style.cursor = 'pointer';
+    el.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') show(el, e.clientX, e.clientY); });
+    el.addEventListener('pointermove',  e => { if (e.pointerType === 'mouse') show(el, e.clientX, e.clientY); });
+    el.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hide(); });
+    el.addEventListener('click', e => { if (el.classList.contains('on') && e.pointerType !== 'mouse') hide(); else show(el, e.clientX, e.clientY); e.stopPropagation(); });
+  });
+}
 
 function fmtWon(n) { return n ? Number(n).toLocaleString('ko-KR') : ''; }
 
@@ -4145,7 +4177,7 @@ function makePortfolioCard(activeItemsRaw) {
   const pctEls = [], dotEls = [];
 
   const updatePie = () => {
-    const data = activeItems.map((it, i) => ({ v: Number(it.amt) || 0, color: PF_COLORS[i % PF_COLORS.length] }));
+    const data = activeItems.map((it, i) => ({ v: Number(it.amt) || 0, color: PF_COLORS[i % PF_COLORS.length], name: it.name }));
     const sum = data.reduce((a, b) => a + b.v, 0);
     total.textContent = sum ? '합계 ' + fmtWon(sum) + '원' : '';
     activeItems.forEach((it, i) => {
@@ -4160,18 +4192,21 @@ function makePortfolioCard(activeItemsRaw) {
     chartWrap.style.height = '';
     const slices = data.filter(d => d.v > 0);
     if (slices.length === 1) {
-      chartWrap.innerHTML = `<svg viewBox="0 0 160 160" width="170" height="170"><circle cx="80" cy="80" r="70" fill="${slices[0].color}" stroke="#fff" stroke-width="1.5"/></svg>`;
+      chartWrap.innerHTML = `<svg viewBox="0 0 160 160" width="170" height="170"><circle cx="80" cy="80" r="70" fill="${slices[0].color}" stroke="#fff" stroke-width="1.5" data-tip="${pfEsc(slices[0].name || '')} · 100% · ${fmtWon(slices[0].v)}원"/></svg>`;
+      pfPieTip(chartWrap);
       return;
     }
     let ang = -Math.PI / 2, paths = '';
     for (const d of slices) {
+      const tipA = `<b>${pfEsc(d.name || '')}</b> · ${(d.v / sum * 100).toFixed(1)}% · ${fmtWon(d.v)}원`;
       const a0 = ang, a1 = ang + (d.v / sum) * Math.PI * 2; ang = a1;
       const large = (a1 - a0) > Math.PI ? 1 : 0;
       const x0 = (80 + 70 * Math.cos(a0)).toFixed(2), y0 = (80 + 70 * Math.sin(a0)).toFixed(2);
       const x1 = (80 + 70 * Math.cos(a1)).toFixed(2), y1 = (80 + 70 * Math.sin(a1)).toFixed(2);
-      paths += `<path d="M80,80 L${x0},${y0} A70,70 0 ${large} 1 ${x1},${y1} Z" fill="${d.color}" stroke="#fff" stroke-width="1.5"/>`;
+      paths += `<path d="M80,80 L${x0},${y0} A70,70 0 ${large} 1 ${x1},${y1} Z" fill="${d.color}" stroke="#fff" stroke-width="1.5" data-tip="${(typeof tipA !== 'undefined' ? tipA : tipB).replace(/"/g, '&quot;')}"/>`;
     }
     chartWrap.innerHTML = `<svg viewBox="0 0 160 160" width="170" height="170">${paths}</svg>`;
+    pfPieTip(chartWrap);
   };
 
   activeItems.forEach((it, i) => {
@@ -4444,7 +4479,9 @@ function makeTargetPortfolioCard(heldItems) {
     const useAmt = !(pctSum > 0);
     const data = list.map((it, i) => ({
       v: useAmt ? (Number(it.amt) || 0) : (Number(it.pct) || 0),
-      color: PF_COLORS[i % PF_COLORS.length]
+      color: PF_COLORS[i % PF_COLORS.length],
+      name: it.name,
+      act: +((Number(it.entryAct) || 0) + (Number(it.coreAct) || 0) + (Number(it.alphaAct) || 0)).toFixed(2)
     }));
     const sum = data.reduce((a, b) => a + b.v, 0);
     const amtSum = list.reduce((a, b) => a + (Number(b.amt) || 0), 0);
@@ -4572,6 +4609,7 @@ function makeTargetPortfolioCard(heldItems) {
       }
     });
     // 암시적 현금 행 (%-모드에서 100% 미달일 때만 표시)
+    let curCash = 0;   // 파이 툴팁에서도 씀
     if (cashRowEl) {
       if (cashPct) {
         cashRowEl.style.display = '';
@@ -4582,7 +4620,7 @@ function makeTargetPortfolioCard(heldItems) {
         setTimeout(alignCashPct, 60);
         // 현금 실제 = 100 − Σ종목 실제(입력값). 종목 실제를 하나도 안 적었으면 포트 비중 카드의 현금 비중으로 대체
         const actTot = list.reduce((a, x) => a + (Number(x.entryAct) || 0) + (Number(x.coreAct) || 0) + (Number(x.alphaAct) || 0), 0);
-        const curCash = actTot > 0 ? Math.max(0, +(100 - actTot).toFixed(1)) : (curW['현금'] || 0);
+        curCash = actTot > 0 ? Math.max(0, +(100 - actTot).toFixed(1)) : (curW['현금'] || 0);
         // 종목 행과 같은 형식: 목표 % + 금액 / 실제 % + 금액 (총 금액 × %)
         const bC = budget();
         const cashAmtLine = (p, extra = '') => bC > 0 && p > 0 ? `<div style="font-size:10.5px;font-weight:600;opacity:.75;line-height:1.2;${extra}">${fmtEok(Math.round(bC * p / 100))}</div>` : '';
@@ -4604,21 +4642,29 @@ function makeTargetPortfolioCard(heldItems) {
     }
     chartWrap.style.height = '';
     const slices = data.filter(d => d.v > 0);
-    if (cashPct) slices.push({ v: cashPct, color: CASH_GRAY });   // 현금 슬라이스 (회색)
+    if (cashPct) slices.push({ v: cashPct, color: CASH_GRAY, name: '현금 (나머지)', isCash: true });   // 현금 슬라이스 (회색)
     const pieSum = sum + cashPct;
     if (slices.length === 1) {
-      chartWrap.innerHTML = `<svg viewBox="0 0 160 160" width="170" height="170"><circle cx="80" cy="80" r="70" fill="${slices[0].color}" stroke="#fff" stroke-width="1.5"/></svg>`;
+      chartWrap.innerHTML = `<svg viewBox="0 0 160 160" width="170" height="170"><circle cx="80" cy="80" r="70" fill="${slices[0].color}" stroke="#fff" stroke-width="1.5" data-tip="${pfEsc(slices[0].name || '')} · 목표 100%"/></svg>`;
+      pfPieTip(chartWrap);
       return;
     }
     let ang = -Math.PI / 2, paths = '';
+    const bT = budget();
     for (const d of slices) {
+      const tgtPct = useAmt ? d.v / pieSum * 100 : d.v;
+      const won = (p) => bT > 0 ? ` (${fmtEok(Math.round(bT * p / 100))})` : '';
+      let tipB = `<b>${pfEsc(d.name || '')}</b><br>목표 ${tgtPct.toFixed(1)}%${won(tgtPct)}`;
+      if (d.isCash) { const cc = curCash; if (cc > 0) tipB += `<br>실제 ${cc.toFixed(1)}%${won(cc)}`; }
+      else if (d.act > 0) tipB += `<br>실제 ${d.act.toFixed(1)}%${won(d.act)} · 차이 ${(d.act - tgtPct) >= 0 ? '+' : ''}${(d.act - tgtPct).toFixed(1)}%p`;
       const a0 = ang, a1 = ang + (d.v / pieSum) * Math.PI * 2; ang = a1;
       const large = (a1 - a0) > Math.PI ? 1 : 0;
       const x0 = (80 + 70 * Math.cos(a0)).toFixed(2), y0 = (80 + 70 * Math.sin(a0)).toFixed(2);
       const x1 = (80 + 70 * Math.cos(a1)).toFixed(2), y1 = (80 + 70 * Math.sin(a1)).toFixed(2);
-      paths += `<path d="M80,80 L${x0},${y0} A70,70 0 ${large} 1 ${x1},${y1} Z" fill="${d.color}" stroke="#fff" stroke-width="1.5"/>`;
+      paths += `<path d="M80,80 L${x0},${y0} A70,70 0 ${large} 1 ${x1},${y1} Z" fill="${d.color}" stroke="#fff" stroke-width="1.5" data-tip="${(typeof tipA !== 'undefined' ? tipA : tipB).replace(/"/g, '&quot;')}"/>`;
     }
     chartWrap.innerHTML = `<svg viewBox="0 0 160 160" width="170" height="170">${paths}</svg>`;
+    pfPieTip(chartWrap);
   };
 
   const buildRows = () => {
