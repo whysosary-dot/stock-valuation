@@ -17,6 +17,10 @@ FORCE = "--force" in sys.argv  # 마지막 평일 아니어도 강제 기록 (�
 
 
 def token():
+    import os
+    t = os.environ.get("GH_PAT") or os.environ.get("GITHUB_TOKEN")
+    if t:
+        return t.strip()
     f = BASE / ".github_token"
     if not f.exists():
         raise SystemExit("토큰 없음")
