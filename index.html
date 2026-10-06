@@ -4524,7 +4524,12 @@ function makeTargetPortfolioCard(heldItems) {
       parts.push(`목표 합계 ${pctSum.toFixed(1)}%`);
       if (cashPct) parts.push(`현금 ${cashPct.toFixed(1)}%`);
     }
-    if (amtSum > 0) parts.push(fmtWon(amtSum) + '원');
+    // 총 금액이 설정되면 총액 기준으로 표기 (종목 합 = 총 금액 × 목표%, 나머지 = 현금)
+    if (budget() > 0) {
+      parts.push(`총 ${fmtWon(budget())}원`);
+      if (amtSum > 0) parts.push(`종목 ${fmtWon(amtSum)}`);
+      if (budget() - amtSum > 0) parts.push(`현금 ${fmtWon(budget() - amtSum)}`);
+    } else if (amtSum > 0) parts.push(fmtWon(amtSum) + '원');
     total.textContent = parts.join(' · ');
     total.style.color = (pctSum > 100 + 0.05) ? '#d97706' : '';   // 100% 초과만 주황 (미달 = 현금)
 
