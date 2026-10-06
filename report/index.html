@@ -182,7 +182,7 @@ function valGrid(v) {
       <div>EPS<span>${v.eps != null ? fmtN(v.eps) : '-'}</span></div>
       <div>배당<span>${v.div != null ? fmtN(v.div, 2) + '%' : '-'}</span></div>
       <div>외인<span>${v.foreign != null ? fmtN(v.foreign, 1) + '%' : '-'}</span></div>
-      <div>52주 위치<span>${v.pos52 != null ? v.pos52 + '%' : '-'}</span>${v.pos52 != null ? `<div class="bar"><i style="width:${v.pos52}%"></i></div>` : ''}</div>
+      <div>52주 위치<span>${v.pos52 != null ? Math.max(0, Math.min(100, v.pos52)) + '%' + (v.pos52 > 100 ? ' <small style="color:#dc2626;font-weight:700">신고가</small>' : v.pos52 < 0 ? ' <small style="color:#2563eb;font-weight:700">신저가</small>' : '') : '-'}</span>${v.pos52 != null ? `<div class="bar"><i style="width:${Math.max(0, Math.min(100, v.pos52))}%"></i></div>` : ''}</div>
     </div>`;
 }
 
