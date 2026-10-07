@@ -21,7 +21,7 @@ BASE = Path(__file__).parent.resolve()
 REPO, BRANCH = "whysosary-dot/stock-valuation", "main"
 KST = timezone(timedelta(hours=9))
 DRY = "--dry-run" in sys.argv
-WORK = Path("/tmp/tg")
+WORK = Path(os.environ.get("TG_WORK", "/tmp/tg"))  # TG_WORK: tg_collect.py 와 동일하게
 UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124 Safari/537.36"}
 
 date_arg = next((a for a in sys.argv[1:] if re.fullmatch(r"\d{4}-\d{2}-\d{2}", a)), None)
@@ -169,6 +169,12 @@ def main():
             continue
         for k in e.get("keys", []):
             seen[k] = max(seen.get(k, ""), e["date"])
+
+    # 요약이 "오탐"으로 시작하는 종목(이름이 다른 뜻으로 매칭된 것)은 카드에서 뺀다. '독립 언급 아님'은 남긴다.
+    false_pos = [s for s in stocks if (summ.get(s["key"]) or "").strip().startswith("오탐")]
+    if false_pos:
+        print(f"  오탐 제외 {len(false_pos)}건: " + ", ".join(s["name"] for s in false_pos[:12]) + (" …" if len(false_pos) > 12 else ""))
+    stocks = [s for s in stocks if not (summ.get(s["key"]) or "").strip().startswith("오탐")]
 
     items = []
     for s in stocks:
