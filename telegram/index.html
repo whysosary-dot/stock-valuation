@@ -37,9 +37,9 @@
   .card.new{border-color:rgba(22,163,74,.55)}
   .card.watch{border-color:#a78bfa;box-shadow:0 0 0 1px rgba(167,139,250,.35)}
   .card.held{border-color:var(--gold);box-shadow:0 0 0 1px rgba(180,83,9,.35)}
-  .card.fav{background:#fffbeb}
-  .fav{background:none;border:none;cursor:pointer;font-size:20px;line-height:1;padding:0 2px;color:#cbd5e1;transition:transform .15s,color .15s;-webkit-tap-highlight-color:transparent}
-  .fav:hover{transform:scale(1.15)} .fav.on{color:#f59e0b}
+  .card.is-fav{background:#fffbeb;border-color:#fbbf24}
+  .favbtn{background:none;border:none;cursor:pointer;font-size:20px;line-height:1;padding:0 2px;color:#cbd5e1;transition:transform .15s,color .15s;-webkit-tap-highlight-color:transparent}
+  .favbtn:hover{transform:scale(1.15)} .favbtn.on{color:#f59e0b}
   .stat.fav-stat{border-color:#fbbf24} .stat.fav-stat b{color:#d97706}
   .top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
   .nm{font-size:15px;font-weight:800}
@@ -170,8 +170,8 @@ function card(it) {
   const px = v.price == null ? '-' : (it.mkt === 'KR' ? fmt(v.price) + '원' : '$' + fmt(v.price, 2));
   const chgCls = v.chg > 0 ? 'u' : v.chg < 0 ? 'd' : '';
   const fav = isFav(CUR.date, it.key);
-  return `<div class="card ${it.new ? 'new' : ''} ${w ? (w.held ? 'held' : 'watch') : ''} ${fav ? 'fav' : ''}">
-    <div class="top"><button class="fav ${fav ? 'on' : ''}" data-k="${esc(it.key)}" title="${fav ? '즐겨찾기 해제' : '이 날짜에 즐겨찾기'}">★</button><span class="nm"><a href="${link}" target="_blank" rel="noopener">${esc(it.name)}</a></span><span class="code">${esc(it.code)}</span>${tags.join('')}
+  return `<div class="card ${it.new ? 'new' : ''} ${w ? (w.held ? 'held' : 'watch') : ''} ${fav ? 'is-fav' : ''}">
+    <div class="top"><button class="favbtn ${fav ? 'on' : ''}" data-k="${esc(it.key)}" title="${fav ? '즐겨찾기 해제' : '이 날짜에 즐겨찾기'}">★</button><span class="nm"><a href="${link}" target="_blank" rel="noopener">${esc(it.name)}</a></span><span class="code">${esc(it.code)}</span>${tags.join('')}
       <span class="cnt">채널 <b>${it.channels.length}</b> · 언급 <b>${it.mentions}</b>${it.last_seen ? ` · 최근 ${it.last_seen.slice(5)}` : ''}</span></div>
     <div class="sum ${it.summary ? '' : 'none'}">${it.summary ? esc(it.summary) : '(요약 없음)'}</div>
     <div class="val">
@@ -214,7 +214,7 @@ function render() {
   $('#chs').style.display = CHS_OPEN ? '' : 'none';
   const list = sortItems(items.filter(matches));
   $('#body').innerHTML = list.length ? `<div class="grid">${list.map(card).join('')}</div>` : (FILTER === 'fav' ? '<div class="empty">이 날짜에 즐겨찾기한 종목이 없습니다. 카드의 ★ 를 눌러 추가하세요.</div>' : '<div class="empty">조건에 맞는 종목이 없습니다</div>');
-  $('#body').querySelectorAll('.fav').forEach(b => b.onclick = e => { e.preventDefault(); toggleFav(CUR.date, b.dataset.k); });
+  $('#body').querySelectorAll('.favbtn').forEach(b => b.onclick = e => { e.preventDefault(); toggleFav(CUR.date, b.dataset.k); });
   $('#foot').innerHTML = `수집 ${CUR.date} · 빌드 ${(CUR.built_at || '').replace('T', ' ').slice(0, 16)} · 요약은 Claude 가 채널 메시지를 읽고 한 줄로 정리한 것(원문은 공개 저장소에 올리지 않음) · 밸류에이션은 네이버 증권 기준 · 종목명 클릭 시 네이버 종목 페이지. 관심·보유 표시는 대시보드에 GitHub PAT 가 설정된 기기에서만. ★ 즐겨찾기는 날짜별로 이 브라우저에 저장(기기 간 동기화 안 됨).`;
 }
 
