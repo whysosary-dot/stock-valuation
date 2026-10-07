@@ -117,7 +117,10 @@ async function loadWatch() {
   } catch (e) { console.warn('watch', e); }
 }
 async function loadIndex() { const r = await fetch(DATA_BASE + 'index.json?cb=' + Date.now()); if (!r.ok) throw new Error('index ' + r.status); INDEX = await r.json(); }
-async function loadDate(d) { const r = await fetch(DATA_BASE + d + '.json?cb=' + Date.now()); if (!r.ok) throw new Error(d + ' ' + r.status); CUR = await r.json(); CH = ''; render(); }
+async function loadDate(d) { const r = await fetch(DATA_BASE + d + '.json?cb=' + Date.now()); if (!r.ok) throw new Error(d + ' ' + r.status); CUR = await r.json(); CH = '';
+  // 오탐(종목명이 다른 뜻으로 매칭)은 카드에서 제외 — 과거 파일 호환용. 새 파일은 tg_build.py 가 미리 뺀다
+  if (CUR.items) { CUR.items = CUR.items.filter(i => !String(i.summary || '').trim().startsWith('오탐')); const c = CUR.counts || {}; c.stocks = CUR.items.length; c.kr = CUR.items.filter(i => i.mkt === 'KR').length; c.us = CUR.items.filter(i => i.mkt === 'US').length; c.new = CUR.items.filter(i => i.new).length; CUR.counts = c; }
+  render(); }
 
 function renderDates() {
   const ds = (INDEX.dates || []);
