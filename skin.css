@@ -118,3 +118,13 @@ html[data-skin="etf"] .btn.insights-btn:hover{background:var(--accent-soft) !imp
 /* 버튼 텍스트 가운데 정렬 (ETF 전체 분류·전체 섹터·그룹·즐겨찾기·인사이트 등) */
 html[data-skin="etf"] .btn,html[data-skin="etf"] button,html[data-skin="etf"] select{display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.2}
 html[data-skin="etf"] select{display:inline-block;text-align:center;text-align-last:center}
+/* ETF: 제목·설명을 다른 탭(sv-head)과 같은 규격으로 — 16px/800 + 회색 12px 설명. 점(dot)은 숨김 */
+html[data-skin="etf"] .topbar h1{font-size:16px !important;font-weight:800 !important;gap:0 !important;flex-wrap:wrap;align-items:baseline !important;letter-spacing:-.01em}
+html[data-skin="etf"] .topbar h1 .dot{display:none !important}
+html[data-skin="etf"] .topbar h1::after{content:'국내 상장 ETF · 주간 등락률·3년 추이·메모 · 매주 토 06:00 갱신';font-size:12px;font-weight:500;color:var(--text-dim);margin-left:10px;white-space:normal}
+html[data-skin="etf"] .topbar .meta{font-size:12px !important;color:var(--text-dim) !important}
+/* ETF: 분류·섹터 셀렉트를 버튼과 같은 크기로 (기존 14px·9px 패딩이 커 보임) */
+html[data-skin="etf"] .topbar select.cat-filter,html[data-skin="etf"] .topbar select.sector-filter{font-size:12.5px !important;font-weight:600 !important;padding:8px 26px 8px 13px !important;border-radius:12px !important;border-color:var(--border) !important;background-color:var(--panel) !important;box-shadow:0 1px 2px rgba(20,27,45,.04);background-position:calc(100% - 13px) 50%,calc(100% - 9px) 50% !important;text-align:left !important;text-align-last:left !important}
+html[data-skin="etf"] .topbar select:hover{border-color:var(--accent) !important;color:var(--accent) !important}
+html[data-skin="etf"] .gh-settings-btn{font-size:12.5px !important;padding:8px 10px !important;border-radius:12px !important}
+
