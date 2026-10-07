@@ -76,6 +76,8 @@ function injectSkin() {
   if (q.get('raw')) return true;
   try {
     const d = $('#fr').contentDocument; if (!d || !d.head) return false;
+    // src 를 바꾼 직후에는 이전 문서나 about:blank 가 잡힌다 — 새 리포트 문서가 생길 때까지 기다린다 (여기에 주입하면 실제 문서는 표지가 보인 뒤에야 가려짐)
+    if (!d.URL || d.URL === 'about:blank' || !d.URL.startsWith(S.base)) return false;
     if (d.documentElement.getAttribute('data-skin') === key) return true;
     d.documentElement.setAttribute('data-skin', key);
     // 링크 다운로드를 기다리지 않도록 핵심 규칙은 인라인으로 먼저
