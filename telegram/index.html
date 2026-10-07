@@ -37,6 +37,10 @@
   .card.new{border-color:rgba(22,163,74,.55)}
   .card.watch{border-color:#a78bfa;box-shadow:0 0 0 1px rgba(167,139,250,.35)}
   .card.held{border-color:var(--gold);box-shadow:0 0 0 1px rgba(180,83,9,.35)}
+  .card.fav{background:#fffbeb}
+  .fav{background:none;border:none;cursor:pointer;font-size:20px;line-height:1;padding:0 2px;color:#cbd5e1;transition:transform .15s,color .15s;-webkit-tap-highlight-color:transparent}
+  .fav:hover{transform:scale(1.15)} .fav.on{color:#f59e0b}
+  .stat.fav-stat{border-color:#fbbf24} .stat.fav-stat b{color:#d97706}
   .top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
   .nm{font-size:15px;font-weight:800}
   .nm a{color:inherit;text-decoration:none}
@@ -85,6 +89,12 @@
 <script>
 const DATA_BASE = './data/';
 let INDEX = null, CUR = null, FILTER = 'all', Q = '', SORT = 'ch', CH = '', CHS_OPEN = false;
+/* 즐겨찾기 — 날짜별로 이 브라우저(localStorage)에 저장 */
+const FAV_KEY = 'tg_favs_v1';
+function favAll() { try { return JSON.parse(localStorage.getItem(FAV_KEY) || '{}'); } catch (e) { return {}; } }
+function favSet(d) { return (favAll()[d]) || {}; }
+function isFav(d, k) { return !!favSet(d)[k]; }
+function toggleFav(d, k) { const a = favAll(); a[d] = a[d] || {}; if (a[d][k]) delete a[d][k]; else a[d][k] = 1; if (!Object.keys(a[d]).length) delete a[d]; try { localStorage.setItem(FAV_KEY, JSON.stringify(a)); } catch (e) {} render(); }
 let WATCH = new Map();
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -133,6 +143,7 @@ function matches(it) {
   if (FILTER === 'us') return it.mkt === 'US';
   if (FILTER === 'watch') return !!w;
   if (FILTER === 'multi') return (it.channels || []).length >= 2;
+  if (FILTER === 'fav') return isFav(CUR.date, it.key);
   return true;
 }
 function sortItems(a) {
@@ -158,8 +169,9 @@ function card(it) {
   const link = it.mkt === 'KR' ? `https://m.stock.naver.com/domestic/stock/${it.code}/total` : `https://m.stock.naver.com/worldstock/stock/${it.code}${v.exchange === 'NASDAQ' ? '.O' : ''}/total`;
   const px = v.price == null ? '-' : (it.mkt === 'KR' ? fmt(v.price) + '원' : '$' + fmt(v.price, 2));
   const chgCls = v.chg > 0 ? 'u' : v.chg < 0 ? 'd' : '';
-  return `<div class="card ${it.new ? 'new' : ''} ${w ? (w.held ? 'held' : 'watch') : ''}">
-    <div class="top"><span class="nm"><a href="${link}" target="_blank" rel="noopener">${esc(it.name)}</a></span><span class="code">${esc(it.code)}</span>${tags.join('')}
+  const fav = isFav(CUR.date, it.key);
+  return `<div class="card ${it.new ? 'new' : ''} ${w ? (w.held ? 'held' : 'watch') : ''} ${fav ? 'fav' : ''}">
+    <div class="top"><button class="fav ${fav ? 'on' : ''}" data-k="${esc(it.key)}" title="${fav ? '즐겨찾기 해제' : '이 날짜에 즐겨찾기'}">★</button><span class="nm"><a href="${link}" target="_blank" rel="noopener">${esc(it.name)}</a></span><span class="code">${esc(it.code)}</span>${tags.join('')}
       <span class="cnt">채널 <b>${it.channels.length}</b> · 언급 <b>${it.mentions}</b>${it.last_seen ? ` · 최근 ${it.last_seen.slice(5)}` : ''}</span></div>
     <div class="sum ${it.summary ? '' : 'none'}">${it.summary ? esc(it.summary) : '(요약 없음)'}</div>
     <div class="val">
@@ -181,10 +193,12 @@ function render() {
   const items = CUR.items || [], k = CUR.counts || {};
   const watchN = items.filter(i => WATCH.has(i.key)).length;
   const multi = items.filter(i => (i.channels || []).length >= 2).length;
+  const favN = items.filter(i => isFav(CUR.date, i.key)).length;
   const st = (f, cls, n, label) => `<div class="stat ${cls} ${FILTER === f ? 'on' : ''}" data-f="${f}"><b>${n}</b><span>${label}</span></div>`;
   $('#stats').innerHTML = st('all', '', items.length, '언급 종목') + st('new', 'new', k.new || 0, '신규 (30일 내 첫 등장)')
     + st('kr', 'kr', k.kr || 0, '한국') + st('us', 'us', k.us || 0, '미국') + st('multi', '', multi, '2개 채널 이상')
     + (WATCH.size ? st('watch', 'watch', watchN, '관심·보유') : '')
+    + st('fav', 'fav-stat', favN, '즐겨찾기')
     + `<div class="stat" style="cursor:default"><b style="color:var(--dim)">${CUR.total_msgs || 0}</b><span>메시지 · 채널 ${(CUR.channels || []).length}</span></div>`;
   $('#stats').querySelectorAll('.stat[data-f]').forEach(el => el.onclick = () => setFilter(el.dataset.f));
   // 채널 칩
@@ -199,8 +213,9 @@ function render() {
   tg.innerHTML = `📡 채널 <small id="chsCount">${Object.keys(chCount).length}개${CH ? ' · ' + esc(CH) : ''}</small> ${CHS_OPEN ? '▾' : '▸'}`;
   $('#chs').style.display = CHS_OPEN ? '' : 'none';
   const list = sortItems(items.filter(matches));
-  $('#body').innerHTML = list.length ? `<div class="grid">${list.map(card).join('')}</div>` : '<div class="empty">조건에 맞는 종목이 없습니다</div>';
-  $('#foot').innerHTML = `수집 ${CUR.date} · 빌드 ${(CUR.built_at || '').replace('T', ' ').slice(0, 16)} · 요약은 Claude 가 채널 메시지를 읽고 한 줄로 정리한 것(원문은 공개 저장소에 올리지 않음) · 밸류에이션은 네이버 증권 기준 · 종목명 클릭 시 네이버 종목 페이지. 관심·보유 표시는 대시보드에 GitHub PAT 가 설정된 기기에서만.`;
+  $('#body').innerHTML = list.length ? `<div class="grid">${list.map(card).join('')}</div>` : (FILTER === 'fav' ? '<div class="empty">이 날짜에 즐겨찾기한 종목이 없습니다. 카드의 ★ 를 눌러 추가하세요.</div>' : '<div class="empty">조건에 맞는 종목이 없습니다</div>');
+  $('#body').querySelectorAll('.fav').forEach(b => b.onclick = e => { e.preventDefault(); toggleFav(CUR.date, b.dataset.k); });
+  $('#foot').innerHTML = `수집 ${CUR.date} · 빌드 ${(CUR.built_at || '').replace('T', ' ').slice(0, 16)} · 요약은 Claude 가 채널 메시지를 읽고 한 줄로 정리한 것(원문은 공개 저장소에 올리지 않음) · 밸류에이션은 네이버 증권 기준 · 종목명 클릭 시 네이버 종목 페이지. 관심·보유 표시는 대시보드에 GitHub PAT 가 설정된 기기에서만. ★ 즐겨찾기는 날짜별로 이 브라우저에 저장(기기 간 동기화 안 됨).`;
 }
 
 $('#q').addEventListener('input', e => { Q = e.target.value.trim().toLowerCase(); render(); });
