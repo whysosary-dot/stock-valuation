@@ -32,6 +32,10 @@
   .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
   .card.watch{border-color:#a78bfa;box-shadow:0 0 0 1px rgba(167,139,250,.35)}
   .card.held{border-color:var(--gold);box-shadow:0 0 0 1px rgba(180,83,9,.35)}
+  .card.is-fav{background:#fffbeb;border-color:#fbbf24}
+  .favbtn{background:none;border:none;cursor:pointer;font-size:20px;line-height:1;padding:0 2px;color:#cbd5e1;transition:transform .15s,color .15s;-webkit-tap-highlight-color:transparent}
+  .favbtn:hover{transform:scale(1.15)} .favbtn.on{color:#f59e0b}
+  .stat.fav-stat{border-color:#fbbf24} .stat.fav-stat b{color:#d97706}
   .top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
   .nm{font-size:15px;font-weight:800}
   .nm a{color:inherit;text-decoration:none}
@@ -72,6 +76,12 @@
 <script>
 const DATA_BASE = './data/';
 let INDEX = null, CUR = null, FILTER = 'all', Q = '';
+/* 즐겨찾기 — 발간일별로 이 브라우저(localStorage)에 저장. 키 = 종목코드|증권사 */
+const FAV_KEY = 'rp_favs_v1';
+const favKeyOf = c => `${c.code}|${c.broker || ''}`;
+function favAll() { try { return JSON.parse(localStorage.getItem(FAV_KEY) || '{}'); } catch (e) { return {}; } }
+function isFav(d, k) { return !!((favAll()[d] || {})[k]); }
+function toggleFav(d, k) { const a = favAll(); a[d] = a[d] || {}; if (a[d][k]) delete a[d][k]; else a[d][k] = 1; if (!Object.keys(a[d]).length) delete a[d]; try { localStorage.setItem(FAV_KEY, JSON.stringify(a)); } catch (e) {} render(); }
 let WATCH = new Map();   // code -> {name, held}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -137,6 +147,7 @@ function matches(c) {
   }
   const w = WATCH.get(c.code);
   if (FILTER === 'watch') return !!w;
+  if (FILTER === 'fav') return isFav(CUR.date, favKeyOf(c));
   if (FILTER === 'industry') return false;
   if (FILTER === 'opchg') return c.opinion_flag === 'up' || c.opinion_flag === 'down';
   if (FILTER === 'up') return c.tp_flag === 'up' || c.opinion_flag === 'up';
@@ -157,8 +168,9 @@ function card(c) {
   if (c.opinion_flag === 'down') tags.push('<span class="tag down">의견 ↓</span>');
   if (c.tp_flag === 'new' || c.opinion_flag === 'new') tags.push('<span class="tag new">신규</span>');
   const upside = (c.tp && c.close) ? ((c.tp / c.close - 1) * 100) : null;
-  return `<div class="card ${w ? (w.held ? 'held' : 'watch') : ''}">
-    <div class="top"><span class="nm"><a href="https://m.stock.naver.com/domestic/stock/${c.code}/total" target="_blank" rel="noopener">${esc(c.name)}</a></span><span class="code">${c.code}</span>${tags.join('')}${(c._n || 1) >= 2 ? `<span class="multi">+${c._n - 1}곳 더</span>` : ''}</div>
+  const fav = isFav(CUR.date, favKeyOf(c));
+  return `<div class="card ${w ? (w.held ? 'held' : 'watch') : ''} ${fav ? 'is-fav' : ''}">
+    <div class="top"><button class="favbtn ${fav ? 'on' : ''}" data-k="${esc(favKeyOf(c))}" title="${fav ? '즐겨찾기 해제' : '이 발간일에 즐겨찾기'}">★</button><span class="nm"><a href="https://m.stock.naver.com/domestic/stock/${c.code}/total" target="_blank" rel="noopener">${esc(c.name)}</a></span><span class="code">${c.code}</span>${tags.join('')}${(c._n || 1) >= 2 ? `<span class="multi">+${c._n - 1}곳 더</span>` : ''}</div>
     <div class="meta"><span>${esc(c.broker)}${c.analysts ? ' · ' + esc(c.analysts) : ''}</span>
       <span>의견 <b>${esc(c.opinion || '-')}</b></span>
       <span>목표 <b class="tp ${c.tp_flag}">${won(c.tp)}</b>${upside != null ? ` <span style="color:${upside >= 0 ? 'var(--up)' : 'var(--down)'}">(${upside >= 0 ? '+' : ''}${upside.toFixed(0)}%)</span>` : ''}</span>
@@ -215,7 +227,8 @@ function render() {
     st('opchg', 'up', `${k.op_up || 0}<small style="font-size:12px;color:var(--dim);font-weight:600"> / ${k.op_down || 0}</small>`, '의견 상향 / 하향') +
     st('new', 'new', k.new || 0, '신규 커버') +
     st('multi', '', Object.values(byCode).filter(n => n >= 2).length, '복수 증권사 종목') +
-    (WATCH.size ? st('watch', 'watch', watchN, '관심·보유 종목') : '');
+    (WATCH.size ? st('watch', 'watch', watchN, '관심·보유 종목') : '') +
+    st('fav', 'fav-stat', comp.filter(c => isFav(CUR.date, favKeyOf(c))).length, '즐겨찾기');
   $('#stats').querySelectorAll('.stat').forEach(el => el.onclick = () => setFilter(el.dataset.f));
 
   // 정렬: 보유 → 관심 → 변경(상향/하향/신규) → 복수 증권사 → 이름
@@ -255,6 +268,7 @@ function render() {
     h += il2.length ? `<div class="grid">${il2.map(indCard).join('')}</div>` : `<div class="empty">산업 리포트 없음</div>`;
   }
   $('#body').innerHTML = h;
+  $('#body').querySelectorAll('.favbtn').forEach(b => b.onclick = e => { e.preventDefault(); toggleFav(CUR.date, b.dataset.k); });
   $('#foot').innerHTML = `발간일 ${CUR.date} · 수집 ${(CUR.collected_at || '').replace('T', ' ').slice(0, 16)} · 원본 <a href="${CUR.source || '#'}" target="_blank" rel="noopener">WiseReport 리포트서머리</a><br>
     평일 07:20 자동 수집(최근 5개 발간일 재확인). 종목명을 누르면 네이버 종목 페이지. 관심·보유 표시는 대시보드에 GitHub PAT 가 설정된 기기에서만 나타납니다.`;
 }
