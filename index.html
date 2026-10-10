@@ -704,8 +704,8 @@
   .pf-card { border-color: #ddd6fe !important; margin-bottom: 16px; }
   .pf-body { display: flex; gap: 18px; padding: 14px 16px; align-items: center; flex-wrap: wrap; }
   .pf-chart { flex: 0 0 170px; }
-  .pf-chart path, .pf-chart circle { transition: opacity .12s; }
-  .pf-chart svg:has(.on) path:not(.on) { opacity: .45; }
+  .pf-chart path, .pf-chart circle, .pf-chart rect { transition: opacity .12s; }
+  .pf-chart svg:has(.on) :is(path, rect):not(.on) { opacity: .45; }
   .pf-chart svg:has(.on) g:not(:has(.on)) text { opacity: .45; }
   .pf-chart text { transition: opacity .12s; user-select: none; }
   .pf-rows { flex: 1; min-width: 230px; }
@@ -4027,7 +4027,7 @@ function pfPieTip(chartWrap) {
     document.body.appendChild(tip);
     document.addEventListener('pointerdown', e => { if (!e.target.closest('.pf-chart')) hide(); }, true);
   }
-  function hide() { tip.style.display = 'none'; document.querySelectorAll('.pf-chart path.on, .pf-chart circle.on').forEach(x => x.classList.remove('on')); }
+  function hide() { tip.style.display = 'none'; document.querySelectorAll('.pf-chart path.on, .pf-chart circle.on, .pf-chart rect.on').forEach(x => x.classList.remove('on')); }
   function show(el, x, y) {
     const t = el.getAttribute('data-tip'); if (!t) return;
     tip.innerHTML = t; tip.style.display = 'block';
@@ -4038,7 +4038,7 @@ function pfPieTip(chartWrap) {
     tip.style.left = L + 'px'; tip.style.top = T + 'px';
     svg.querySelectorAll('.on').forEach(z => z.classList.remove('on')); el.classList.add('on');
   }
-  svg.querySelectorAll('path, circle').forEach(el => {
+  svg.querySelectorAll('path, circle, rect').forEach(el => {
     el.style.cursor = 'pointer';
     el.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') show(el, e.clientX, e.clientY); });
     el.addEventListener('pointermove',  e => { if (e.pointerType === 'mouse') show(el, e.clientX, e.clientY); });
@@ -4069,7 +4069,7 @@ function pfTreemap(slices, W = 160, H = 160) {
   return `<svg viewBox="0 0 ${W} ${H}" width="170" height="170" style="border-radius:8px;overflow:hidden">` + out.map(r => {
     const rx = r.x + g / 2, ry = r.y + g / 2, rw = Math.max(0, r.w - g), rh = Math.max(0, r.h - g);
     const pct = (r.v / tot * 100).toFixed(1) + '%';
-    const name = r.name || '';
+    const name = r.label || r.name || '';
     const fs = Math.max(6, Math.min(11, Math.min(rw / Math.max(2, name.length) * 1.6, rh / 3.2)));
     const fsP = Math.max(5.5, Math.min(9.5, fs * .85));
     let label = '';
@@ -4077,7 +4077,7 @@ function pfTreemap(slices, W = 160, H = 160) {
       if (rh > fs + fsP + 4 && rw > name.length * fs * .9) label = `<text x="${(rx + rw / 2).toFixed(1)}" y="${(ry + rh / 2 - 1).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}" font-weight="700" fill="#fff" pointer-events="none">${pfEsc(name)}</text><text x="${(rx + rw / 2).toFixed(1)}" y="${(ry + rh / 2 + fsP + 1).toFixed(1)}" text-anchor="middle" font-size="${fsP.toFixed(1)}" font-weight="600" fill="#fff" fill-opacity=".9" pointer-events="none">${pct}</text>`;
       else label = `<text x="${(rx + rw / 2).toFixed(1)}" y="${(ry + rh / 2 + fsP * .35).toFixed(1)}" text-anchor="middle" font-size="${fsP.toFixed(1)}" font-weight="700" fill="#fff" pointer-events="none">${pct}</text>`;
     }
-    return `<g><path d="M${rx.toFixed(2)},${ry.toFixed(2)} h${rw.toFixed(2)} v${rh.toFixed(2)} h${(-rw).toFixed(2)} Z" fill="${r.color}" stroke="#fff" stroke-width=".6" rx="2" data-tip="${(r.tip || '').replace(/"/g, '&quot;')}"/>${label}</g>`;
+    return `<g><rect x="${rx.toFixed(2)}" y="${ry.toFixed(2)}" width="${rw.toFixed(2)}" height="${rh.toFixed(2)}" rx="2.5" fill="${r.color}" stroke="#fff" stroke-width=".6" data-tip="${(r.tip || '').replace(/"/g, '&quot;')}"/>${label}</g>`;
   }).join('') + '</svg>';
 }
 
@@ -4681,7 +4681,7 @@ function makeTargetPortfolioCard(heldItems) {
     }
     chartWrap.style.height = '';
     const slices = data.filter(d => d.v > 0);
-    if (cashPct) slices.push({ v: cashPct, color: CASH_GRAY, name: '현금 (나머지)', isCash: true });   // 현금 슬라이스 (회색)
+    if (cashPct) slices.push({ v: cashPct, color: CASH_GRAY, name: '현금 (나머지)', label: '현금', isCash: true });   // 현금 슬라이스 (회색)
     const pieSum = sum + cashPct;
     const bT = budget();
     for (const d of slices) {
