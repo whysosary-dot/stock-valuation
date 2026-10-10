@@ -706,6 +706,8 @@
   .pf-chart { flex: 0 0 170px; }
   .pf-chart path, .pf-chart circle { transition: opacity .12s; }
   .pf-chart svg:has(.on) path:not(.on) { opacity: .45; }
+  .pf-chart svg:has(.on) g:not(:has(.on)) text { opacity: .45; }
+  .pf-chart text { transition: opacity .12s; user-select: none; }
   .pf-rows { flex: 1; min-width: 230px; }
   .pf-row { display: flex; align-items: center; gap: 8px; padding: 6px 0 4px; }
   .pf-dot { flex: 0 0 10px; width: 10px; height: 10px; border-radius: 50%; }
@@ -4045,6 +4047,40 @@ function pfPieTip(chartWrap) {
   });
 }
 
+/* 트리맵(Finviz 스타일 네모 차트): slices=[{v,color,name,tip}] → <svg> 문자열. 면적 ∝ v (squarified) */
+function pfTreemap(slices, W = 160, H = 160) {
+  const tot = slices.reduce((a, b) => a + b.v, 0); if (!tot) return '';
+  const items = slices.slice().sort((a, b) => b.v - a.v).map(d => ({ ...d, a: d.v / tot * W * H }));
+  const out = [];
+  function worst(row, side) { const s = row.reduce((a, b) => a + b.a, 0); let mx = 0; for (const r of row) { const w = Math.max((side * side * r.a) / (s * s), (s * s) / (side * side * r.a)); if (w > mx) mx = w; } return mx; }
+  function layoutRow(row, x, y, w, h) {
+    const s = row.reduce((a, b) => a + b.a, 0);
+    if (w >= h) { const rw = s / h; let yy = y; for (const r of row) { const rh = r.a / rw; out.push({ ...r, x, y: yy, w: rw, h: rh }); yy += rh; } return [x + rw, y, w - rw, h]; }
+    else { const rh = s / w; let xx = x; for (const r of row) { const rw = r.a / rh; out.push({ ...r, x: xx, y, w: rw, h: rh }); xx += rw; } return [x, y + rh, w, h - rh]; }
+  }
+  let x = 0, y = 0, w = W, h = H, row = [];
+  for (let i = 0; i < items.length; i++) {
+    const side = Math.min(w, h);
+    if (row.length && worst(row.concat(items[i]), side) > worst(row, side)) { [x, y, w, h] = layoutRow(row, x, y, w, h); row = []; }
+    row.push(items[i]);
+  }
+  if (row.length) layoutRow(row, x, y, w, h);
+  const g = 1.2;   // 타일 간격
+  return `<svg viewBox="0 0 ${W} ${H}" width="170" height="170" style="border-radius:8px;overflow:hidden">` + out.map(r => {
+    const rx = r.x + g / 2, ry = r.y + g / 2, rw = Math.max(0, r.w - g), rh = Math.max(0, r.h - g);
+    const pct = (r.v / tot * 100).toFixed(1) + '%';
+    const name = r.name || '';
+    const fs = Math.max(6, Math.min(11, Math.min(rw / Math.max(2, name.length) * 1.6, rh / 3.2)));
+    const fsP = Math.max(5.5, Math.min(9.5, fs * .85));
+    let label = '';
+    if (rw > 14 && rh > 10) {
+      if (rh > fs + fsP + 4 && rw > name.length * fs * .9) label = `<text x="${(rx + rw / 2).toFixed(1)}" y="${(ry + rh / 2 - 1).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}" font-weight="700" fill="#fff" pointer-events="none">${pfEsc(name)}</text><text x="${(rx + rw / 2).toFixed(1)}" y="${(ry + rh / 2 + fsP + 1).toFixed(1)}" text-anchor="middle" font-size="${fsP.toFixed(1)}" font-weight="600" fill="#fff" fill-opacity=".9" pointer-events="none">${pct}</text>`;
+      else label = `<text x="${(rx + rw / 2).toFixed(1)}" y="${(ry + rh / 2 + fsP * .35).toFixed(1)}" text-anchor="middle" font-size="${fsP.toFixed(1)}" font-weight="700" fill="#fff" pointer-events="none">${pct}</text>`;
+    }
+    return `<g><path d="M${rx.toFixed(2)},${ry.toFixed(2)} h${rw.toFixed(2)} v${rh.toFixed(2)} h${(-rw).toFixed(2)} Z" fill="${r.color}" stroke="#fff" stroke-width=".6" rx="2" data-tip="${(r.tip || '').replace(/"/g, '&quot;')}"/>${label}</g>`;
+  }).join('') + '</svg>';
+}
+
 function fmtWon(n) { return n ? Number(n).toLocaleString('ko-KR') : ''; }
 
 /* 시나리오 종목명 → Stock Valuation 종목 매칭 (주가 자동 연동용) */
@@ -4207,22 +4243,8 @@ function makePortfolioCard(activeItemsRaw) {
       return;
     }
     chartWrap.style.height = '';
-    const slices = data.filter(d => d.v > 0);
-    if (slices.length === 1) {
-      chartWrap.innerHTML = `<svg viewBox="0 0 160 160" width="170" height="170"><circle cx="80" cy="80" r="70" fill="${slices[0].color}" stroke="#fff" stroke-width="1.5" data-tip="${pfEsc(slices[0].name || '')} · 100% · ${fmtWon(slices[0].v)}원"/></svg>`;
-      pfPieTip(chartWrap);
-      return;
-    }
-    let ang = -Math.PI / 2, paths = '';
-    for (const d of slices) {
-      const tipA = `<b>${pfEsc(d.name || '')}</b> · ${(d.v / sum * 100).toFixed(1)}% · ${fmtWon(d.v)}원`;
-      const a0 = ang, a1 = ang + (d.v / sum) * Math.PI * 2; ang = a1;
-      const large = (a1 - a0) > Math.PI ? 1 : 0;
-      const x0 = (80 + 70 * Math.cos(a0)).toFixed(2), y0 = (80 + 70 * Math.sin(a0)).toFixed(2);
-      const x1 = (80 + 70 * Math.cos(a1)).toFixed(2), y1 = (80 + 70 * Math.sin(a1)).toFixed(2);
-      paths += `<path d="M80,80 L${x0},${y0} A70,70 0 ${large} 1 ${x1},${y1} Z" fill="${d.color}" stroke="#fff" stroke-width="1.5" data-tip="${(typeof tipA !== 'undefined' ? tipA : tipB).replace(/"/g, '&quot;')}"/>`;
-    }
-    chartWrap.innerHTML = `<svg viewBox="0 0 160 160" width="170" height="170">${paths}</svg>`;
+    const slices = data.filter(d => d.v > 0).map(d => ({ ...d, tip: `<b>${pfEsc(d.name || '')}</b> · ${(d.v / sum * 100).toFixed(1)}% · ${fmtWon(d.v)}원` }));
+    chartWrap.innerHTML = pfTreemap(slices);
     pfPieTip(chartWrap);
   };
 
@@ -4661,12 +4683,6 @@ function makeTargetPortfolioCard(heldItems) {
     const slices = data.filter(d => d.v > 0);
     if (cashPct) slices.push({ v: cashPct, color: CASH_GRAY, name: '현금 (나머지)', isCash: true });   // 현금 슬라이스 (회색)
     const pieSum = sum + cashPct;
-    if (slices.length === 1) {
-      chartWrap.innerHTML = `<svg viewBox="0 0 160 160" width="170" height="170"><circle cx="80" cy="80" r="70" fill="${slices[0].color}" stroke="#fff" stroke-width="1.5" data-tip="${pfEsc(slices[0].name || '')} · 목표 100%"/></svg>`;
-      pfPieTip(chartWrap);
-      return;
-    }
-    let ang = -Math.PI / 2, paths = '';
     const bT = budget();
     for (const d of slices) {
       const tgtPct = useAmt ? d.v / pieSum * 100 : d.v;
@@ -4674,13 +4690,9 @@ function makeTargetPortfolioCard(heldItems) {
       let tipB = `<b>${pfEsc(d.name || '')}</b><br>목표 ${tgtPct.toFixed(1)}%${won(tgtPct)}`;
       if (d.isCash) { const cc = curCash; if (cc > 0) tipB += `<br>실제 ${cc.toFixed(1)}%${won(cc)}`; }
       else if (d.act > 0) tipB += `<br>실제 ${d.act.toFixed(1)}%${won(d.act)} · 차이 ${(d.act - tgtPct) >= 0 ? '+' : ''}${(d.act - tgtPct).toFixed(1)}%p`;
-      const a0 = ang, a1 = ang + (d.v / pieSum) * Math.PI * 2; ang = a1;
-      const large = (a1 - a0) > Math.PI ? 1 : 0;
-      const x0 = (80 + 70 * Math.cos(a0)).toFixed(2), y0 = (80 + 70 * Math.sin(a0)).toFixed(2);
-      const x1 = (80 + 70 * Math.cos(a1)).toFixed(2), y1 = (80 + 70 * Math.sin(a1)).toFixed(2);
-      paths += `<path d="M80,80 L${x0},${y0} A70,70 0 ${large} 1 ${x1},${y1} Z" fill="${d.color}" stroke="#fff" stroke-width="1.5" data-tip="${(typeof tipA !== 'undefined' ? tipA : tipB).replace(/"/g, '&quot;')}"/>`;
+      d.tip = tipB;
     }
-    chartWrap.innerHTML = `<svg viewBox="0 0 160 160" width="170" height="170">${paths}</svg>`;
+    chartWrap.innerHTML = pfTreemap(slices);
     pfPieTip(chartWrap);
   };
 
