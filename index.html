@@ -3258,7 +3258,7 @@ function saveDiaryData(data) { localStorage.setItem(DIARY_KEY, JSON.stringify(da
 
 /* GitHub(remote) 를 기준으로 하되, remote 에 '없는' 로컬 값만 채워 넣는 머지.
    - daily/weekly: remote 에 없는 날짜의 일기는 로컬 것 유지
-   - scenario/pfTarget: 같은 id(없으면 이름)의 항목에서 remote 에 없는 필드(buyPx·cost·qty·amt…)는 로컬 값 유지,
+   - scenario/pfTarget: 같은 id(없으면 이름)의 항목에서 remote 에 없는 필드(avgPx·cost·qty·amt…)는 로컬 값 유지,
      remote 에 아예 없는 로컬 항목은 뒤에 추가 (시나리오는 오늘 생성된 것만)
    - 그 외 최상위 키: remote 에 없으면 로컬 것 유지. remote 에 있는 값은 항상 remote 가 이김 */
 function diaryMergeKeepLocal(remote, local) {
@@ -4376,25 +4376,22 @@ function makePortfolioCard(activeItemsRaw) {
       vals.append(qty, pxLab, amtView);
       row.appendChild(dot); row.appendChild(nm); row.appendChild(vals);
       // 매수가(평단, 종목 통화) → 수익률·평가손익 (USD 는 현재 환율로 원화 환산)
+      // 필드명 avgPx — 'buyPx' 는 옛 매수계획 필드라 migrateBuyPlanToBuy() 가 렌더 때마다 지워버림 (2026-10-11 데이터 유실 원인)
       const fx = pxKrw / px;
       const isUsd = stk.currency === 'USD';
       retDiv = document.createElement('div'); retDiv.className = 'pf-ret';
       const buy = document.createElement('input'); buy.className = 'pf-buy';
       buy.type = 'text'; buy.inputMode = 'decimal'; buy.placeholder = isUsd ? '매수가 $' : '매수가';
       buy.title = '평균 매수단가' + (isUsd ? ' (달러)' : ' (원)');
-      buy.value = Number(it.buyPx) > 0 ? Number(it.buyPx).toLocaleString(isUsd ? 'en-US' : 'ko-KR', { maximumFractionDigits: 4 }) : '';
+      buy.value = Number(it.avgPx) > 0 ? Number(it.avgPx).toLocaleString(isUsd ? 'en-US' : 'ko-KR', { maximumFractionDigits: 4 }) : '';
       const retTxt = document.createElement('span');
-      const buyKrw = document.createElement('span'); buyKrw.className = 'pf-px';   // 해외주식: 매수가 원화 환산
-      retDiv.append(buy, buyKrw, retTxt);
+      retDiv.append(buy, retTxt);
       retCalc = () => {
-        const b = Number(it.buyPx) || 0, q = Number(it.qty) || 0;
+        const b = Number(it.avgPx) || 0, q = Number(it.qty) || 0;
         if (!(b > 0 && q > 0)) return null;
         return { cost: q * b * fx, val: Number(it.amt) || 0 };
       };
       updateRet = () => {
-        const b0 = Number(it.buyPx) || 0;
-        buyKrw.textContent = isUsd && b0 > 0 ? '≈' + Math.round(b0 * fx).toLocaleString('ko-KR') + '원' : '';
-        buyKrw.title = isUsd ? `환율 ${Number(state.usdkrw).toLocaleString('ko-KR')}원/$ 적용 (현재 환율 기준)` : '';
         const r = retCalc();
         if (!r) { retTxt.innerHTML = '<span style="opacity:.6">매수가를 입력하면 수익률이 표시돼요</span>'; return; }
         const pl = r.val - r.cost, rt = pl / r.cost * 100;
@@ -4402,10 +4399,10 @@ function makePortfolioCard(activeItemsRaw) {
       };
       buy.addEventListener('input', () => {
         const v = Number(String(buy.value).replace(/[^\d.]/g, '')) || 0;
-        it.buyPx = v || undefined;
+        it.avgPx = v || undefined;
         saveDeb(); updateRet(); updatePie();
       });
-      buy.addEventListener('blur', () => { if (Number(it.buyPx) > 0) buy.value = Number(it.buyPx).toLocaleString(isUsd ? 'en-US' : 'ko-KR', { maximumFractionDigits: 4 }); });
+      buy.addEventListener('blur', () => { if (Number(it.avgPx) > 0) buy.value = Number(it.avgPx).toLocaleString(isUsd ? 'en-US' : 'ko-KR', { maximumFractionDigits: 4 }); });
       qty.addEventListener('input', updateRet);
     } else {
       // 매칭 안 됨 → 금액 직접 입력
