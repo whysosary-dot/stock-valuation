@@ -4353,13 +4353,17 @@ function makePortfolioCard(activeItemsRaw) {
       buy.title = '평균 매수단가' + (isUsd ? ' (달러)' : ' (원)');
       buy.value = Number(it.buyPx) > 0 ? Number(it.buyPx).toLocaleString(isUsd ? 'en-US' : 'ko-KR', { maximumFractionDigits: 4 }) : '';
       const retTxt = document.createElement('span');
-      retDiv.append(buy, retTxt);
+      const buyKrw = document.createElement('span'); buyKrw.className = 'pf-px';   // 해외주식: 매수가 원화 환산
+      retDiv.append(buy, buyKrw, retTxt);
       retCalc = () => {
         const b = Number(it.buyPx) || 0, q = Number(it.qty) || 0;
         if (!(b > 0 && q > 0)) return null;
         return { cost: q * b * fx, val: Number(it.amt) || 0 };
       };
       updateRet = () => {
+        const b0 = Number(it.buyPx) || 0;
+        buyKrw.textContent = isUsd && b0 > 0 ? '≈' + Math.round(b0 * fx).toLocaleString('ko-KR') + '원' : '';
+        buyKrw.title = isUsd ? `환율 ${Number(state.usdkrw).toLocaleString('ko-KR')}원/$ 적용 (현재 환율 기준)` : '';
         const r = retCalc();
         if (!r) { retTxt.innerHTML = '<span style="opacity:.6">매수가를 입력하면 수익률이 표시돼요</span>'; return; }
         const pl = r.val - r.cost, rt = pl / r.cost * 100;
