@@ -6030,6 +6030,30 @@ window.addEventListener('pagehide', () => {
   try { saveDiaryData(diary.data); } catch(_) {}
 });
 
+/* 같은 브라우저에 대시보드 탭이 2개 이상 열려 있을 때:
+   다른 탭이 저장(localStorage)하면 이 탭의 메모리 상태도 즉시 따라간다.
+   안 그러면 먼저 열어둔(오래된) 탭이 렌더·종료 시점에 자기 옛 상태로 localStorage 를 덮어써
+   새 탭에서 입력한 값(매수가 등)이 사라진다 — 2026-10-11 실제 발생 */
+window.addEventListener('storage', (e) => {
+  if (e.key !== DIARY_KEY || !e.newValue) return;
+  const apply = () => {
+    try { diary.data = JSON.parse(e.newValue); } catch (_) { return; }
+    Object.values(diary.saveTimers || {}).forEach(t => clearTimeout(t)); diary.saveTimers = {};
+    if (typeof renderAllDiaryFeeds === 'function') renderAllDiaryFeeds();
+  };
+  const ae = document.activeElement;
+  const typing = ae && (ae.isContentEditable || ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT') && ae.closest && ae.closest('#page-diary');
+  if (typing) { window._diaryPendingLs = e.newValue; return; }   // 입력 중이면 포커스 벗어난 뒤 적용
+  apply();
+});
+document.addEventListener('focusout', () => {
+  if (!window._diaryPendingLs) return;
+  const v = window._diaryPendingLs; window._diaryPendingLs = null;
+  // 이 탭에서 방금 입력한 값이 더 최신이므로, 다른 탭 값을 기준으로 하되 이 탭에만 있는 값은 보존
+  try { diary.data = diaryMergeKeepLocal(JSON.parse(v), diary.data); saveDiaryData(diary.data); } catch (_) {}
+  if (typeof renderAllDiaryFeeds === 'function') renderAllDiaryFeeds();
+});
+
 window.addEventListener('pageshow', (e) => {
   if (!e.persisted) return;
   // bfcache에서 복원됨 — localStorage에서 최신 상태 재로드 후 렌더
