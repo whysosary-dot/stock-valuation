@@ -729,6 +729,15 @@
   .pf-info svg { flex: 0 0 auto; }
   .pf-info .up { color: #dc2626; font-weight: 700; }
   .pf-info .dn { color: #2563eb; font-weight: 700; }
+  /* 매수가·수익률 줄 (포트 비중 카드) */
+  .pf-ret { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin: 0 0 6px 18px; font-size: 11.5px; color: var(--text-dim); }
+  .pf-ret input.pf-buy { width: 92px; text-align: right; font-size: 12px; padding: 2px 7px; border: 1px solid var(--border); border-radius: 7px; background: var(--panel); color: var(--text); }
+  .pf-ret input.pf-buy:focus { outline: none; border-color: #a78bfa; box-shadow: 0 0 0 2px #ede9fe; }
+  .pf-ret .up { color: #dc2626; font-weight: 700; }
+  .pf-ret .dn { color: #2563eb; font-weight: 700; }
+  .pf-ret .flat { color: var(--text-dim); font-weight: 700; }
+  .pf-total .pf-tot-ret { margin-left: 6px; font-weight: 700; }
+  .pf-total .up { color: #dc2626; } .pf-total .dn { color: #2563eb; }
 
   /* 데스크톱: 값 묶음은 투명 컨테이너 (기존 한 줄 레이아웃 유지) */
   .pf-vals { display: contents; }
@@ -4227,12 +4236,22 @@ function makePortfolioCard(activeItemsRaw) {
     return card;
   }
 
-  const pctEls = [], dotEls = [];
+  const pctEls = [], dotEls = [], retFns = [];
+  const pfRetCls = v => v > 0 ? 'up' : v < 0 ? 'dn' : 'flat';
+  const pfSgn = (v, d = 0) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d });
 
   const updatePie = () => {
     const data = activeItems.map((it, i) => ({ v: Number(it.amt) || 0, color: pfColorFor(it.name), name: it.name }));
     const sum = data.reduce((a, b) => a + b.v, 0);
-    total.textContent = sum ? '합계 ' + fmtWon(sum) + '원' : '';
+    // 전체 수익률: 매수가(또는 매수금액)가 입력된 종목만 합산
+    let costT = 0, valT = 0, nRet = 0;
+    retFns.forEach(f => { const r = f(); if (r && r.cost > 0) { costT += r.cost; valT += r.val; nRet++; } });
+    let totHtml = sum ? '합계 ' + fmtWon(sum) + '원' : '';
+    if (costT > 0) {
+      const pl = valT - costT, rt = pl / costT * 100;
+      totHtml += `<span class="pf-tot-ret ${pfRetCls(pl)}" title="매수가 입력 종목 ${nRet}개 기준 · 투자원금 ${fmtWon(Math.round(costT))}원">${pfSgn(rt, 1)}% (${pfSgn(Math.round(pl))}원)</span>`;
+    }
+    total.innerHTML = totHtml;
     activeItems.forEach((it, i) => {
       pctEls[i].textContent = sum && data[i].v ? (data[i].v / sum * 100).toFixed(1) + '%' : '';
       dotEls[i].style.background = data[i].v ? data[i].color : 'var(--border)';
@@ -4259,7 +4278,7 @@ function makePortfolioCard(activeItemsRaw) {
     };
 
     const stk = scFindStock(it.name);
-    let infoDiv = null;
+    let infoDiv = null, retDiv = null, retCalc = () => null, updateRet = () => {};
     if (stk) {
       // Stock Valuation 데이터 스트립: 스파크라인 · 시총 · 등락률 · 상방/하방
       const pcts = (v, suffix) => v == null ? '' : `<span class="${v >= 0 ? 'up' : 'dn'}">${v >= 0 ? '+' : ''}${v.toFixed(1)}%</span>${suffix ? ' ' + suffix : ''}`;
@@ -4325,6 +4344,34 @@ function makePortfolioCard(activeItemsRaw) {
       const vals = document.createElement('span'); vals.className = 'pf-vals';
       vals.append(qty, pxLab, amtView);
       row.appendChild(dot); row.appendChild(nm); row.appendChild(vals);
+      // 매수가(평단, 종목 통화) → 수익률·평가손익 (USD 는 현재 환율로 원화 환산)
+      const fx = pxKrw / px;
+      const isUsd = stk.currency === 'USD';
+      retDiv = document.createElement('div'); retDiv.className = 'pf-ret';
+      const buy = document.createElement('input'); buy.className = 'pf-buy';
+      buy.type = 'text'; buy.inputMode = 'decimal'; buy.placeholder = isUsd ? '매수가 $' : '매수가';
+      buy.title = '평균 매수단가' + (isUsd ? ' (달러)' : ' (원)');
+      buy.value = Number(it.buyPx) > 0 ? Number(it.buyPx).toLocaleString(isUsd ? 'en-US' : 'ko-KR', { maximumFractionDigits: 4 }) : '';
+      const retTxt = document.createElement('span');
+      retDiv.append(buy, retTxt);
+      retCalc = () => {
+        const b = Number(it.buyPx) || 0, q = Number(it.qty) || 0;
+        if (!(b > 0 && q > 0)) return null;
+        return { cost: q * b * fx, val: Number(it.amt) || 0 };
+      };
+      updateRet = () => {
+        const r = retCalc();
+        if (!r) { retTxt.innerHTML = '<span style="opacity:.6">매수가를 입력하면 수익률이 표시돼요</span>'; return; }
+        const pl = r.val - r.cost, rt = pl / r.cost * 100;
+        retTxt.innerHTML = `수익률 <span class="${pfRetCls(pl)}">${pfSgn(rt, 1)}%</span> · 평가손익 <span class="${pfRetCls(pl)}">${pfSgn(Math.round(pl))}원</span> <span style="opacity:.6">(원금 ${fmtWon(Math.round(r.cost))}원)</span>`;
+      };
+      buy.addEventListener('input', () => {
+        const v = Number(String(buy.value).replace(/[^\d.]/g, '')) || 0;
+        it.buyPx = v || undefined;
+        saveDeb(); updateRet(); updatePie();
+      });
+      buy.addEventListener('blur', () => { if (Number(it.buyPx) > 0) buy.value = Number(it.buyPx).toLocaleString(isUsd ? 'en-US' : 'ko-KR', { maximumFractionDigits: 4 }); });
+      qty.addEventListener('input', updateRet);
     } else {
       // 매칭 안 됨 → 금액 직접 입력
       const amt = document.createElement('input'); amt.className = 'pf-amt';
@@ -4340,9 +4387,37 @@ function makePortfolioCard(activeItemsRaw) {
       const vals = document.createElement('span'); vals.className = 'pf-vals';
       vals.append(amt);
       row.appendChild(dot); row.appendChild(nm); row.appendChild(vals);
+      // 주가 미연동 종목: 매수금액(원금) 직접 입력 → 수익률 (현금 등은 비워두면 수익률 집계에서 제외)
+      retDiv = document.createElement('div'); retDiv.className = 'pf-ret';
+      const cost = document.createElement('input'); cost.className = 'pf-buy';
+      cost.type = 'text'; cost.inputMode = 'numeric'; cost.placeholder = '매수금액(원)'; cost.title = '투자 원금 (원)';
+      cost.style.width = '110px';
+      cost.value = fmtWon(it.cost);
+      const retTxt = document.createElement('span');
+      retDiv.append(cost, retTxt);
+      retCalc = () => {
+        const c = Number(it.cost) || 0;
+        if (!(c > 0)) return null;
+        return { cost: c, val: Number(it.amt) || 0 };
+      };
+      updateRet = () => {
+        const r = retCalc();
+        if (!r) { retTxt.innerHTML = '<span style="opacity:.6">매수금액을 입력하면 수익률이 표시돼요</span>'; return; }
+        const pl = r.val - r.cost, rt = pl / r.cost * 100;
+        retTxt.innerHTML = `수익률 <span class="${pfRetCls(pl)}">${pfSgn(rt, 1)}%</span> · 평가손익 <span class="${pfRetCls(pl)}">${pfSgn(Math.round(pl))}원</span>`;
+      };
+      cost.addEventListener('input', () => {
+        const v = Number(String(cost.value).replace(/[^\d]/g, '')) || 0;
+        it.cost = v || undefined;
+        cost.value = fmtWon(v);
+        saveDeb(); updateRet(); updatePie();
+      });
+      amt.addEventListener('input', updateRet);
     }
     row.appendChild(pct);
     rows.appendChild(row);
+    retFns.push(retCalc);
+    if (retDiv) { rows.appendChild(retDiv); updateRet(); }
     if (infoDiv) rows.appendChild(infoDiv);
   });
 
