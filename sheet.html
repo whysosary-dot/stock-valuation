@@ -1239,7 +1239,7 @@ function openSheet(id) {
     return;
   }
 
-  // ── 로그인 전용 페이지(claude.ai 등): 새 창 열기 카드 ──
+  // ── 임베드 금지 페이지(claude.ai 등): 새 창 열기 카드 ──
   if (s.type === 'web' && isNoPreview(s)) {
     showWebLinkOnlyView(s);
     return;
@@ -1438,7 +1438,7 @@ function markHostBlocked(host) {
 }
 /* 임베드 확실히 허용 (자동 감지 오탐 무시) */
 const EMBED_ALLOWED_HOSTS = ['m.stock.naver.com', 'stock.naver.com', 'm.blog.naver.com', 'blog.naver.com'];
-/* 로그인해야 보이는 페이지(claude.ai 아티팩트 등) — 임베드도 스크린샷도 불가 → 새 창 열기 카드만 */
+/* 다른 사이트 안에 표시를 금지(CSP frame-ancestors 'self')하고 스크린샷 서비스도 못 보는 페이지(claude.ai 아티팩트 등) → 새 창 열기 카드만 */
 const NO_PREVIEW_HOSTS = ['claude.ai', 'claude.com', 'chatgpt.com', 'chat.openai.com', 'gemini.google.com'];
 function isNoPreview(s) {
   try { const h = new URL(s.wurl).hostname; return NO_PREVIEW_HOSTS.some(b => h === b || h.endsWith('.' + b)); }
@@ -1456,7 +1456,7 @@ function showWebLinkOnlyView(s) {
     + '<div style="font-size:17px;font-weight:800;margin-bottom:6px;"></div>'
     + '<div style="font-size:13.5px;color:var(--text-dim);line-height:1.7;margin-bottom:18px;"></div>';
   wrap.children[1].textContent = s.name || host;
-  wrap.children[2].textContent = host + ' 페이지는 로그인한 본인만 볼 수 있어서 대시보드 안에 미리보기로 띄울 수 없어요. 아래 버튼으로 새 창에서 여세요.';
+  wrap.children[2].textContent = host + ' 는 다른 사이트 안에 페이지를 띄우는 것 자체를 막아 두어서(공개 링크여도 동일) 대시보드 안에서는 미리보기가 안 돼요. 아래 버튼으로 새 창에서 여세요.';
   const a = document.createElement('a');
   a.href = s.wurl; a.target = '_blank'; a.rel = 'noopener';
   a.className = 'rs-import-btn';
@@ -2791,15 +2791,15 @@ function buildItemCard(s) {
     card.appendChild(sub);
   }
   else if (s.type === 'web' && isNoPreview(s)) {
-    // 로그인 전용 페이지 — 미리보기 대신 열기 카드
+    // 임베드 금지 페이지 — 미리보기 대신 열기 카드
     let host = '웹사이트'; try { host = new URL(s.wurl).hostname; } catch(_) {}
     const box = document.createElement('div');
     box.style.cssText = 'height:220px; border:1px solid var(--border); border-radius:8px; cursor:pointer; background:var(--panel-2); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--text-dim); font-size:13px; text-align:center; padding:0 14px;';
-    box.innerHTML = '<div style="font-size:30px;">🔒</div><div>로그인 전용 페이지 — 미리보기 없음</div><div style="font-weight:700;color:var(--accent,#2563eb);">↗ 탭하면 새 창에서 열기</div>';
+    box.innerHTML = '<div style="font-size:30px;">🔒</div><div>사이트가 임베드를 막음 — 미리보기 없음</div><div style="font-weight:700;color:var(--accent,#2563eb);">↗ 탭하면 새 창에서 열기</div>';
     box.addEventListener('click', (e) => { e.stopPropagation(); window.open(s.wurl, '_blank', 'noopener'); });
     card.appendChild(box);
     const sub = document.createElement('div'); sub.className = 'fv-sub';
-    sub.textContent = `🔗 ${host} · 로그인 필요 (탭하면 새 창)`;
+    sub.textContent = `🔗 ${host} · 임베드 불가 (탭하면 새 창)`;
     card.appendChild(sub);
   }
   else if (s.type === 'web' && isEmbedBlocked(s)) {
