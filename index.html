@@ -5734,7 +5734,9 @@ document.getElementById('pat-clear').addEventListener('click', () => {
 
 /* ───────── GitHub 커밋 & 푸시 ───────── */
 async function ghApiGet(pat, path) {
-  const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/${path}?ref=${GH.BRANCH}`, {
+  // 캐시 우회(t=) + no-store: 브라우저가 옛 404 응답을 재사용하면 sha 없이 PUT → 422 ("sha" wasn't supplied)
+  const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/${path}?ref=${GH.BRANCH}&t=${Date.now()}`, {
+    cache: 'no-store',
     headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'User-Agent': 'sv-browser' }
   });
   if (!r.ok) { if (r.status === 404) return null; throw new Error(`GET ${path}: ${r.status}`); }
@@ -5872,10 +5874,19 @@ async function ghCommitAllRun(pat) {
 
     try {
     // ── 2. diary.json : localStorage 다이어리 전체 커밋 ──
-    const diaryFile = await ghApiGet(pat, 'sv/diary.json');
-    const diaryPutRes = await ghApiPut(pat, 'sv/diary.json', JSON.stringify(diary.data, null, 2),
-      diaryFile ? diaryFile.sha : null,
-      `sync: 다이어리 업데이트 ${today}`);
+    let diaryFile = await ghApiGet(pat, 'sv/diary.json');
+    if (!diaryFile) { await new Promise(r => setTimeout(r, 800)); diaryFile = await ghApiGet(pat, 'sv/diary.json'); }   // 일시적 404 대비 재조회
+    const diaryBody = JSON.stringify(diary.data, null, 2);
+    let diaryPutRes;
+    try {
+      diaryPutRes = await ghApiPut(pat, 'sv/diary.json', diaryBody, diaryFile ? diaryFile.sha : null, `sync: 다이어리 업데이트 ${today}`);
+    } catch (e) {
+      // sha 누락(422)·충돌(409): 최신 sha 다시 받아 1회 재시도
+      if (!/\b(422|409)\b/.test(e.message)) throw e;
+      const again = await ghApiGet(pat, 'sv/diary.json');
+      if (!again) throw e;
+      diaryPutRes = await ghApiPut(pat, 'sv/diary.json', diaryBody, again.sha, `sync: 다이어리 업데이트 ${today}`);
+    }
     // 새 blob SHA 저장 → 같은 기기에서 커밋 직후 새로고침해도 머지 스킵 (미커밋 변경 보존)
     const newDiarySha = diaryPutRes && diaryPutRes.content && diaryPutRes.content.sha;
     if (newDiarySha) localStorage.setItem(DIARY_GH_SHA_KEY, String(newDiarySha));
