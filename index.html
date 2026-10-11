@@ -3256,6 +3256,37 @@ function loadDiary() {
 }
 function saveDiaryData(data) { localStorage.setItem(DIARY_KEY, JSON.stringify(data)); }
 
+/* GitHub(remote) 를 기준으로 하되, remote 에 '없는' 로컬 값만 채워 넣는 머지.
+   - daily/weekly: remote 에 없는 날짜의 일기는 로컬 것 유지
+   - scenario/pfTarget: 같은 id(없으면 이름)의 항목에서 remote 에 없는 필드(buyPx·cost·qty·amt…)는 로컬 값 유지,
+     remote 에 아예 없는 로컬 항목은 뒤에 추가 (시나리오는 오늘 생성된 것만)
+   - 그 외 최상위 키: remote 에 없으면 로컬 것 유지. remote 에 있는 값은 항상 remote 가 이김 */
+function diaryMergeKeepLocal(remote, local) {
+  if (!local || typeof local !== 'object') return remote;
+  const out = { ...remote };
+  for (const k of Object.keys(local)) if (out[k] === undefined) out[k] = local[k];
+  for (const k of ['daily', 'weekly']) {
+    if (local[k] && typeof local[k] === 'object' && !Array.isArray(local[k])) {
+      out[k] = { ...(local[k] || {}), ...(remote[k] || {}) };
+    }
+  }
+  const keyOf = it => it && (it.id || String(it.name || '').toLowerCase().replace(/\s+/g, ''));
+  for (const k of ['scenario', 'pfTarget']) {
+    if (!Array.isArray(local[k])) continue;
+    const base = Array.isArray(remote[k]) ? remote[k].map(x => ({ ...x })) : [];
+    const idx = new Map(); base.forEach((it, i) => { const key = keyOf(it); if (key) idx.set(key, i); });
+    for (const lit of local[k]) {
+      const key = keyOf(lit); if (!key) continue;
+      if (idx.has(key)) {
+        const r = base[idx.get(key)];
+        for (const f of Object.keys(lit)) if (r[f] === undefined && lit[f] !== undefined) r[f] = lit[f];
+      } else if (k !== 'scenario' || lit.updated === todayDateStr()) base.push(lit);   // 시나리오는 오늘 만든 것만 재추가 (다른 기기에서 지운 항목 부활 방지)
+    }
+    out[k] = base;
+  }
+  return out;
+}
+
 const diary = {
   data: loadDiary(),
   activeTab: 'daily',
@@ -5656,9 +5687,10 @@ function initDiary() {
         return;
       }
 
-      // 새 커밋 발견 → GitHub 상태로 통째 교체 (최신 푸시 = 진실, 모든 기기 미러링)
-      // 주의: 모든 필드 포함 — scenario / pfDeposits / pfMemo / pfHist / trades_backup 등
-      diary.data = { daily: {}, weekly: {}, ...ghDiary };
+      // 새 커밋 발견 → GitHub 상태로 교체 (최신 푸시 = 진실, 모든 기기 미러링)
+      // 단, 이 기기에만 있고 아직 커밋 안 된 값(새 일기 날짜, 시나리오 종목의 매수가·수량 등 GitHub 쪽에 없는 필드)은
+      // 날리지 않고 보존 — 커밋 실패 뒤 동기화가 돌면서 입력값이 통째로 사라지던 문제 방지
+      diary.data = diaryMergeKeepLocal({ daily: {}, weekly: {}, ...ghDiary }, diary.data);
       let saved = true;
       try { saveDiaryData(diary.data); } catch (e) {
         // 용량 초과 → 폴더 데이터 IndexedDB 이관이 끝나길 기다렸다가 한 번 더
@@ -5739,8 +5771,15 @@ async function ghApiGet(pat, path) {
     cache: 'no-store',
     headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'User-Agent': 'sv-browser' }
   });
-  if (!r.ok) { if (r.status === 404) return null; throw new Error(`GET ${path}: ${r.status}`); }
-  return r.json();
+  if (r.ok) return r.json();
+  if (r.status !== 404) throw new Error(`GET ${path}: ${r.status}`);
+  // Contents API 가 404 를 줘도 파일이 실제로는 있을 수 있음 → 트리에서 sha 재확인 (없으면 진짜 신규 파일)
+  try {
+    const t = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/git/trees/${GH.BRANCH}?recursive=1&t=${Date.now()}`, {
+      cache: 'no-store', headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json' } });
+    if (t.ok) { const td = await t.json(); const e = (td.tree || []).find(x => x.path === path); if (e) return { sha: e.sha, path }; }
+  } catch (_) {}
+  return null;
 }
 
 async function ghApiPut(pat, path, contentStr, sha, message) {
