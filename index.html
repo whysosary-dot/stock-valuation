@@ -1977,12 +1977,12 @@ function renderRow(s) {
       else if (c.key === '_foreign') { if (v.foreign != null) { txt = fmt(v.foreign, 1) + '%'; cls = ''; } }
       else if (c.key === '_pos52') {
         const p = pos52(s);
-        if (p != null) { html = `<span class="pos52"><b>${p}%</b><i><em style="width:${p}%"></em></i></span>`; cls = ''; }
+        if (p != null) { html = `<span class="pos52"><b>${v.hi52_src ? '≈' : ''}${p}%</b><i><em style="width:${p}%"></em></i></span>`; cls = ''; }
       }
       if (html) td.innerHTML = html; else td.textContent = txt;
       if (cls) td.classList.add(cls);
       td.classList.add('text-center', 'val-cell');
-      if (v.asof) td.title = (c.key === '_pos52' ? '(현재가 − 52주 최저) ÷ (52주 최고 − 최저) · ' : '') + '네이버 증권 ' + v.asof;
+      if (v.asof) td.title = (c.key === '_pos52' ? '(현재가 − 52주 최저) ÷ (52주 최고 − 최저) · ' + (v.hi52_src ? '≈ 네이버에 52주 고저가 없어 1년 주봉 종가 최고·최저로 대체 · ' : '') : '') + '네이버 증권 ' + v.asof;
     } else if (c.type === 'chart3y') {
       td.classList.add('chart-cell');
       td.innerHTML = renderSparkline(s.price_history_3y);
