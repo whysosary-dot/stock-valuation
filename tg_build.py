@@ -22,6 +22,7 @@ REPO, BRANCH = "whysosary-dot/stock-valuation", "main"
 KST = timezone(timedelta(hours=9))
 DRY = "--dry-run" in sys.argv
 WORK = Path(os.environ.get("TG_WORK", "/tmp/tg"))  # TG_WORK: tg_collect.py 와 동일하게
+_FB = Path(f"/tmp/tg_{os.getuid()}")   # tg_collect.py 가 디스크 부족 시 전환하는 폴더
 UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124 Safari/537.36"}
 
 date_arg = next((a for a in sys.argv[1:] if re.fullmatch(r"\d{4}-\d{2}-\d{2}", a)), None)
@@ -139,10 +140,14 @@ def put(path, obj, msg, tok):
 
 def main():
     mp = WORK / f"mentions_{DATE}.json"
+    if not mp.exists() and (_FB / mp.name).exists():
+        mp = _FB / mp.name
     if not mp.exists():
         raise SystemExit(f"없음: {mp} — tg_collect.py 먼저")
     m = json.loads(mp.read_text())
     sp = WORK / f"summaries_{DATE}.json"
+    if not sp.exists() and (_FB / sp.name).exists():
+        sp = _FB / sp.name
     summ = json.loads(sp.read_text()) if sp.exists() else {}
     if not summ:
         print("⚠ 요약 파일 없음 — 요약 없이 진행")
