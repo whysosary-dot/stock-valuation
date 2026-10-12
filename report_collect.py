@@ -270,10 +270,29 @@ def main():
 
     tok = None if DRY else token()
     results = {}
+    # 이른 아침 WiseReport 가 증권사명·산업명 대신 내부 코드(증권사 '34', 산업 'G151050')를 내보내는 경우가 있다
+    # (2026-10-12 07:21 실제 발생 — 그대로 저장하면 이미 정상인 과거 일자까지 코드판으로 덮어씀).
+    def looks_coded(comp, ind):
+        rows = comp + ind
+        if not rows: return False
+        bad = sum(1 for x in rows if re.fullmatch(r"\d+", x.get("broker") or "")) + \
+              sum(1 for x in ind if re.fullmatch(r"G\d{6}", x.get("sector") or ""))
+        return bad >= max(1, len(rows) // 2)
+    coded_retry_done = False
     for d in dates:
         hc = fetch(1, d); time.sleep(0.6)
         hi = fetch(2, d); time.sleep(0.6)
         comp, ind = parse_company(hc), parse_industry(hi)
+        if looks_coded(comp, ind) and not coded_retry_done:
+            print(f"  ! {d}: 증권사·산업이 코드로 내려옴 — 90초 후 재시도")
+            coded_retry_done = True
+            time.sleep(90)
+            hc = fetch(1, d); time.sleep(0.6)
+            hi = fetch(2, d); time.sleep(0.6)
+            comp, ind = parse_company(hc), parse_industry(hi)
+        if looks_coded(comp, ind):
+            print(f"  ! {d}: 여전히 코드판 — 이 일자는 저장 건너뜀 (기존 파일 보존, 다음 실행에서 재수집)")
+            continue
         attach_valuation(comp)
         counts = {
             "company": len(comp), "industry": len(ind),
@@ -289,7 +308,7 @@ def main():
         print(f"  {d}: 기업 {counts['company']} · 산업 {counts['industry']} · TP↑{counts['tp_up']} TP↓{counts['tp_down']} 의견↑{counts['op_up']} 의견↓{counts['op_down']}")
 
     if DRY:
-        Path("/tmp/report_latest.json").write_text(json.dumps(results[dates[0]], ensure_ascii=False, indent=1))
+        Path("/tmp/report_latest.json").write_text(json.dumps(next(iter(results.values()), {}), ensure_ascii=False, indent=1))
         print("(dry-run — /tmp/report_latest.json)")
         return 0
 
