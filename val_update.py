@@ -94,12 +94,21 @@ def main():
     asof = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     with ThreadPoolExecutor(6) as ex:
         vals = list(ex.map(fetch, stocks))
-    ok = 0
+    ok = fb = 0
     for s, v in zip(stocks, vals):
+        v = dict(v or {})
+        # 네이버에 52주 고저가 없는 해외 종목(대만·싱가포르·유럽 등) → 1년 주봉 종가의 최고·최저로 대체.
+        # 장중 고저가가 아니라 '주간 종가' 기준이라 실제 52주 고저와 다를 수 있음 → hi52_src 로 표시 (2026-10-12)
+        if not v.get("hi52") or not v.get("lo52"):
+            ph = [x for x in (s.get("price_history") or []) if isinstance(x, (int, float)) and x > 0]
+            if len(ph) >= 26:
+                v["hi52"], v["lo52"], v["hi52_src"] = round(max(ph), 4), round(min(ph), 4), "1y주봉종가"
+                fb += 1
         if v:
             v["asof"] = asof
             s["val"] = v
             ok += 1
+    if fb: print(f"  · 52주 고저 대체(1년 주봉 종가) {fb}종목")
     print(f"밸류에이션 {ok}/{len(stocks)} 갱신 ({asof})")
     for s, v in list(zip(stocks, vals))[:5]:
         print(" ", s.get("name"), v)
