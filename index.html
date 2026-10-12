@@ -4110,11 +4110,13 @@ function pfTreemap(slices, W = 160, H = 160) {
     const rx = r.x + g / 2, ry = r.y + g / 2, rw = Math.max(0, r.w - g), rh = Math.max(0, r.h - g);
     const pct = (r.v / tot * 100).toFixed(1) + '%';
     const name = r.label || r.name || '';
-    const fs = Math.max(6, Math.min(11, Math.min(rw / Math.max(2, name.length) * 1.6, rh / 3.2)));
-    const fsP = Math.max(5.5, Math.min(9.5, fs * .85));
+    // 글자 폭 추정(한글·전각 1em, 영문·숫자 ≈0.62em) → 타일 폭에 맞춰 글자 크기를 줄여서라도 이름을 넣는다
+    const units = [...name].reduce((u, ch) => u + (/[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af\u3000-\u9fff]/.test(ch) ? 1 : .62), 0) || 1;
+    const fs = Math.min(11, (rw - 4) / units, rh / 3.2);
+    const fsP = Math.max(5.5, Math.min(9.5, Math.max(fs, 6.5) * .85));
     let label = '';
     if (rw > 14 && rh > 10) {
-      if (rh > fs + fsP + 4 && rw > name.length * fs * .9) label = `<text x="${(rx + rw / 2).toFixed(1)}" y="${(ry + rh / 2 - 1).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}" font-weight="700" fill="#fff" pointer-events="none">${pfEsc(name)}</text><text x="${(rx + rw / 2).toFixed(1)}" y="${(ry + rh / 2 + fsP + 1).toFixed(1)}" text-anchor="middle" font-size="${fsP.toFixed(1)}" font-weight="600" fill="#fff" fill-opacity=".9" pointer-events="none">${pct}</text>`;
+      if (fs >= 5 && rh > fs + fsP + 4) label = `<text x="${(rx + rw / 2).toFixed(1)}" y="${(ry + rh / 2 - 1).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}" font-weight="700" fill="#fff" pointer-events="none">${pfEsc(name)}</text><text x="${(rx + rw / 2).toFixed(1)}" y="${(ry + rh / 2 + fsP + 1).toFixed(1)}" text-anchor="middle" font-size="${fsP.toFixed(1)}" font-weight="600" fill="#fff" fill-opacity=".9" pointer-events="none">${pct}</text>`;
       else label = `<text x="${(rx + rw / 2).toFixed(1)}" y="${(ry + rh / 2 + fsP * .35).toFixed(1)}" text-anchor="middle" font-size="${fsP.toFixed(1)}" font-weight="700" fill="#fff" pointer-events="none">${pct}</text>`;
     }
     return `<g><rect x="${rx.toFixed(2)}" y="${ry.toFixed(2)}" width="${rw.toFixed(2)}" height="${rh.toFixed(2)}" rx="2.5" fill="${r.color}" stroke="#fff" stroke-width=".6" data-tip="${(r.tip || '').replace(/"/g, '&quot;')}"/>${label}</g>`;
