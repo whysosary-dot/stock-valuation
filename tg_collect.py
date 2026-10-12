@@ -27,7 +27,19 @@ def _tg_api():
     return int(a), b
 API_ID, API_HASH = _tg_api()
 SRC_SESSION = BASE.parent / "AWAKE 전자 공시" / "awake_session.session"
-WORK = Path("/tmp/tg"); WORK.mkdir(parents=True, exist_ok=True)
+def _resolve_work():
+    """TG_WORK(실행 사용자별 작업 폴더). 맥 VM 의 $HOME(/sessions) 파티션이 가득 차면 쓰기가 실패하므로
+    2MB 시험 쓰기에 실패하면 /tmp/tg_<uid> 로 자동 전환한다 (2026-10-12)."""
+    p = Path(os.environ.get("TG_WORK", "/tmp/tg"))
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+        t = p / ".probe"; t.write_bytes(b"0" * 2_000_000); t.unlink()
+        return p
+    except Exception:
+        fb = Path(f"/tmp/tg_{os.getuid()}"); fb.mkdir(parents=True, exist_ok=True)
+        print(f"⚠ TG_WORK({p}) 쓰기 불가(디스크 가득 참?) → {fb} 사용. 요약 파일(summaries_<날짜>.json)도 이 폴더에 저장할 것")
+        return fb
+WORK = _resolve_work()
 SESSION = WORK / "sess"
 
 date_arg = next((a for a in sys.argv[1:] if re.fullmatch(r"\d{4}-\d{2}-\d{2}", a)), None)
