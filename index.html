@@ -6351,7 +6351,7 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
         const mapOf = arr => Object.fromEntries((arr||[]).filter(d=>d&&d.value!=null).map(d=>[d.label, d.avg ?? d.value]));
         const LC = ["#f59e0b","#10b981","#ef4444","#8b5cf6","#06b6d4"];
         const mainMap = mapOf(data);
-        const ds = [{ label: ind.dataLabel || (extra.length ? (ind.mainName || ind.name.split(' — ')[1]?.split(' vs ')[0] || '메인') : ind.name),
+        const ds = [{ label: ind.mainName || ind.chartMainLabel || ind.name,
             data: labels.map(l=>mainMap[l] ?? null), spanGaps:true,
             borderColor:ind.color||'#3056f0', borderWidth:2.2,
             pointRadius:labels.length>40?0:2.5, pointHitRadius:8, tension:.25 }];
