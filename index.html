@@ -5278,9 +5278,6 @@ function renderFeedScenario() {
   feed.appendChild(makeTargetPortfolioCard(active.filter(s => s.held)));
   // 포트 비중 카드 — 그 아래 (보유중으로 표시한 종목만)
   feed.appendChild(makePortfolioCard(active.filter(s => s.held)));
-  // 월간 수익률 누적 그래프 — 포트 비중 바로 아래
-  feed.appendChild(makePfReturnCard());
-
   const newBtn = document.createElement('button');
   newBtn.className = 'diary-new-card-btn'; newBtn.textContent = '+ 종목 시나리오 추가';
   newBtn.addEventListener('click', () => {
@@ -5290,6 +5287,8 @@ function renderFeedScenario() {
     setTimeout(() => { const el = feed.querySelector('.sc-name'); if (el) el.focus(); }, 50);
   });
   feed.appendChild(newBtn);
+  // 월간 수익률 누적 그래프 — 시나리오 추가 버튼 바로 아래
+  feed.appendChild(makePfReturnCard());
 
   if (!active.length && !archived.length) {
     const e = document.createElement('div'); e.className = 'diary-empty-state';
