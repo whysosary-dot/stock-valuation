@@ -6299,6 +6299,10 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
 .ixn-tbl th:first-child,.ixn-tbl td:first-child{text-align:left}
 .ixn-tbl td{padding:5.5px 9px;text-align:right;border-bottom:1px solid var(--panel-2);font-variant-numeric:tabular-nums}
 .ixn-tbl tr:last-child td{border-bottom:none}
+.ixn-desc{font-size:11px;color:var(--text-dim);line-height:1.5;margin:-4px 0 8px}
+.ixn-warn{font-size:11px;color:#dc2626;font-weight:600;line-height:1.5;margin:-4px 0 8px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:6px 8px}
+.ixn-card.wide .ixn-box{height:230px}
+.ixn-cat{grid-column:1/-1;font-size:13px;font-weight:800;margin:8px 2px -4px;color:var(--text)}
 </style>
 <script>
 (function(){
@@ -6331,21 +6335,34 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
       const inds = extractArr(html, 'const INDICATORS');
       if(!inds || !inds.length) throw new Error('no data');
       box.innerHTML = '<div class="ixn-grid">' + inds.map((ind,i)=>`
-        <div class="ixn-card"><h4 class="ixn-t" data-i="${i}">${ind.name} <span style="font-weight:400;font-size:11px;color:var(--text-dim)">${ind.unit||''}</span><span class="ixn-toggle">데이터 ▸</span></h4>
+        ${ind.category && ind.category!==(inds[i-1]||{}).category && ind.id && String(ind.id).startsWith('dk_') && !String((inds[i-1]||{}).id||'').startsWith('dk_') ? '<div class="ixn-cat">💊 '+ind.category+' 트래커</div>' : ''}
+        <div class="ixn-card${ind.chartLines&&ind.products?' wide':''}"><h4 class="ixn-t" data-i="${i}">${ind.name} <span style="font-weight:400;font-size:11px;color:var(--text-dim)">${ind.unit||''}</span><span class="ixn-toggle">데이터 ▸</span></h4>
         <div class="src">${ind.source||''}${ind.category?' · '+ind.category:''}</div>
+        ${ind.warn?`<div class="ixn-warn">⚠ ${ind.warn}</div>`:''}${ind.desc?`<div class="ixn-desc">${ind.desc}</div>`:''}
         <div class="ixn-box"><canvas id="ixn-${i}"></canvas></div>
         <div class="ixn-data" id="ixnd-${i}" hidden></div></div>`).join('') + '</div>';
       inds.forEach((ind,i)=>{
         const data = (ind.data||[]).filter(d=>d&&d.value!=null);
         const cv = document.getElementById('ixn-'+i); if(!cv||!data.length) return;
+        /* chartLines + products → 보조 선 (invest-index 엔진과 같은 규약) */
+        const extra = (ind.chartLines && ind.products) ? ind.chartLines.map(n=>ind.products.find(p=>p.name===n)).filter(Boolean) : [];
+        let labels = data.map(d=>d.label);
+        if (extra.length) labels = [...new Set([...labels, ...extra.flatMap(p=>(p.data||[]).filter(d=>d&&d.value!=null).map(d=>d.label))])].sort();
+        const mapOf = arr => Object.fromEntries((arr||[]).filter(d=>d&&d.value!=null).map(d=>[d.label, d.avg ?? d.value]));
+        const LC = ["#f59e0b","#10b981","#ef4444","#8b5cf6","#06b6d4"];
+        const mainMap = mapOf(data);
+        const ds = [{ label: ind.dataLabel || (extra.length ? (ind.mainName || ind.name.split(' — ')[1]?.split(' vs ')[0] || '메인') : ind.name),
+            data: labels.map(l=>mainMap[l] ?? null), spanGaps:true,
+            borderColor:ind.color||'#3056f0', borderWidth:2.2,
+            pointRadius:labels.length>40?0:2.5, pointHitRadius:8, tension:.25 }];
+        extra.forEach((p,k)=>{ const m = mapOf(p.data); ds.push({ label:p.name, data:labels.map(l=>m[l] ?? null), spanGaps:true,
+            borderColor:LC[k%LC.length], borderWidth:1.4, pointRadius:labels.length>40?0:2, pointHitRadius:8, tension:.25 }); });
         new Chart(cv, { type:'line',
-          data:{ labels:data.map(d=>d.label), datasets:[{ data:data.map(d=>d.value),
-            borderColor:ind.color||'#3056f0', borderWidth:2,
-            pointRadius:data.length>40?0:2.5, pointHitRadius:8, tension:.25 }] },
-          options:{ responsive:true, maintainAspectRatio:false,
-            plugins:{ legend:{display:false} },
+          data:{ labels, datasets: ds },
+          options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+            plugins:{ legend:{display:extra.length>0, position:'bottom', labels:{boxWidth:10,font:{size:10},padding:8}} },
             scales:{ x:{ticks:{maxTicksLimit:6,font:{size:9.5},color:'#9aa3b8'},grid:{display:false}},
-              y:{ticks:{font:{size:9.5},color:'#9aa3b8',maxTicksLimit:5},grid:{color:'#f0f2f7'}} } } });
+              y:{reverse:!!ind.reverseY, ticks:{font:{size:9.5},color:'#9aa3b8',maxTicksLimit:5},grid:{color:'#f0f2f7'}} } } });
       });
       /* 지표 이름 클릭 → 차트 ↔ raw 데이터 테이블 토글 */
       box.querySelectorAll('.ixn-t').forEach(t=>t.addEventListener('click', ()=>{
@@ -6356,11 +6373,13 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
         if(dv.hidden){
           if(!dv.innerHTML){
             const rows = (ind.data||[]).filter(d=>d&&d.value!=null).slice().reverse();
-            dv.innerHTML = '<table class="ixn-tbl"><thead><tr><th>기간</th><th>값'+(ind.unit?' ('+ind.unit+')':'')+'</th><th>전기比</th></tr></thead><tbody>'
+            const hasNote = rows.some(d=>d.note);
+            dv.innerHTML = '<table class="ixn-tbl"><thead><tr><th>기간</th><th>값'+(ind.unit?' ('+ind.unit+')':'')+'</th><th>전기比</th>'+(hasNote?'<th style="text-align:left">비고</th>':'')+'</tr></thead><tbody>'
               + rows.map((d,j)=>{ const prev = rows[j+1];
                   const chg = (prev&&prev.value) ? (d.value/prev.value-1)*100 : null;
-                  return `<tr><td>${d.label}</td><td>${Number(d.value).toLocaleString()}</td>
-                    <td style="color:${chg==null?'#9aa3b8':(chg>=0?'#d3273e':'#2f56e8')};font-weight:600">${chg==null?'–':(chg>0?'+':'')+chg.toFixed(1)+'%'}</td></tr>`; }).join('')
+                  const vcol = d.derived===true ? '#d97706' : (d.derived===false ? '#2563eb' : 'inherit');
+                  return `<tr><td>${d.label}</td><td style="color:${vcol}">${Number(d.value).toLocaleString()}</td>
+                    <td style="color:${chg==null?'#9aa3b8':(chg>=0?'#d3273e':'#2f56e8')};font-weight:600">${chg==null?'–':(chg>0?'+':'')+chg.toFixed(1)+'%'}</td>${hasNote?`<td style="text-align:left;font-size:10.5px;color:var(--text-dim);white-space:normal">${d.note||''}</td>`:''}</tr>`; }).join('')
               + '</tbody></table>';
           }
           dv.hidden = false; cb.style.display = 'none'; tg.textContent = '차트 ▸';
