@@ -4311,6 +4311,22 @@ function makePortfolioCard(activeItemsRaw) {
       const pl = valT - costT, rt = pl / costT * 100;
       totHtml += `<span class="pf-tot-ret ${pfRetCls(pl)}" title="매수가 입력 종목 ${nRet}개 기준 · 투자원금 ${fmtWon(Math.round(costT))}원">${pfSgn(rt, 1)}% (${pfSgn(Math.round(pl))}원)</span>`;
     }
+    // 기간 수익률 (입·출금 보정) — 월간 수익률 그래프와 같은 방식: 월말 스냅샷 체인 + 마지막 스냅샷 이후 현재까지
+    try {
+      const hist = pfMonthlyData().slice().sort((x, y) => (x.ym < y.ym ? -1 : 1)).filter(h => h.total > 0);
+      if (sum && hist.length) {
+        const deps = Array.isArray(diary.data.pfDeposits) ? diary.data.pfDeposits : [];
+        const depBetween = (d0, d1) => deps.reduce((acc, x) => (x.d > d0 && (!d1 || x.d <= d1) ? acc + (Number(x.amt) || 0) : acc), 0);
+        let mul = 1;
+        for (let i = 1; i < hist.length; i++) mul *= (hist[i].total - depBetween(hist[i - 1].d || '', hist[i].d || '')) / hist[i - 1].total;
+        const last = hist[hist.length - 1];
+        const dNow = depBetween(last.d || '', null);
+        mul *= (sum - dNow) / last.total;
+        const pr = (mul - 1) * 100;
+        const depAll = depBetween(hist[0].d || '', null);
+        totHtml += `<span class="pf-tot-ret ${pfRetCls(pr)}" style="margin-left:8px;opacity:.9" title="${hist[0].ym} 말 ${fmtWon(hist[0].total)}원 기준 · 월말 스냅샷 체인 · 기간 중 입출금 ${pfSgn(depAll)}원 제외 (월간 수익률 그래프와 같은 계산)">기간 ${pfSgn(pr, 1)}% <span style="font-weight:500;font-size:.85em">(${hist[0].ym.slice(2).replace('-', '.')}말~, 입출금 보정)</span></span>`;
+      }
+    } catch (_) {}
     total.innerHTML = totHtml;
     activeItems.forEach((it, i) => {
       pctEls[i].textContent = sum && data[i].v ? (data[i].v / sum * 100).toFixed(1) + '%' : '';
