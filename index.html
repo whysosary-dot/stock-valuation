@@ -3261,6 +3261,15 @@ function saveDiaryData(data) { localStorage.setItem(DIARY_KEY, JSON.stringify(da
    - scenario/pfTarget: 같은 id(없으면 이름)의 항목에서 remote 에 없는 필드(avgPx·cost·qty·amt…)는 로컬 값 유지,
      remote 에 아예 없는 로컬 항목은 뒤에 추가 (시나리오는 오늘 생성된 것만)
    - 그 외 최상위 키: remote 에 없으면 로컬 것 유지. remote 에 있는 값은 항상 remote 가 이김 */
+/* 삭제 기록 남기기 — kind: 'pfTarget' | 'scenario' */
+function diaryTombstone(kind, item) {
+  const k = item && (item.id || String(item.name || '').toLowerCase().replace(/\s+/g, ''));
+  if (!k) return;
+  if (!diary.data._tomb || typeof diary.data._tomb !== 'object') diary.data._tomb = {};
+  const arr = Array.isArray(diary.data._tomb[kind]) ? diary.data._tomb[kind] : (diary.data._tomb[kind] = []);
+  arr.unshift({ k, n: item.name || '', t: new Date().toISOString() });
+  if (arr.length > 300) arr.length = 300;
+}
 function diaryMergeKeepLocal(remote, local) {
   if (!local || typeof local !== 'object') return remote;
   const out = { ...remote };
@@ -3283,6 +3292,23 @@ function diaryMergeKeepLocal(remote, local) {
       } else if (k !== 'scenario' || lit.updated === todayDateStr()) base.push(lit);   // 시나리오는 오늘 만든 것만 재추가 (다른 기기에서 지운 항목 부활 방지)
     }
     out[k] = base;
+  }
+  // 삭제 기록(tombstone) — 어느 기기에서 지운 항목이든 머지로 되살아나지 않게 (2026-10-15)
+  const tomb = {};
+  for (const src of [remote && remote._tomb, local && local._tomb]) {
+    if (!src || typeof src !== 'object') continue;
+    for (const [k, arr] of Object.entries(src)) {
+      if (!Array.isArray(arr)) continue;
+      const m = tomb[k] || (tomb[k] = new Map());
+      for (const t of arr) if (t && t.k && !(m.has(t.k) && m.get(t.k).t >= t.t)) m.set(t.k, t);
+    }
+  }
+  if (Object.keys(tomb).length) {
+    out._tomb = {};
+    for (const [k, m] of Object.entries(tomb)) {
+      out._tomb[k] = [...m.values()].sort((a, b) => (a.t < b.t ? 1 : -1)).slice(0, 300);
+      if (Array.isArray(out[k])) out[k] = out[k].filter(it => !m.has(keyOf(it)));
+    }
   }
   return out;
 }
@@ -3916,6 +3942,7 @@ function makeScenarioCard(item) {
       const list = scList();
       const i = list.indexOf(item);
       if (i >= 0) list.splice(i, 1);
+      diaryTombstone('scenario', item);
       saveDiaryData(diary.data); updateTabCounts(); renderFeedScenario();
     });
   });
@@ -4907,6 +4934,7 @@ function makeTargetPortfolioCard(heldItems) {
       del.addEventListener('click', () => {
         svConfirm(`목표 포트에서 '${it.name || '(이름 없음)'}' 을 뺄까요?`, () => {
           diary.data.pfTarget = tgt().filter(x => x !== it);
+          diaryTombstone('pfTarget', it);
           saveDiaryData(diary.data);
           buildRows(); updatePie();
         });
