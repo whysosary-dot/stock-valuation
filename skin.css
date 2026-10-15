@@ -18,6 +18,8 @@ html[data-skin="us"] .hdr .dt,html[data-skin="kr"] .hdr .dt{background:var(--acc
 html[data-skin="us"] .summ-hdr,html[data-skin="kr"] .summ-hdr,html[data-skin="us"] .kr-hdr,html[data-skin="kr"] .kr-hdr,html[data-skin="kr"] .flow-hdr{background:var(--accent-soft) !important;background-image:none !important;color:var(--accent) !important}
 html[data-skin="us"] .strat,html[data-skin="kr"] .strat{background:var(--panel) !important;background-image:none !important;color:var(--text) !important;border:1px solid var(--border)}
 html[data-skin="us"] .strat-list li,html[data-skin="kr"] .strat-list li{color:var(--text) !important}
+html[data-skin="us"] .strat-list b,html[data-skin="kr"] .strat-list b,html[data-skin="us"] .strat-list li span:not(.bullet),html[data-skin="kr"] .strat-list li span:not(.bullet){color:var(--text) !important}
+html[data-skin="us"] .strat-list li + li,html[data-skin="kr"] .strat-list li + li{border-top-color:var(--border) !important}
 html[data-skin="us"] .strat-mode,html[data-skin="kr"] .strat-mode{background:var(--accent-soft) !important;color:var(--accent) !important}
 html[data-skin="us"] .sent,html[data-skin="kr"] .sent,html[data-skin="us"] .dcard,html[data-skin="kr"] .dcard,html[data-skin="us"] .ins,html[data-skin="kr"] .ins,html[data-skin="us"] .kr-card,html[data-skin="kr"] .flow-card,html[data-skin="us"] .summ,html[data-skin="kr"] .summ{border-radius:12px !important;border-color:var(--border) !important}
 html[data-skin="us"] .kpi,html[data-skin="kr"] .kpi,html[data-skin="us"] .ix,html[data-skin="kr"] .ix{border-radius:10px !important;border-color:var(--border) !important;background:var(--panel-2) !important}
