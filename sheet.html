@@ -1562,7 +1562,7 @@ async function createPdfNoteCard(pdfUrl, name, folderId) {
     const r = await fetch(pdfUrl, { mode: 'cors' });
     if (!r.ok) throw new Error('다운로드 실패 ' + r.status);
     const pdfjs = await ensurePdfJs();
-    const pdf = await pdfjs.getDocument({ data: await r.arrayBuffer() }).promise;
+    const pdf = await pdfjs.getDocument({ data: await r.arrayBuffer(), cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/', cMapPacked: true, standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/' }).promise;
     let html = '';
     for (let p = 1; p <= pdf.numPages; p++) {
       const page = await pdf.getPage(p);
@@ -1835,12 +1835,13 @@ function ensurePdfJs() {
   return _pdfjsReady;
 }
 
-/* PDF ArrayBuffer → 페이지 이미지 삽입 (파일 첨부·URL 붙여넣기 공용) */
+/* PDF ArrayBuffer → 페이지 이미지 삽입 (파일 첨부·URL 붙여넣기 공용)
+   cMapUrl 필수 — 증권사 리포트 등 한글 CID 폰트(미임베드) PDF 는 CMap 없으면 글자가 통째로 빠진 채 렌더된다 (2026-10-16 미래에셋 한라IMS 리포트) */
 async function insertPdfBuffer(buf) {
   setStatus('PDF 변환 중…', false);
   try {
     const pdfjs = await ensurePdfJs();
-    const pdf = await pdfjs.getDocument({ data: buf }).promise;
+    const pdf = await pdfjs.getDocument({ data: buf, cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/', cMapPacked: true, standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/' }).promise;
     const total = pdf.numPages;
     if (total > 15) toast(`📎 ${total}페이지 — 변환에 시간이 걸릴 수 있어요`, 'ok', 3000);
     const ed = document.getElementById('note-edit');
