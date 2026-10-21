@@ -1,0 +1,23 @@
+name: pf-monthly
+# 매월 28~31일 21:00 KST — 스크립트가 '이 달 마지막 평일'인지 스스로 판정, 아니면 스킵
+on:
+  schedule:
+    - cron: '0 12 28-31 * *'
+    - cron: '30 12 28-31 * *'
+  workflow_dispatch:
+concurrency:
+  group: pf-monthly
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: pf_monthly_snapshot.py (마지막 평일이면 sv/pf_monthly.json 기록)
+        env:
+          GH_PAT: ${{ secrets.SV_PAT }}
+        run: python3 pf_monthly_snapshot.py 2>&1 | tail -10
