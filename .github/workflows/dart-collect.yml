@@ -1,0 +1,28 @@
+name: dart-collect
+# 09:10·13:10·18:10 KST 평일 Dart 탭 공시 수집. 변경 없으면 커밋 생략
+on:
+  schedule:
+    - cron: '10 0 * * 1-5'
+    - cron: '35 0 * * 1-5'
+    - cron: '10 4 * * 1-5'
+    - cron: '35 4 * * 1-5'
+    - cron: '10 9 * * 1-5'
+    - cron: '35 9 * * 1-5'
+  workflow_dispatch:
+concurrency:
+  group: dart-collect
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: dart_collect.py (DART·EDGAR·TDnet → dart-monitoring/data/disclosures.json)
+        env:
+          GH_PAT: ${{ secrets.SV_PAT }}
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: python3 dart_collect.py 2>&1 | tail -15
