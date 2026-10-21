@@ -1,0 +1,25 @@
+name: report-collect
+# 07:20·12:20 KST 월~토 증권사 리포트 수집. 내용 같으면 커밋 생략이라 재시도 cron 무해
+on:
+  schedule:
+    - cron: '20 22 * * 0-5'
+    - cron: '50 22 * * 0-5'
+    - cron: '20 3 * * 1-6'
+    - cron: '50 3 * * 1-6'
+  workflow_dispatch:
+concurrency:
+  group: report-collect
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: report_collect.py (WiseReport 기업·산업 리포트 → report/data)
+        env:
+          GITHUB_TOKEN: ${{ secrets.SV_PAT }}
+        run: python3 report_collect.py 2>&1 | tail -15
