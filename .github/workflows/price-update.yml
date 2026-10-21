@@ -1,10 +1,13 @@
 name: price-update
-# 장중 10분마다 주가·시총·등락률 갱신 (Claude 없이, GitHub 서버에서 실행 — 토큰 0)
-# cron 은 UTC. KR 09:00~15:50 KST = 00~06 UTC / US 09:30~16:00 ET = 14:30~21:00(서머타임)·15:30~22:00 UTC
+# 장중 10분 간격 주가·시총·등락률 갱신 (Claude 없이 GitHub 서버에서 실행 — 토큰 0)
+# GitHub 의 cron 은 수십 분~수 시간씩 밀리거나 건너뛰는 일이 잦아서(2026-10-21 확인: */10 이 75분간 0회),
+# cron 은 '장 시작 깨우기' 용도로만 쓰고, 한 번 깨면 장 마감까지 job 안에서 10분마다 반복한다.
+#   KR 장: 00:00~06:45 UTC (09:00~15:45 KST)
+#   US 장: 13:30~22:15 UTC (서머타임·표준시 모두 포함)
 on:
   schedule:
-    - cron: '*/10 0-6 * * 1-5'
-    - cron: '*/10 14-22 * * 1-5'
+    - cron: '0 0-6 * * 1-5'      # KR 장중 매시 깨우기 (이미 돌고 있으면 대기열에서 곧 종료)
+    - cron: '30 13-21 * * 1-5'   # US 장중 매시 깨우기
   workflow_dispatch:
 concurrency:
   group: price-update
@@ -12,14 +15,24 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - run: pip install -q yfinance flask flask-cors
-      - name: hourly_price_update.py
+      - name: loop until market close (10 min)
         env:
           GITHUB_TOKEN: ${{ secrets.SV_PAT }}
-        run: python3 hourly_price_update.py 2>&1 | tail -15
+        run: |
+          H=$(date -u +%-H); M=$(date -u +%-M); NOW=$((H*60+M))
+          if   [ $NOW -lt 405 ]; then END=405                       # 06:45 UTC
+          elif [ $NOW -ge 810 ] && [ $NOW -lt 1335 ]; then END=1335  # 13:30~22:15 UTC
+          else echo "장 시간 아님 — 1회만 실행"; END=$((NOW+1)); fi
+          while : ; do
+            python3 hourly_price_update.py 2>&1 | tail -4
+            H=$(date -u +%-H); M=$(date -u +%-M); NOW=$((H*60+M))
+            [ $NOW -ge $END ] && break
+            sleep $(( 600 - $(date -u +%s) % 600 ))
+          done
