@@ -1,0 +1,25 @@
+name: price-update
+# 장중 10분마다 주가·시총·등락률 갱신 (Claude 없이, GitHub 서버에서 실행 — 토큰 0)
+# cron 은 UTC. KR 09:00~15:50 KST = 00~06 UTC / US 09:30~16:00 ET = 14:30~21:00(서머타임)·15:30~22:00 UTC
+on:
+  schedule:
+    - cron: '*/10 0-6 * * 1-5'
+    - cron: '*/10 14-22 * * 1-5'
+  workflow_dispatch:
+concurrency:
+  group: price-update
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -q yfinance flask flask-cors
+      - name: hourly_price_update.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.SV_PAT }}
+        run: python3 hourly_price_update.py 2>&1 | tail -15
