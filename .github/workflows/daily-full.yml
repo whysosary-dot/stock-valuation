@@ -1,0 +1,26 @@
+name: daily-full
+# 06:00·17:00 KST 전체 갱신(차트 이력 포함). GitHub cron 이 건너뛰는 일이 있어 40분 뒤 한 번 더 — 두 번 돌아도 무해
+on:
+  schedule:
+    - cron: '0 21 * * *'
+    - cron: '40 21 * * *'
+    - cron: '0 8 * * *'
+    - cron: '40 8 * * *'
+  workflow_dispatch:
+concurrency:
+  group: daily-full
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -q yfinance flask flask-cors
+      - name: daily_update.py (시총 + 1y/3y 가격이력 + 검증)
+        env:
+          GITHUB_TOKEN: ${{ secrets.SV_PAT }}
+        run: python3 daily_update.py 2>&1 | tail -25
