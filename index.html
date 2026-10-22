@@ -1924,8 +1924,11 @@ function renderRow(s) {
       const tickerCode = ticker.split('.')[0];
       // naver_code 없으면 tickerCode(suffix 제거) 사용 — 285A.T → 285A, NVDA → NVDA
       const naverCode = s.naver_code || tickerCode;
+      // 대만(.TW/.TWO) 은 네이버 해외주식에 없음 → 코드만 남아 엉뚱한 종목(일본 동일 코드)으로 이어짐. 구글 파이낸스로.
       const naverUrl = isKorean
         ? `https://m.stock.naver.com/domestic/stock/${tickerCode}/total`
+        : ticker.endsWith('.TW')  ? `https://www.google.com/finance/quote/${tickerCode}:TPE`
+        : ticker.endsWith('.TWO') ? `https://www.google.com/finance/quote/${tickerCode}:TPEX`
         : `https://m.stock.naver.com/worldstock/stock/${naverCode}/total`;
 
       // ── 즐겨찾기 별 버튼 ──
@@ -6245,6 +6248,8 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
     const naverCode = s.naver_code || code;
     return isKorean
       ? `https://m.stock.naver.com/domestic/stock/${code}/total`
+      : ticker.endsWith('.TW')  ? `https://www.google.com/finance/quote/${code}:TPE`
+      : ticker.endsWith('.TWO') ? `https://www.google.com/finance/quote/${code}:TPEX`
       : `https://m.stock.naver.com/worldstock/stock/${naverCode}/total`;
   }
   function nameLink(s) {
