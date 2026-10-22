@@ -360,6 +360,14 @@
     color: var(--text); font-size: 12.5px; padding: 6px 8px; border-radius: 6px; cursor: pointer;
   }
   .sfp-actions button:hover { border-color: var(--accent); color: var(--accent); }
+  .sfp-search {
+    display: block; width: 100%; box-sizing: border-box; margin: 0 0 6px;
+    background: var(--panel-2); border: 1px solid var(--border-strong); color: var(--text);
+    font-size: 13px; padding: 6px 8px; border-radius: 6px; outline: none;
+    position: sticky; top: 42px; z-index: 1;
+  }
+  .sfp-search:focus { border-color: var(--accent); }
+  .sfp-item.sfp-hide { display: none; }
   .sfp-item {
     display: flex; align-items: center; gap: 8px;
     padding: 7px 10px; border-radius: 6px; cursor: pointer;
@@ -1302,6 +1310,7 @@ td input, td textarea{border-radius:8px}
         <button id="sfp-all" type="button">전체 선택</button>
         <button id="sfp-clear" type="button">전체 해제</button>
       </div>
+      <input id="sfp-search" class="sfp-search" type="search" placeholder="섹터 검색..." autocomplete="off" />
       <div id="sfp-list"></div>
     </div>
   </div>
@@ -2336,6 +2345,16 @@ function render() {
   m.textContent = parts.join(' · ');
 }
 
+function applySectorSearch() {
+  const inp = document.getElementById('sfp-search');
+  const listEl = document.getElementById('sfp-list');
+  if (!inp || !listEl) return;
+  const q = inp.value.trim().toLowerCase();
+  listEl.querySelectorAll('.sfp-item').forEach(el => {
+    el.classList.toggle('sfp-hide', !!q && !el.dataset.name.includes(q));
+  });
+}
+
 function updateSectorFilterOptions() {
   const listEl = document.getElementById('sfp-list');
   const btn = document.getElementById('sector-filter-btn');
@@ -2383,8 +2402,10 @@ function updateSectorFilterOptions() {
       const cnt = document.createElement('span');
       cnt.className = 'sfp-cnt'; cnt.textContent = counts.get(name);
       lb.append(cb, dot, nm, cnt);
+      lb.dataset.name = name.toLowerCase();
       listEl.appendChild(lb);
     });
+    applySectorSearch();
   }
 
   // 버튼 라벨
@@ -2563,9 +2584,20 @@ async function init() {
   // 섹터 다중 선택 드롭다운
   const sfBtn = document.getElementById('sector-filter-btn');
   const sfPanel = document.getElementById('sector-filter-panel');
+  const sfSearch = document.getElementById('sfp-search');
   sfBtn.addEventListener('click', e => {
     e.stopPropagation();
     sfPanel.hidden = !sfPanel.hidden;
+    if (!sfPanel.hidden && sfSearch && window.matchMedia('(hover: hover)').matches) sfSearch.focus();
+  });
+  sfSearch.addEventListener('input', applySectorSearch);
+  sfSearch.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { sfSearch.value = ''; applySectorSearch(); e.stopPropagation(); }
+    if (e.key === 'Enter') {
+      // 검색 결과가 하나뿐이면 Enter로 바로 토글
+      const vis = [...document.querySelectorAll('#sfp-list .sfp-item:not(.sfp-hide) input')];
+      if (vis.length === 1) vis[0].click();
+    }
   });
   sfPanel.addEventListener('click', e => e.stopPropagation());
   document.addEventListener('click', () => { if (!sfPanel.hidden) sfPanel.hidden = true; });
