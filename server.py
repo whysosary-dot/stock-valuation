@@ -144,6 +144,14 @@ def _fetch_marketcap_krw(ticker: str, usdkrw: float, shares_adjustment: float = 
             except Exception:
                 hkd_rate = 180.0
             market_cap_krw = float(market_cap_native) * hkd_rate
+        elif currency == "TWD":
+            # 대만달러 — 이전엔 분기가 없어 달러 환율로 곱해 시총이 ~30배 부풀려졌음 (2026-10-22 수정)
+            try:
+                twd = yf.Ticker("TWDKRW=X").fast_info
+                twd_rate = twd.get("lastPrice") or twd.get("last_price") or 44.0
+            except Exception:
+                twd_rate = 44.0
+            market_cap_krw = float(market_cap_native) * twd_rate
         elif currency == "CNY" or currency == "RMB":
             try:
                 cny = yf.Ticker("CNYKRW=X").fast_info
