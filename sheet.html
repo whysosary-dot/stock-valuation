@@ -572,6 +572,24 @@ function removeSheetData(id) {
   idbDelKey(DATA_PREF + id);
 }
 
+/* 분할 저장된 시트 데이터(<id>.json 매니페스트 + <id>.cN.json 조각) 읽기 — index.html 의 ghSheetDataPut 과 짝 */
+async function ghSheetDataFetch(pat, id) {
+  const H = { Authorization: 'token ' + pat, Accept: 'application/vnd.github.raw' };
+  const u = (p) => `https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/sv/sheets/data/${p}?ref=${GH.BRANCH}&t=${Date.now()}`;
+  const r = await fetch(u(`${id}.json`), { cache: 'no-store', headers: H });
+  if (!r.ok) return { ok: false, status: r.status };
+  const txt = await r.text();
+  let obj; try { obj = JSON.parse(txt); } catch (_) { return { ok: false, status: 0 }; }
+  if (!(obj && obj._chunked)) return { ok: true, data: obj };
+  const parts = [];
+  for (let i = 0; i < obj.parts; i++) {
+    const pr = await fetch(u(`${id}.c${i}.json`), { cache: 'no-store', headers: H });
+    if (!pr.ok) return { ok: false, status: pr.status };
+    parts.push(await pr.text());
+  }
+  return { ok: true, data: JSON.parse(parts.join('')) };
+}
+
 /* 카드 1건의 내용만 GitHub 에서 즉시 받아오기.
    인덱스는 동기화됐는데 내용 파일이 이 기기에 없을 때(다른 기기에서 만든 카드 등) 복구용. */
 async function pullOneSheetData(id, opts = {}) {
@@ -580,8 +598,7 @@ async function pullOneSheetData(id, opts = {}) {
     if (!opts.silent) toast('🔑 대시보드 ⚙️ 에서 GitHub 토큰을 먼저 저장하세요', 'err', 5000);
     return false;
   }
-  const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/sv/sheets/data/${id}.json?ref=${GH.BRANCH}&t=${Date.now()}`,
-    { cache: 'no-store', headers: { Authorization: 'token ' + pat, Accept: 'application/vnd.github.raw' } });
+  const r = await ghSheetDataFetch(pat, id);
   if (!r.ok) {
     if (!opts.silent) {
       toast(r.status === 404 ? '❌ GitHub 에 이 카드의 내용이 없습니다 (원본 기기에서 커밋 필요)'
@@ -589,7 +606,7 @@ async function pullOneSheetData(id, opts = {}) {
     }
     return false;
   }
-  saveSheetData(id, await r.json());
+  saveSheetData(id, r.data);
   return true;
 }
 
@@ -3040,11 +3057,8 @@ async function ghDelete(path, sha, message, pat) {
     //    (PDF 페이지가 든 노트 등). raw 미디어타입은 대용량도 원본 그대로 반환.
     const dlOne = async (s) => {
       try {
-        const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/sv/sheets/data/${s.id}.json?ref=${GH.BRANCH}&t=${Date.now()}`, {
-          cache: 'no-store',
-          headers: { Authorization: 'token ' + pat, Accept: 'application/vnd.github.raw' }
-        });
-        if (r.ok) saveSheetData(s.id, await r.json());
+        const r = await ghSheetDataFetch(pat, s.id);
+        if (r.ok) saveSheetData(s.id, r.data);
       } catch(_) {}
     };
     // 현재 보고 있는 폴더의 카드부터 먼저 받기
@@ -3260,12 +3274,9 @@ async function fetchMissingSheetData(pat) {
     !localStorage.getItem(DATA_PREF + s.id) && !_bigCache[s.id]);
   const one = async (s) => {
     try {
-      const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/sv/sheets/data/${s.id}.json?ref=${GH.BRANCH}&t=${Date.now()}`, {
-        cache: 'no-store',
-        headers: { Authorization: 'token ' + pat, Accept: 'application/vnd.github.raw' }
-      });
+      const r = await ghSheetDataFetch(pat, s.id);
       if (r.ok) {
-        saveSheetData(s.id, await r.json());
+        saveSheetData(s.id, r.data);
         console.log('[sheets] 누락 데이터 복구:', s.name);
       }
     } catch(_) {}
