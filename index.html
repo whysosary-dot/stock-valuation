@@ -5856,6 +5856,32 @@ async function ghApiGet(pat, path) {
   return null;
 }
 
+/* 대용량 파일(PDF 페이지 이미지가 든 노트 등)은 Contents API PUT 이
+   "422 file is too large to be processed" 로 거절된다 → Git Data API 로 우회
+   (blob 생성 → 트리 → 커밋 → ref 갱신). blob 은 100MB 까지 허용. */
+const GH_BIG_PUT_BYTES = 5 * 1024 * 1024;
+async function ghApiPutViaGitData(pat, path, b64, message) {
+  const H = { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json', 'User-Agent': 'sv-browser' };
+  const base = `https://api.github.com/repos/${GH.OWNER}/${GH.REPO}`;
+  const call = async (url, method, body) => {
+    const r = await fetch(url, { method, headers: H, cache: 'no-store', body: body ? JSON.stringify(body) : undefined });
+    if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(`${method} ${url.replace(base,'')}: ${r.status} ${e.message||''}`); }
+    return r.json();
+  };
+  const blob = await call(`${base}/git/blobs`, 'POST', { content: b64, encoding: 'base64' });
+  const ref = await call(`${base}/git/ref/heads/${GH.BRANCH}`, 'GET');
+  const headSha = ref.object.sha;
+  const headCommit = await call(`${base}/git/commits/${headSha}`, 'GET');
+  const tree = await call(`${base}/git/trees`, 'POST', {
+    base_tree: headCommit.tree.sha,
+    tree: [{ path, mode: '100644', type: 'blob', sha: blob.sha }]
+  });
+  const commit = await call(`${base}/git/commits`, 'POST', { message, tree: tree.sha, parents: [headSha] });
+  await call(`${base}/git/refs/heads/${GH.BRANCH}`, 'PATCH', { sha: commit.sha });
+  // Contents API PUT 응답 모양에 맞춰 반환 (content.sha = 새 blob SHA)
+  return { content: { sha: blob.sha, path }, commit: { sha: commit.sha } };
+}
+
 async function ghApiPut(pat, path, contentStr, sha, message) {
   // UTF-8 → base64 (한글 포함, 청크 방식 — Safari iOS 대용량 안전)
   const bytes = new TextEncoder().encode(contentStr);
@@ -5864,6 +5890,7 @@ async function ghApiPut(pat, path, contentStr, sha, message) {
   for (let i = 0; i < bytes.length; i += CHUNK)
     bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
   const b64 = btoa(bin);
+  if (bytes.length > GH_BIG_PUT_BYTES) return ghApiPutViaGitData(pat, path, b64, message);
   const body = { message, content: b64, branch: GH.BRANCH };
   if (sha) body.sha = sha;
   const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/${path}`, {
@@ -5871,7 +5898,11 @@ async function ghApiPut(pat, path, contentStr, sha, message) {
     headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json', 'User-Agent': 'sv-browser' },
     body: JSON.stringify(body)
   });
-  if (!r.ok) { const e = await r.json().catch(()=>{}); throw new Error(`PUT ${path}: ${r.status} ${e?.message||''}`); }
+  if (!r.ok) {
+    const e = await r.json().catch(()=>{});
+    if (r.status === 422 && /too large/i.test(e?.message || '')) return ghApiPutViaGitData(pat, path, b64, message);
+    throw new Error(`PUT ${path}: ${r.status} ${e?.message||''}`);
+  }
   return r.json();
 }
 
