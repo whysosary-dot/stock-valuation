@@ -1099,6 +1099,20 @@
   .i-name-link { color: var(--text); text-decoration: none; font-weight: 500; }
   .i-name-link:hover { color: var(--accent); text-decoration: underline; }
   .insight-loading { text-align: center; color: var(--text-dim); font-size: 13px; padding: 40px 0; }
+  /* AI 인사이트 (스케줄 태스크가 쓴 insights/sv.json) */
+  .ai-ins { display:flex; flex-direction:column; gap:8px; }
+  .ai-ins .ai-head { font-size: 14px; font-weight: 700; line-height: 1.45; color: var(--text); }
+  .ai-ins .ai-meta { font-size: 11px; color: var(--text-dim); }
+  .ai-ins .ai-meta.stale { color: #b45309; }
+  .ai-card { border: 1px solid var(--border); border-left: 4px solid #6366f1; border-radius: 10px; padding: 9px 12px; background: var(--panel); }
+  .ai-card .t { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+  .ai-card .b { font-size: 12.5px; line-height: 1.55; color: var(--text); white-space: pre-line; }
+  .ai-card .tags { margin-top: 4px; display:flex; flex-wrap:wrap; gap:4px; }
+  .ai-card .tag { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; background: var(--panel-2); color: var(--text-dim); border: 1px solid var(--border); }
+  .ai-watch { font-size: 12.5px; line-height: 1.5; padding-left: 16px; margin: 0; }
+  .ai-src { font-size: 11px; color: var(--text-dim); line-height: 1.5; }
+  .ai-src a { color: inherit; }
+  .ai-src details summary { cursor: pointer; }
   .insight-overlay-bg {
     display: none; position: fixed; inset: 0; z-index: 249;
     background: rgba(15,23,42,0.18);
@@ -6256,6 +6270,32 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
     return `<a href="${naverUrl(s)}" target="_blank" rel="noopener" class="i-name-link">${s.name}</a>`;
   }
 
+  const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  async function loadAiInsight() {
+    const slot = document.getElementById('ai-ins-slot');
+    if (!slot) return;
+    const box = slot.querySelector('.ai-ins');
+    try {
+      const r = await fetch(`https://raw.githubusercontent.com/${GH.OWNER}/stock-valuation/main/insights/sv.json?t=${Math.floor(Date.now()/300000)}`, { cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      const kst = new Date(Date.now() + 9*3600*1000).toISOString().slice(0,10);
+      const stale = d.date && d.date !== kst;
+      let h = `<div class="ai-head">${esc(d.headline || '')}</div>`;
+      h += `<div class="ai-meta${stale ? ' stale' : ''}">${esc(d.date || '')} 생성${d.as_of ? ' · ' + esc(d.as_of) : ''}${stale ? ' · ⚠ 오늘 분이 아직 없습니다(평일 장 마감 후 갱신)' : ''} · Claude 작성 · 투자 권유 아님</div>`;
+      (d.insights || []).forEach(it => {
+        h += `<div class="ai-card"><div class="t">${esc(it.title)}</div><div class="b">${esc(it.body)}</div>`;
+        if (it.tags && it.tags.length) h += `<div class="tags">${it.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>`;
+        h += `</div>`;
+      });
+      if (d.watch && d.watch.length) h += `<div class="ai-card" style="border-left-color:#f59e0b"><div class="t">👀 내일·이번 주 볼 것</div><ul class="ai-watch">${d.watch.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`;
+      if (d.sources && d.sources.length) h += `<div class="ai-src"><details><summary>출처 ${d.sources.length}건</summary>${d.sources.map(x => `<div>· <a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a>${x.date ? ' (' + esc(x.date) + ')' : ''}</div>`).join('')}</details></div>`;
+      box.innerHTML = h;
+    } catch (e) {
+      box.innerHTML = `<div class="ai-meta">아직 생성된 인사이트가 없습니다 (${esc(e.message)}). 평일 16:10 KST 스케줄 작업이 insights/sv.json 을 만듭니다.</div>`;
+    }
+  }
+
   function buildInsight() {
     const stocks = (state && state.stocks) ? state.stocks : [];
     if (!stocks.length) { body.innerHTML = '<div class="insight-loading">데이터 없음</div>'; return; }
@@ -6307,6 +6347,12 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
 
     // HTML 조립
     let html = '';
+
+    // AI 인사이트 자리 (스케줄 태스크 산출 insights/sv.json — 비동기 로드 후 채움)
+    html += `<div class="insight-section" id="ai-ins-slot">
+      <div class="insight-section-title">🧠 오늘의 인사이트 — 데이터 + 뉴스 검색</div>
+      <div class="ai-ins"><div class="ai-meta">불러오는 중…</div></div>
+    </div>`;
 
     // 종합 요약
     html += `<div class="insight-section">
@@ -6417,6 +6463,7 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
     }
 
     body.innerHTML = html;
+    loadAiInsight();
   }
 })();
 // ────────────────────────────────────────────────────────────────
