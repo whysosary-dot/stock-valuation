@@ -1036,11 +1036,12 @@
   /* ── 인사이트 패널 ── */
   /* ETF Monitor 와 같은 중앙 대형 모달 (2026-10-25: 400px 사이드 패널 → 넓은 모달) */
   /* 탭 바 아래 영역(ETF 탭의 iframe 영역과 동일)에서 중앙 정렬 — 크기는 ETF Monitor 모달과 같게 (width min(920px,96%) · 높이 88%) */
-  :root { --sv-nav-h: 0px; }
+  /* body 에 zoom:1.08 이 걸려 있어 fixed 좌표·vh 가 1.08배 되므로, JS 가 zoom 으로 나눈 값(--sv-nav-h, --sv-vh)을 넣는다 */
+  :root { --sv-nav-h: 0px; --sv-vh: 100vh; }
   #insight-panel {
     position: fixed; left: 50%;
-    top: calc(var(--sv-nav-h) + (100vh - var(--sv-nav-h)) / 2);
-    width: min(920px, 96vw); max-height: calc((100vh - var(--sv-nav-h)) * 0.88);
+    top: calc(var(--sv-nav-h) + (var(--sv-vh) - var(--sv-nav-h)) / 2);
+    width: min(920px, 96vw); max-height: calc((var(--sv-vh) - var(--sv-nav-h)) * 0.88);
     transform: translate(-50%, -50%) scale(0.98);
     background: var(--panel); border: 0; border-radius: 12px;
     box-shadow: 0 16px 48px rgba(15,23,42,0.25);
@@ -1126,7 +1127,7 @@
   }
   .insight-overlay-bg.open { display: block; }
   @media (max-width: 640px) {
-    #insight-panel { width: 96vw; max-height: calc((100vh - var(--sv-nav-h)) * 0.92); }
+    #insight-panel { width: 96vw; max-height: calc((var(--sv-vh) - var(--sv-nav-h)) * 0.92); }
   }
   @media (min-width: 641px) {
     .insight-body { padding: 18px 24px; gap: 18px; }
@@ -6258,8 +6259,10 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
     // 탭 바 높이를 재서 그 아래 영역에만 모달·배경을 띄움 (ETF 탭과 같은 위치)
     try {
       const nav = document.getElementById('page-tabs-nav');
-      const h = nav ? Math.max(0, Math.round(nav.getBoundingClientRect().bottom)) : 0;
-      document.documentElement.style.setProperty('--sv-nav-h', h + 'px');
+      const z = parseFloat(getComputedStyle(document.body).zoom) || 1;   // theme.css body{zoom:1.08}
+      const h = nav ? Math.max(0, nav.getBoundingClientRect().bottom) : 0;
+      document.documentElement.style.setProperty('--sv-nav-h', (h / z).toFixed(1) + 'px');
+      document.documentElement.style.setProperty('--sv-vh', (window.innerHeight / z).toFixed(1) + 'px');
     } catch(_) {}
     buildInsight();
     panel.classList.add('open');
