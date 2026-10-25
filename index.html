@@ -1034,15 +1034,17 @@
   .btn.fav-on { background: #e8f5e9; border-color: #2e7d32; color: #1b5e20; }
 
   /* ── 인사이트 패널 ── */
+  /* ETF Monitor 와 같은 중앙 대형 모달 (2026-10-25: 400px 사이드 패널 → 넓은 모달) */
   #insight-panel {
-    position: fixed; top: 0; right: -420px; width: 400px; height: 100vh;
-    background: var(--panel); border-left: 1px solid var(--border);
-    box-shadow: -4px 0 24px rgba(15,23,42,0.10);
-    z-index: 250; display: flex; flex-direction: column;
-    transition: right 0.28s cubic-bezier(0.4,0,0.2,1);
+    position: fixed; top: 50%; left: 50%; width: min(1100px, 96vw); height: min(92vh, 1200px);
+    transform: translate(-50%, -50%) scale(0.98);
+    background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(15,23,42,0.22);
+    z-index: 250; display: none; flex-direction: column;
+    opacity: 0; transition: opacity 0.2s, transform 0.2s;
     overflow: hidden;
   }
-  #insight-panel.open { right: 0; }
+  #insight-panel.open { display: flex; opacity: 1; transform: translate(-50%, -50%) scale(1); }
   .insight-header {
     display: flex; align-items: center; gap: 10px;
     padding: 16px 18px; border-bottom: 1px solid var(--border);
@@ -1115,13 +1117,22 @@
   .ai-src details summary { cursor: pointer; }
   .insight-overlay-bg {
     display: none; position: fixed; inset: 0; z-index: 249;
-    background: rgba(15,23,42,0.18);
+    background: rgba(15,23,42,0.45);
     transition: opacity 0.28s;
   }
   .insight-overlay-bg.open { display: block; }
-  @media (max-width: 440px) {
-    #insight-panel { width: 100vw; right: -100vw; }
-    #insight-panel.open { right: 0; }
+  @media (max-width: 640px) {
+    #insight-panel { width: 100vw; height: 100vh; height: 100dvh; border-radius: 0; border: 0; }
+  }
+  @media (min-width: 641px) {
+    .insight-body { padding: 18px 24px; gap: 18px; }
+    .ai-ins .ai-head { font-size: 17px; }
+    .ai-ins .ai-meta { font-size: 12px; }
+    .ai-card { padding: 11px 14px; }
+    .ai-card .t { font-size: 14.5px; }
+    .ai-card .b { font-size: 13.5px; line-height: 1.6; }
+    .ai-watch { font-size: 13.5px; }
+    .insight-row { font-size: 13.5px; }
   }
 
   /* 좁은 뷰포트에서 topbar 가독성 보존 (컬럼 숨김은 하지 않음) */
@@ -6251,6 +6262,7 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
   openBtn.addEventListener('click', openInsight);
   closeBtn.addEventListener('click', closeInsight);
   overlay.addEventListener('click', closeInsight);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && panel.classList.contains('open')) closeInsight(); });
 
   function chgClass(v) { return v > 0 ? 'up' : v < 0 ? 'dn' : 'flat'; }
   function chgSign(v)  { return v > 0 ? '+' : ''; }
