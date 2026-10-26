@@ -1,0 +1,33 @@
+name: screener-watchdog
+# stock-screener 의 daily-screen 이 GitHub cron 지연·누락으로 안 돈 날을 메운다.
+# 평일 17:52 / 19:23 / 21:47 KST 에 공개 페이지 daily/index.json 의 latest_date 를 확인해
+# 오늘(KST) 데이터가 없으면 workflow_dispatch 로 daily-screen 을 발동. 있으면 아무것도 안 함.
+# (휴장일엔 발동해도 스크립트가 휴장 감지 후 즉시 종료 — 무해)
+on:
+  schedule:
+    - cron: '52 8 * * 1-5'
+    - cron: '23 10 * * 1-5'
+    - cron: '47 12 * * 1-5'
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: check latest_date and dispatch if missing
+        env:
+          GH_PAT: ${{ secrets.SV_PAT }}
+        run: |
+          TODAY=$(TZ=Asia/Seoul date +%F)
+          LATEST=$(curl -fsSL "https://whysosary-dot.github.io/stock-screener/daily/index.json?t=$(date +%s)" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("latest_date",""))' || echo "")
+          echo "today(KST)=$TODAY latest=$LATEST"
+          if [ "$LATEST" = "$TODAY" ]; then echo "오늘 데이터 있음 — 종료"; exit 0; fi
+          # 이미 실행 중/대기 중인 run 이 있으면 중복 발동하지 않음
+          ACTIVE=$(curl -fsSL -H "Authorization: token $GH_PAT" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/whysosary-dot/stock-screener/actions/workflows/daily-screen.yml/runs?per_page=5" \
+            | python3 -c 'import sys,json;print(sum(1 for r in json.load(sys.stdin).get("workflow_runs",[]) if r["status"] in ("queued","in_progress")))' || echo 0)
+          if [ "$ACTIVE" != "0" ]; then echo "이미 실행 중($ACTIVE) — 종료"; exit 0; fi
+          echo "오늘 데이터 없음 → daily-screen 발동"
+          curl -fsS -X POST -H "Authorization: token $GH_PAT" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/whysosary-dot/stock-screener/actions/workflows/daily-screen.yml/dispatches" \
+            -d '{"ref":"main"}' && echo "dispatch OK"
