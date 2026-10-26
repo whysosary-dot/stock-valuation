@@ -6255,19 +6255,36 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
   const openBtn = document.getElementById('insight-btn');
   const closeBtn= document.getElementById('insight-close-btn');
 
-  function openInsight() {
-    // 탭 바 높이를 재서 그 아래 영역에만 모달·배경을 띄움 (ETF 탭과 같은 위치)
+  /* 탭 바 바로 아래 영역에 모달·배경 배치.
+     body zoom(1.08)을 브라우저마다 다르게 처리(Safari 는 fixed 좌표에도 배율 적용)하므로
+     값을 넣은 뒤 실제 위치를 재서 배율을 역산해 보정한다. 탭 접기/펼치기·회전 때도 다시 맞춤. */
+  function placeInsight() {
     try {
+      const root = document.documentElement.style;
       const nav = document.getElementById('page-tabs-nav');
-      const z = parseFloat(getComputedStyle(document.body).zoom) || 1;   // theme.css body{zoom:1.08}
-      const h = nav ? Math.max(0, nav.getBoundingClientRect().bottom) : 0;
-      document.documentElement.style.setProperty('--sv-nav-h', (h / z).toFixed(1) + 'px');
-      document.documentElement.style.setProperty('--sv-vh', (window.innerHeight / z).toFixed(1) + 'px');
+      const nb = nav ? Math.max(0, nav.getBoundingClientRect().bottom) : 0;
+      root.setProperty('--sv-nav-h', nb.toFixed(1) + 'px');
+      root.setProperty('--sv-vh', window.innerHeight.toFixed(1) + 'px');
+      if (!overlay.classList.contains('open') || nb <= 0) return;
+      const t = overlay.getBoundingClientRect().top;      // 실제로 그려진 위치
+      const f = t > 0 ? t / nb : 1;                        // 화면에 적용된 배율
+      if (Math.abs(f - 1) > 0.005) {
+        root.setProperty('--sv-nav-h', (nb / f).toFixed(1) + 'px');
+        root.setProperty('--sv-vh', (window.innerHeight / f).toFixed(1) + 'px');
+      }
     } catch(_) {}
+  }
+  function openInsight() {
     buildInsight();
     panel.classList.add('open');
     overlay.classList.add('open');
+    placeInsight();
   }
+  try {
+    const navEl = document.getElementById('page-tabs-nav');
+    if (navEl && window.ResizeObserver) new ResizeObserver(() => { if (panel.classList.contains('open')) placeInsight(); }).observe(navEl);
+    window.addEventListener('resize', () => { if (panel.classList.contains('open')) placeInsight(); });
+  } catch(_) {}
   function closeInsight() {
     panel.classList.remove('open');
     overlay.classList.remove('open');
