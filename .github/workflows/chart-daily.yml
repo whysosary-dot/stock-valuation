@@ -1,19 +1,24 @@
 name: chart-daily
 # Chart 탭 — 시장 그룹판 + 일봉·주봉 스캔 (Claude 토큰 0, GitHub 서버 실행)
-#   KR: 평일 16:40 KST (07:40 UTC) + 보험 17:50 KST  → chart/data/groups_kr.json, scan_kr.json
-#   US: 평일 06:40 KST (21:40 UTC 전날) + 보험 07:50 KST → groups_us.json, groups_macro.json, scan_us.json
-# 같은 날 두 번 돌아도 같은 파일을 덮어쓰므로 무해. cron 분은 정각·30분을 피함(GitHub 혼잡 슬롯).
+#   KR 목표: 평일 16:40 KST 이후  → chart/data/groups_kr.json, scan_kr.json
+#   US 목표: 평일 06:40 KST 이후(미국 마감 후) → groups_us.json, groups_macro.json, scan_us.json
+# GitHub cron 은 수 시간 지연될 수 있어 "지금 몇 시냐"로 시장을 고르지 않고,
+# meta.json 의 kr_date / us_date 가 '기대 날짜'보다 오래됐는지(= 아직 안 갱신됐는지)로 판단.
+# 그래서 슬롯을 넉넉히 두어도, 이미 갱신된 시장은 1초 만에 끝남.
 on:
   schedule:
-    - cron: '41 7 * * 1-5'
-    - cron: '53 8 * * 1-5'
-    - cron: '43 21 * * 1-5'
-    - cron: '53 22 * * 1-5'
+    - cron: '41 7 * * 1-5'    # 16:41 KST
+    - cron: '53 8 * * 1-5'    # 17:53 KST
+    - cron: '17 10 * * 1-5'   # 19:17 KST (지연 보험)
+    - cron: '29 13 * * 1-5'   # 22:29 KST (지연 보험)
+    - cron: '43 21 * * 0-4'   # 06:43 KST 다음날
+    - cron: '53 22 * * 0-4'   # 07:53 KST
+    - cron: '17 1 * * 1-5'    # 10:17 KST (지연 보험)
   workflow_dispatch:
     inputs:
       market:
-        description: 'kr | us | both'
-        default: 'both'
+        description: 'kr | us | both | auto'
+        default: 'auto'
 permissions:
   contents: write
 concurrency:
@@ -22,29 +27,60 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install -q requests yfinance pandas lxml
       - name: decide market
         id: m
         run: |
-          H=$(date -u +%-H); IN="${{ github.event.inputs.market }}"
-          if [ -n "$IN" ]; then echo "mkt=$IN" >> $GITHUB_OUTPUT
-          elif [ $H -ge 5 ] && [ $H -le 12 ]; then echo "mkt=kr" >> $GITHUB_OUTPUT
-          else echo "mkt=us" >> $GITHUB_OUTPUT; fi
+          IN="${{ github.event.inputs.market }}"
+          python3 - "$IN" <<'EOF' >> $GITHUB_OUTPUT
+          import json, sys, datetime as dt
+          arg = (sys.argv[1] or "auto").strip()
+          if arg in ("kr", "us", "both"):
+              print(f"mkt={arg}"); sys.exit()
+          try: meta = json.load(open("chart/data/meta.json"))
+          except Exception: meta = {}
+          def expected(tz_hours, close_h, close_m):
+              now = dt.datetime.utcnow() + dt.timedelta(hours=tz_hours)
+              d = now.date()
+              if (now.hour, now.minute) < (close_h, close_m): d -= dt.timedelta(days=1)
+              while d.weekday() >= 5: d -= dt.timedelta(days=1)
+              return d.isoformat()
+          # KR: 15:30 마감 + 네이버 반영 여유 → 16:30 KST 이후 당일 기대
+          # US: 16:00 ET 마감 + 여유 → 17:00 ET 이후 당일 기대 (ET = UTC-4/-5; 보수적으로 -5)
+          exp_kr = expected(9, 16, 30)
+          exp_us = expected(-5, 17, 0)
+          need = []
+          if meta.get("kr_date", "") < exp_kr: need.append("kr")
+          if meta.get("us_date", "") < exp_us: need.append("us")
+          print("mkt=" + ("+".join(need) if need else "none"))
+          print(f"info=kr {meta.get('kr_date')}→{exp_kr} / us {meta.get('us_date')}→{exp_us}")
+          EOF
+          cat $GITHUB_OUTPUT
+      - name: deps
+        if: steps.m.outputs.mkt != 'none'
+        run: pip install -q requests yfinance pandas lxml
       - name: build
+        if: steps.m.outputs.mkt != 'none'
         run: |
           M="${{ steps.m.outputs.mkt }}"
-          if [ "$M" = "both" ] || [ "$M" = "kr" ]; then python3 chart/build_chart.py kr 2>&1 | grep -v "Failed download\|possibly delisted\|Invalid Crumb" | tail -12; fi
-          if [ "$M" = "both" ] || [ "$M" = "us" ]; then python3 chart/build_chart.py us 2>&1 | grep -v "Failed download\|possibly delisted\|Invalid Crumb" | tail -12; fi
+          case "$M" in both|kr|kr+us) python3 chart/build_chart.py kr 2>&1 | grep -v "Failed download\|possibly delisted\|Invalid Crumb" | tail -12 ;; esac
+          case "$M" in both|us|kr+us) python3 chart/build_chart.py us 2>&1 | grep -v "Failed download\|possibly delisted\|Invalid Crumb" | tail -12 ;; esac
       - name: commit
+        if: steps.m.outputs.mkt != 'none'
         run: |
           git config user.email "whysosary@naver.com"
           git config user.name "리송"
           git add -A chart/data
-          if git diff --cached --quiet; then echo "변동 없음"; else
-            git commit -q -m "chart: $(date -u -d '+9 hours' +%F) ${{ steps.m.outputs.mkt }} (actions)" && git push -q && git log --oneline -1; fi
+          if git diff --cached --quiet; then echo "변동 없음"; exit 0; fi
+          git commit -q -m "chart: $(date -u -d '+9 hours' +%F) ${{ steps.m.outputs.mkt }} (actions)"
+          # 빌드 중(4~5분) 다른 커밋(인사이트·대시보드 편집)이 들어오면 push 거절 → rebase 후 재시도
+          for i in 1 2 3 4 5; do
+            git pull --rebase -q origin main && git push -q && { git log --oneline -1; exit 0; }
+            echo "push 재시도 $i"; sleep $((i*7))
+          done
+          exit 1
