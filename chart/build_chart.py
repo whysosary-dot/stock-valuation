@@ -375,6 +375,26 @@ def yf_download(tickers, period="2y"):
                 d = [x.strftime("%Y-%m-%d") for x in sub.index]
                 out[tk] = (d, sub["Open"].tolist(), sub["High"].tolist(), sub["Low"].tolist(), sub["Close"].tolist(), sub["Volume"].fillna(0).tolist())
             except Exception: pass
+    # 누락 종목 재시도(야후 간헐적 빈 응답 보정) — 작은 청크로 2회
+    missing = [t for t in tickers if t not in out]
+    for attempt in range(2):
+        if len(missing) < 5: break
+        print(f"  ↻ 누락 {len(missing)}개 재시도 {attempt+1}"); time.sleep(8)
+        for i in range(0, len(missing), 40):
+            chunk = missing[i:i + 40]
+            try:
+                df = yf.download(chunk, period=period, interval="1d", group_by="ticker", threads=True, progress=False, auto_adjust=False)
+            except Exception: continue
+            if df is None or df.empty: continue
+            for tk in chunk:
+                try:
+                    sub = df[tk] if len(chunk) > 1 else df
+                    sub = sub.dropna(subset=["Close"])
+                    if sub.empty: continue
+                    d = [x.strftime("%Y-%m-%d") for x in sub.index]
+                    out[tk] = (d, sub["Open"].tolist(), sub["High"].tolist(), sub["Low"].tolist(), sub["Close"].tolist(), sub["Volume"].fillna(0).tolist())
+                except Exception: pass
+        missing = [t for t in tickers if t not in out]
     return out
 
 def build_us():
