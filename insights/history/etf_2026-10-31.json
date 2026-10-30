@@ -1,0 +1,88 @@
+{
+ "tab": "etf",
+ "date": "2026-10-31",
+ "as_of": "데이터 기준 2026-10-24 00:18 KST (데이터 미갱신 — 이번 주 10/31 갱신분 아님)",
+ "headline": "[데이터 미갱신] 매파 동결·AI 수익성 의구심에 반도체 이탈, 돈은 대기자금으로",
+ "insights": [
+  {
+   "title": "로테이션의 축은 'AI 하드웨어 → 보안·소프트웨어·방어주'",
+   "body": "데이터 주간(~10/23) 상위는 사이버보안(BUG)·소프트웨어(IGV)였고 하위는 국내 반도체 소부장·AI 광통신·AI 전력 인프라였다. 보안주 급등은 10/23 Evercore ISI 채널 서베이가 업종 예산 전망 개선을 짚은 것과 CrowdStrike CEO의 대규모 해킹 경고가 겹친 결과로 보도됐다. 이번 주에는 알파벳 실적 후 12.64% 급락으로 AI 인프라 투자의 수익화 속도에 대한 의구심이 다시 불거져 10/30 코스피가 3.48% 하락했고 SK하이닉스가 7%대 밀렸다. 같은 날 삼성바이오로직스·제약은 올라, 데이터상 바이오·헬스케어가 1주·3개월 모두 상위권인 흐름과 맞물린다.",
+   "tags": [
+    "반도체",
+    "사이버보안",
+    "바이오/제약"
+   ],
+   "kind": "mixed"
+  },
+  {
+   "title": "크로스에셋: 금리 인상 재가격화가 금을 누르고 위험선호를 깎았다",
+   "body": "연준은 10/28 기준금리를 3.75~4.00%로 동결했지만 2명이 인상 소수의견을 냈고, 시장은 12/9 회의 25bp 인상 확률을 약 85%로 반영했다. 미 10년물은 5%를 다시 넘었다. 금은 10/23 후티의 사우디 공격으로 유가가 5개월 고점까지 오르며 인플레·금리 인상 우려가 커지고, 기술주 급락에 따른 마진콜용 현금화까지 겹쳐 4,000달러 아래로 밀렸다 — GLD 52주 위치 0, 달러(UUP) 52주 위치 97이 그 결과다. 위험선호 스프레드 1개월 -8.24%p, 하이일드 약세는 위험회피 국면이 아직 풀리지 않았음을 보여준다.",
+   "tags": [
+    "금리",
+    "금",
+    "달러",
+    "신용"
+   ],
+   "kind": "mixed"
+  },
+  {
+   "title": "국내 자금: 지수는 저가매수, 나머지는 현금성으로 대피",
+   "body": "10/21→10/24 국내 ETF 순유입은 KODEX 200(+3,570억)과 머니마켓·CD·전단채 등 대기자금(+4,737억)에 몰렸고, 반도체 업종 ETF와 채권형은 순유출이었다. 즉 개별 테마 비중은 줄이고 지수 바닥 매수와 현금 대기를 동시에 택한 모습이다. 코스닥150 레버리지 +757억 유입·곱버스 -530억 유출로 개인은 반등 쪽에 베팅했지만, 10/30 외국인이 코스피 현물을 1.62조원 순매도한 반면 개인·기관이 받아낸 구도라 수급 부담은 남아 있다.",
+   "tags": [
+    "자금흐름",
+    "대기자금",
+    "레버리지"
+   ],
+   "kind": "mixed"
+  },
+  {
+   "title": "구조: 1년 주도주의 동시 조정과 '에너지·헬스케어' 신고가",
+   "body": "반도체 섹터는 1년 +68.9%를 유지하지만 1개월 -15.7%로 메모리·전력인프라·원자력 등 AI 밸류체인 전반이 함께 '조정 진입'에 들어섰다. 반대로 52주 고점 부근은 XLE·XOP·XLV·VHT·XLP 등 에너지·헬스케어·필수소비재 — 유가 상승과 방어 선호가 동시에 반영된 묶음이다. 조선·방산·중공업은 4기간 모두 마이너스인 구조적 약세로, 한화에어로스페이스의 3분기 실적 미스(10/30 -8.42%)는 원인 중 하나로 보도됐으나 업종 전반의 원인은 확인되지 않았다.",
+   "tags": [
+    "구조적 강세",
+    "구조적 약세",
+    "방산/조선"
+   ],
+   "kind": "data"
+  }
+ ],
+ "watch": [
+  "11/1 한국 10월 수출입 — 반도체 수출이 AI 수익성 우려를 반박하는지",
+  "아마존·인텔 등 빅테크 실적 소화 후 11/2 국내 반도체 수급(외국인 순매도 지속 여부)",
+  "11/10 미국 10월 CPI — 12/9 FOMC 인상 확률(약 85%) 재조정",
+  "중동(후티·사우디) 리스크와 유가 — 금·에너지 ETF 방향"
+ ],
+ "sources": [
+  {
+   "title": "[증시 시황] 코스피 3.48% 급락…삼성전자·SK하이닉스에 'AI 쇼크'",
+   "url": "https://www.topstarnews.net/news/articleView.html?idxno=16263932",
+   "date": "2026-10-30"
+  },
+  {
+   "title": "코스피, 외국인 1.6조 순매도에 하락…5730선 마감",
+   "url": "https://view.asiae.co.kr/article/2026103016084854064",
+   "date": "2026-10-30"
+  },
+  {
+   "title": "Rate decision live: Interest rates held steady in split vote, Warsh says politics played 'no role'",
+   "url": "https://finance.yahoo.com/economy/policy/live/fed-meeting-live-updates-interest-rates-held-steady-in-split-vote-warsh-says-politics-played-no-role-ahead-of-midterm-elections-191946928.html",
+   "date": "2026-10-28"
+  },
+  {
+   "title": "FOMC October 2026: Fed Holds at 3.75%-4%, Markets React",
+   "url": "https://admiralmarkets.com/analytics/traders-blog/fomc-october-2026-fed-holds-rates",
+   "date": "2026-10-28"
+  },
+  {
+   "title": "Gold slips below US$4,000 an ounce on 23 Oct as oil surges",
+   "url": "https://www.nationthailand.com/business/40072669",
+   "date": "2026-10-23"
+  },
+  {
+   "title": "What Is Behind The Move In CrowdStrike Stock?",
+   "url": "https://www.trefis.com/stock/crwd/articles/620538/what-is-behind-the-move-in-crowdstrike-stock/2026-10-26",
+   "date": "2026-10-26"
+  }
+ ],
+ "generated_at": "2026-10-31T08:06:44+09:00"
+}
