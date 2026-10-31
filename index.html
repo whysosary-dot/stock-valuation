@@ -1325,7 +1325,6 @@ td input, td textarea{border-radius:8px}
   <button class="page-tab-btn" data-page="research">🔬 Research</button>
   <button class="page-tab-btn" data-page="sheet">📁 Folder</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
-  <button class="page-tab-btn" data-page="rules">📏 Rules</button>
   <div class="tabs-spacer"></div>
   <button id="gh-settings-btn" class="gh-settings-btn" title="GitHub 토큰 설정">⚙️</button>
   <button id="gh-commit-btn" class="gh-commit-btn" title="밸류에이션 + 다이어리 GitHub에 커밋">☁️ 커밋 &amp; 푸시</button>
@@ -1500,15 +1499,13 @@ td input, td textarea{border-radius:8px}
   ></iframe>
 </div><!-- /page-etfmonitor -->
 
-<div id="page-rules" class="page">
-  <iframe id="rules-frame" style="width:100%;height:calc(100vh - 48px);border:none;display:block;" loading="lazy" title="Rules — 투자 규칙 · 자동 점검"></iframe>
-</div><!-- /page-rules -->
 <div id="page-diary" class="page">
   <div class="diary-topbar">
     <div class="diary-tabs">
       <button class="dtab active" data-tab="daily">📔 일기<span class="dtab-cnt" id="cnt-daily">0</span></button>
       <button class="dtab" data-tab="scenario">🎯 시나리오<span class="dtab-cnt" id="cnt-scenario">0</span></button>
       <button class="dtab" data-tab="highlights">🔴 강조<span class="dtab-cnt" id="cnt-highlights">0</span></button>
+      <button class="dtab" data-tab="rules">📏 규칙</button>
     </div>
     <span class="spacer"></span>
     <input id="diary-search" class="diary-search-inp" type="search" placeholder="🔍 내용 검색..." autocomplete="off" />
@@ -1519,6 +1516,9 @@ td input, td textarea{border-radius:8px}
     <div id="feed-daily"  class="diary-feed active"></div>
     <div id="feed-scenario" class="diary-feed"></div>
     <div id="feed-highlights" class="diary-feed"></div>
+    <div id="feed-rules" class="diary-feed" style="padding:0;overflow:hidden">
+      <iframe id="rules-frame" style="width:100%;height:100%;border:none;display:block;" title="규칙 — 투자 규칙 · 자동 점검"></iframe>
+    </div>
   </div>
 </div><!-- /page-diary -->
 
@@ -2724,7 +2724,6 @@ const IFRAME_TAB_SRC = {
   research:  'https://whysosary-dot.github.io/investment-notes/',
   report:    './report/index.html?v=' + Date.now(),  // 증권사 리포트 정리 (same-origin)
   telegram:  './telegram/index.html?v=' + Date.now(),  // 텔레그램 채널 언급 종목 (same-origin)
-  rules:     './rules/index.html?v=' + Date.now(),  // 투자 규칙 · 다이어리 기반 자동 점검 (same-origin, 토큰은 localStorage 공유)
   // sheet 은 X-Frame-Options 로 iframe 차단되어 안내 페이지로 대체 (IFRAME_TAB_SRC 등록 X)
 };
 
@@ -5600,6 +5599,7 @@ function initDiary() {
       // 강조·시나리오 탭은 들어올 때마다 최신 상태로 새로 그림
       if (diary.activeTab === 'highlights') renderFeedHighlights();
       if (diary.activeTab === 'scenario') renderFeedScenario();
+      if (diary.activeTab === 'rules') { const f = document.getElementById('rules-frame'); if (f) f.src = './rules/index.html?v=' + Date.now(); }
       // 탭이 보여진 후 모든 textarea 높이 재계산 (display:none 상태에서 scrollHeight=0 문제 해결)
       requestAnimationFrame(() => {
         document.querySelectorAll(`#feed-${diary.activeTab} textarea`).forEach(ta => {
