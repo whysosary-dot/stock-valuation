@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Rules — 투자 규칙 · 자동 점검</title>
+<link rel="stylesheet" href="https://whysosary-dot.github.io/stock-valuation/theme.css">
+<style>
+/* 규칙 탭: 다이어리(invest-private sv/diary.json)를 읽어 규칙 준수 여부를 자동 점검한다. 토큰·데이터는 메인 대시보드와 같은 localStorage 를 쓴다. */
+body{padding:12px 14px 40px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.top h1{font-size:16px;font-weight:800;margin:0}
+.top .meta{font-size:12px;color:var(--text-dim)}
+.top .rf{margin-left:auto;border:1px solid var(--border-strong);background:var(--panel);border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--text)}
+.intro{font-size:12.5px;color:var(--text-dim);line-height:1.65;margin:0 0 12px}
+.intro b{color:var(--text)}
+.sec-h{font-size:14px;font-weight:800;margin:16px 0 8px;display:flex;align-items:baseline;gap:8px}
+.sec-h .s{font-size:12px;color:var(--text-dim);font-weight:500}
+/* 점검 카드 */
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.ck{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow);min-width:0;border-left:5px solid var(--border-strong)}
+.ck.ok{border-left-color:#16a34a}.ck.warn{border-left-color:#d97706}.ck.bad{border-left-color:#dc2626}.ck.na{border-left-color:var(--border-strong)}
+.ck .t{font-size:12px;color:var(--text-dim);font-weight:600;display:flex;gap:6px;align-items:center}
+.ck .t .st{margin-left:auto;font-size:11px;font-weight:800;border-radius:6px;padding:1px 7px}
+.ck.ok .st{background:#eef7ee;color:#166534}.ck.warn .st{background:#fff7e6;color:#9a5b00}.ck.bad .st{background:#fdeef0;color:#b91c1c}.ck.na .st{background:var(--panel-2);color:var(--text-dim)}
+.ck .v{font-size:22px;font-weight:800;margin:4px 0 2px;font-variant-numeric:tabular-nums}
+.ck .v small{font-size:12px;font-weight:600;color:var(--text-dim)}
+.ck .d{font-size:11.5px;color:var(--text-dim);line-height:1.55}
+.ck .d b{color:var(--text)}
+.score{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin:0 0 12px;box-shadow:var(--shadow);flex-wrap:wrap}
+.score .big{font-size:30px;font-weight:900;font-variant-numeric:tabular-nums}
+.score .big.g{color:#16a34a}.score .big.y{color:#d97706}.score .big.r{color:#dc2626}
+.score .txt{font-size:12.5px;color:var(--text-dim);line-height:1.6}
+.score .txt b{color:var(--text)}
+/* 규칙 카드 */
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+.rc{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow);min-width:0}
+.rc .no{display:inline-block;background:var(--text);color:#fff;font-weight:800;font-size:11px;border-radius:6px;padding:1px 7px;margin-right:6px;vertical-align:middle}
+.rc h3{font-size:14px;margin:0 0 6px;font-weight:800;line-height:1.4}
+.rc .rule{font-size:13px;line-height:1.65;margin:0 0 8px}
+.rc .rule b{color:#b91c1c}
+.rc .why{font-size:12px;color:var(--text-dim);line-height:1.6;border-top:1px dashed var(--border);padding-top:8px;margin-top:6px}
+.rc .why b{color:var(--text)}
+.rc .why .q{display:block;margin:3px 0 0;padding-left:8px;border-left:2px solid var(--border-strong);font-style:italic}
+.rc .chk{font-size:11px;margin-top:8px;color:var(--text-dim)}
+.rc .chk span{display:inline-block;border:1px solid var(--border-strong);border-radius:5px;padding:0 6px;margin-right:4px;background:var(--panel-2)}
+.rc .chk span.auto{border-color:#bfe3c6;background:#eef7ee;color:#166534}
+/* 표 */
+table{border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;width:100%}
+th{text-align:right;font-weight:700;color:var(--text-dim);padding:6px 8px;border-bottom:1px solid var(--border-strong);white-space:nowrap}
+td{text-align:right;padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+.tbl{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:6px 8px;box-shadow:var(--shadow);overflow:auto}
+.bad-t{color:#dc2626;font-weight:700}.ok-t{color:#16a34a;font-weight:700}
+.note{font-size:11.5px;color:var(--text-dim);margin:8px 0 0;line-height:1.6}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:760px){.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>📏 Rules — 투자 규칙 · 자동 점검</h1>
+  <span class="meta" id="meta">다이어리 불러오는 중…</span>
+  <button class="rf" id="rf">↻ 다시 점검</button>
+</div>
+<p class="intro">규칙은 다이어리 5~10월(77일)을 복기해 뽑은 것이고, 점검은 <b>Diary 탭 데이터(포트 이력·시나리오·매매일지)</b>를 그대로 읽어 자동으로 합니다. 의지가 아니라 <b>장치</b>로 지키는 것이 목적입니다. 빨강은 지금 규칙을 어기고 있다는 뜻, 주황은 주의, 회색은 데이터가 부족해 판단 보류입니다.</p>
+
+<div class="score" id="score"></div>
+<div class="sec-h">오늘의 점검 <span class="s" id="chk-s"></span></div>
+<div class="cgrid" id="checks"></div>
+
+<div class="sec-h">규칙 <span class="s">— 각 규칙 아래에 왜 이 규칙이 생겼는지(다이어리 근거)를 적어 두었습니다</span></div>
+<div class="rgrid" id="rules"></div>
+
+<div class="sec-h">추이 <span class="s">— 월별 매매 횟수 · 포트 집중도 이력</span></div>
+<div class="two">
+  <div class="tbl" id="t-month"></div>
+  <div class="tbl" id="t-pf"></div>
+</div>
+<p class="note" id="note"></p>
+
+<script>
+/* ── 규칙 정의 ── */
+const LIMITS = { maxW: 35, minN: 3, tradesMo: 10, bigMove: 7, diaryGap: 5 };
+const RULES = [
+  { n: 1, h: '매수 전 시나리오 시트 필수', rule: '매수 근거 · 매도 조건(시나리오가 깨지는 조건) · 안전가(safePx)가 비어 있으면 <b>사지 않는다</b>. 근거가 "모르겠음"이면 비중 10%를 넘길 수 없다.',
+    why: '확신 없는 포지션이 급락일에 가장 먼저 흔들렸다.', q: ['알파벳 — 매수 근거 "모르겠음", 매도 "수익일 때". 포트 메모: "왜 들고 있는 건지 스스로 납득이 안 된다"', '7/2 한화오션 — "캐나다 잠수함 수주인 줄 알고 들어갔는데 국내 구축함… 제대로 확인도 안 하고 급하게 들어감"'], auto: '시나리오 미작성 보유종목' },
+  { n: 2, h: '한 종목 최대 35% · 최소 3종목', rule: '어떤 확신이 들어도 한 종목은 전체의 <b>35%</b>를 넘기지 않고, 종목은 <b>3개 이상</b> 유지한다. 몰빵은 리밸런싱이라는 카드를 버리는 것이다.',
+    why: '"몰빵 절대 금지"를 6/2·6/4·6/19·6/22 네 번 썼지만 포트 이력에 한 종목 100%가 7/28·8/4·9/1 세 번 나온다. 큰 손실은 전부 몰빵 상태에서 났다.', q: ['7/31 "현마엔 어닝 쇼크 -16%. 몰빵했으니 자산의 16%가 증발"', '8/19 "몰빵은 리밸런싱이라는 카드를 버리는 것이다. 항상 카드가 많을수록 유리하다"'], auto: '최대 비중 · 종목 수' },
+  { n: 3, h: '±7% 움직인 날은 그 종목 매매 금지', rule: '보유·관심 종목이 당일 <b>±7% 이상</b> 움직이면 그날은 매매하지 않는다. 일기를 먼저 쓰고 <b>다음 날</b> 결정한다. NXT·장 초반 매매는 특히 금지.',
+    why: '큰 손실 매매는 예외 없이 급등락 당일, 그것도 장 초반 반응이었다. 하루 미뤘으면 대부분 피할 수 있었다.', q: ['7/28 "한엔 -7% 빠져서 10일선 이탈하길래 매도했는데 -2%로 마감. 그냥 돈을 갖다 쳐버렸다"', '8/27 "DN오토모티브 3일간 -35% 빼길래 멘탈 나가서 전량 매도… 장 마감하고 NDR 리포트가 나와서 다시 허겁지겁 매수"'], auto: '급등락 당일 매매(추정)' },
+  { n: 4, h: '리서치 북 90% · 트레이딩 북 10%', rule: '계좌를 둘로 나눈다. <b>리서치 북</b>(90%)은 3~5종목, 보유 6~12개월, 리밸런싱은 분기 1회 또는 시나리오 붕괴 시에만. <b>트레이딩 북</b>(10%)은 손익을 따로 기록하고 3개월 연속 마이너스면 폐쇄.',
+    why: '리서치로 번 돈을 트레이딩으로 잃는 구조였다. 가치 쪽(제주 아이디어, 10/12 DN오토, 한라IMS)은 벌었고 트레이딩 쪽은 전부 잃었다.', q: ['6/8 "타이밍 매매로 돈을 단 한 번도 번 적이 없다"', '5/28 "단타도 정확히 아는 이슈 아니면 들어가지 말자… 앞으로 단타 금지"', '8/6 "메지온 IR 전에 비중 10% 들어갔다가 -18% 손절. 이벤트 매매는 이제 하지 말자"'], auto: '월간 매매 횟수' },
+  { n: 5, h: '매도는 가격이 아니라 시나리오로', rule: '진입할 때 "<b>이게 깨지면 판다</b>"를 한 줄로 적는다. 상대 수익률(다른 종목이 더 오른다)은 매도 사유가 아니다. 트림은 기계적으로: <b>+50%에서 1/3</b>.',
+    why: '제주반도체 시나리오의 매도 조건은 "2분기 어닝쇼크 시"였는데 실제 매도 사유는 "전닉보다 덜 오른다"였다. +60% 수익이 평단 아래 매도로 끝났다.', q: ['7/22 "수익률 60% 가까이 갔던 종목인데… 차라리 중간에 좀 팔 걸"', '5/22 "절대 많이 올랐다는 이유로 팔지 않기… 나중에 틀리면 복기하면 되지"'], auto: '시나리오 매도조건 공란' },
+  { n: 6, h: '남의 포지션으로 내 포지션을 바꾸지 않는다', rule: '고수의 현금화·매수 소식, 블로그 이웃의 수익률은 <b>판단 재료가 아니다</b>. 텔레그램·블로그는 장 마감 후에만. 시세 확인은 하루 두 번(10시·15시)으로 제한.',
+    why: '타인의 판단으로 바꾼 포지션은 매번 후회로 끝났다. 비교 → FOMO → 매매의 순서가 반복된다.', q: ['6/8 "고수 말도 다 맞는 건 아니네… 고수가 뭐라고 해도 거시경제는 무시하자"', '7/28 "겸손님 현금화 소식 듣고 반도체는 끝났다고 판단해서 전닉 다 팔고" → 8/4 하이닉스 상한가', '6/27 "투자를 잘하는 사람들이 하루 종일 텔레그램만 보고 있을까? 프로라면 절대 그러지 않을 것"'], auto: null },
+  { n: 7, h: '분할 매수 · 첫 비중은 목표의 절반', rule: '한 번에 다 사지 않는다. 첫 매수는 목표 비중의 <b>50%</b>, 나머지는 떨어질 때 나눠 산다. 호실적 발표 후 급등 중인 종목은 한 번에 사지 않는다.',
+    why: '떨어지면 더 살 각오로 짠 포트는 급락일에도 버텼다(8/24). 한 번에 다 산 포지션은 못 버텼다.', q: ['9/7 "답을 찾았다. 첫 비중 50%만 태우고 나머지는 유동적으로 분할매수. 3개 종목 이상 분산"', '9/27 "한라IMS 20%를 담되 차트 자리가 안 좋으니 10%만 담고 떨어질 때마다 더 담자"'], auto: null },
+  { n: 8, h: '레버리지 · 생활자금 금지', rule: '신용·레버리지는 쓰지 않는다. 전세금·계약금 등 <b>기한이 있는 돈</b>은 계좌에 넣지 않는다. 배우자 계좌는 합산해서 생각하지 않는다.',
+    why: '지금의 매매 빈도와 몰빵 재발 이력에서 레버리지는 회복 불가능한 결과를 만든다. 기한 있는 돈은 하락장에서 판단을 마비시킨다.', q: ['7/8 "전세 계약금으로 받은 4천만원 추가 투입"', '10/28 "레버리지를 자유자재로 쓰면서 수익률을 극대화하고 싶다… 고수들이 레버리지 쓰지 말고 천천히 가라고 한다"', '6/2 "딩수 계좌랑 내 계좌를 합쳐서 생각하지 말자. 그래야 포트폴리오 운용 실력이 쌓인다"'], auto: null },
+  { n: 9, h: '매일 쓴다 — 매매가 없어도', rule: '일기는 매매의 결과가 아니라 매매를 막는 장치다. 매매하고 싶은 날일수록 <b>먼저 쓴다</b>. 5일 이상 비우지 않는다.',
+    why: '일기를 쓰지 않은 기간(8월 말~9월)에 자신감이 무너졌고, 매일 쓴 10월에 규칙과 행동이 처음으로 일치했다.', q: ['10/12 "내 스트라이크 존에 올 때까지 기다리고 아니면 보내버리기. 기억할 만한 매매다"', '10/16 "투자 아이디어의 기간을 6개월~1년으로 잡고 3종목 이상 다변화하면 리밸런싱에서 자유로워질 것"'], auto: '마지막 일기 경과일' },
+];
+
+/* ── 데이터 로드: localStorage(메인 대시보드 동기화 사본) → GitHub(invest-private) ── */
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const strip = h => String(h == null ? '' : h).replace(/<br\s*\/?>|<\/p>|<\/div>/gi, '\n').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+function lsDiary() { try { return JSON.parse(localStorage.getItem('sv_diary_v1') || 'null'); } catch (_) { return null; } }
+async function ghDiary() {
+  const pat = (localStorage.getItem('sv_github_pat') || '').trim(); if (!pat) return { err: '토큰 없음 (메인 ⚙️ 에서 저장)' };
+  const r = await fetch(`https://api.github.com/repos/whysosary-dot/invest-private/contents/sv/diary.json?ref=main&t=${Date.now()}`, { cache: 'no-store', headers: { Accept: 'application/vnd.github.raw+json', Authorization: `token ${pat}` } });
+  if (!r.ok) return { err: `GitHub ${r.status}` };
+  return { data: await r.json() };
+}
+
+/* ── 분석 ── */
+const KST = () => new Date(Date.now() + 9 * 3600e3);
+const ymd = d => d.toISOString().slice(0, 10);
+function analyze(d) {
+  const out = {};
+  // 포트 이력(최신)
+  const hist = (d.pfHist || []).slice().sort((a, b) => a.d < b.d ? -1 : 1);
+  out.hist = hist.map(h => { const tot = h.items.reduce((s, i) => s + (+i.amt || 0), 0); const st = h.items.filter(i => i.name !== '현금' && +i.amt > 0); const mx = st.reduce((m, i) => Math.max(m, +i.amt), 0); const top = st.find(i => +i.amt === mx); return { d: h.d, n: st.length, maxW: tot ? mx / tot * 100 : 0, top: top ? top.name : '', tot, cash: tot ? (h.items.find(i => i.name === '현금') || { amt: 0 }).amt / tot * 100 : 0 }; });
+  out.last = out.hist[out.hist.length - 1] || null;
+  // 시나리오(보유)
+  const sc = (d.scenario || []).filter(s => !s.archived && s.held && s.name !== '현금');
+  out.held = sc.map(s => { const buy = strip(s.buy).trim(), sell = strip(s.sell).trim(); const vague = t => !t || /모르겠|수익일 때|^-+$/.test(t) || t.length < 6; return { name: s.name, buyOk: !vague(buy), sellOk: !vague(sell), safeOk: !!s.safePx, amt: +s.amt || 0 }; });
+  out.heldBad = out.held.filter(h => !(h.buyOk && h.sellOk && h.safeOk));
+  // 매매 (trades + trades_backup + 일기 본문 '매도/매수 N주' 줄)
+  const trades = {};
+  const add = (day, t) => { (trades[day] = trades[day] || []).push(t); };
+  for (const src of [d.trades, d.trades_backup]) if (src && typeof src === 'object') for (const day in src) (src[day] || []).forEach(t => add(day, { type: t.type, name: (t.name || '').trim(), memo: strip(t.memo || '') }));
+  for (const day in (d.daily || {})) {
+    if (trades[day]) continue; // 이미 구조화된 매매가 있으면 본문 파싱 생략(중복 방지)
+    const txt = strip(d.daily[day]);
+    const re = /(?:^|\n)\s*(매도|매수)\s+(\S+)\s+([\d,]+)주/g; let m;
+    while ((m = re.exec(txt))) add(day, { type: m[1], name: m[2], memo: '' });
+  }
+  out.trades = trades;
+  const byMo = {}; for (const day in trades) byMo[day.slice(0, 7)] = (byMo[day.slice(0, 7)] || 0) + trades[day].length;
+  out.byMo = byMo;
+  const mo = ymd(KST()).slice(0, 7); out.thisMo = byMo[mo] || 0; out.mo = mo;
+  // 급등락 당일 매매(추정): 같은 날 일기·메모에 그 종목명과 ±7% 이상 숫자가 함께 등장
+  out.bigDay = [];
+  for (const day in trades) {
+    const txt = strip(d.daily && d.daily[day] || '') + ' ' + trades[day].map(t => t.memo).join(' ');
+    const pcts = (txt.match(/[-+]?\s?\d{1,2}(?:\.\d)?\s?%/g) || []).map(x => Math.abs(parseFloat(x.replace(/\s|%/g, ''))));
+    if (pcts.some(p => p >= LIMITS.bigMove)) trades[day].forEach(t => { if (t.name && txt.includes(t.name.replace(/\s/g, '').slice(0, 3))) out.bigDay.push({ d: day, ...t }); });
+  }
+  // 일기 공백
+  const days = Object.keys(d.daily || {}).sort(); out.lastDiary = days[days.length - 1] || null;
+  out.diaryGap = out.lastDiary ? Math.floor((KST() - new Date(out.lastDiary + 'T00:00:00Z')) / 864e5) : null;
+  out.diaryDays = days.length;
+  // 몰빵 이력
+  out.mollbbang = out.hist.filter(h => h.maxW > 50);
+  return out;
+}
+
+/* ── 렌더 ── */
+function card(cls, t, v, d, st) { return `<div class="ck ${cls}"><div class="t">${t}<span class="st">${st || { ok: '준수', warn: '주의', bad: '위반', na: '보류' }[cls]}</span></div><div class="v">${v}</div><div class="d">${d}</div></div>`; }
+function render(d, srcLabel) {
+  const a = analyze(d); const C = []; let ok = 0, tot = 0;
+  const tally = cls => { if (cls !== 'na') { tot++; if (cls === 'ok') ok++; } return cls; };
+  // 1 최대 비중
+  if (a.last) { const c = tally(a.last.maxW > LIMITS.maxW ? (a.last.maxW > 50 ? 'bad' : 'warn') : 'ok'); C.push(card(c, '규칙 2 · 한 종목 최대 비중', `${a.last.maxW.toFixed(0)}% <small>/ 상한 ${LIMITS.maxW}%</small>`, `${esc(a.last.top)} · 포트 이력 ${a.last.d} 기준${a.last.cash > 0.5 ? ` · 현금 ${a.last.cash.toFixed(0)}%` : ''}`)); }
+  else C.push(card(tally('na'), '규칙 2 · 한 종목 최대 비중', '—', '포트 이력이 없습니다'));
+  // 2 종목 수
+  if (a.last) { const c = tally(a.last.n < LIMITS.minN ? (a.last.n <= 1 ? 'bad' : 'warn') : 'ok'); C.push(card(c, '규칙 2 · 종목 수', `${a.last.n}종목 <small>/ 최소 ${LIMITS.minN}</small>`, `몰빵(50%↑) 이력 <b>${a.mollbbang.length}회</b>${a.mollbbang.length ? ' · 마지막 ' + a.mollbbang[a.mollbbang.length - 1].d : ''}`)); }
+  // 3 시나리오 미작성
+  { const c = tally(a.held.length === 0 ? 'na' : a.heldBad.length ? (a.heldBad.length >= 2 ? 'bad' : 'warn') : 'ok');
+    C.push(card(c, '규칙 1·5 · 시나리오 미작성 보유종목', `${a.heldBad.length}<small> / 보유 ${a.held.length}</small>`, a.heldBad.length ? a.heldBad.map(h => `<b>${esc(h.name)}</b> — ${[!h.buyOk && '매수근거', !h.sellOk && '매도조건', !h.safeOk && '안전가'].filter(Boolean).join('·')} 비어 있음`).join('<br>') : '보유 종목 모두 매수근거·매도조건·안전가 작성됨')); }
+  // 4 월간 매매
+  { const c = tally(a.thisMo > LIMITS.tradesMo ? 'bad' : a.thisMo > LIMITS.tradesMo / 2 ? 'warn' : 'ok');
+    const prev = Object.keys(a.byMo).sort().slice(-3).map(k => `${k.slice(5)}월 ${a.byMo[k]}`).join(' · ');
+    C.push(card(c, '규칙 4 · 이달 매매 횟수', `${a.thisMo}건 <small>/ 상한 ${LIMITS.tradesMo}</small>`, `최근: ${prev || '—'}<br>매매일지(구조화)와 일기 본문의 "매도/매수 N주" 줄을 합산`)); }
+  // 5 급등락 당일 매매
+  { const recent = a.bigDay.filter(x => x.d >= ymd(new Date(KST() - 30 * 864e5)));
+    const c = tally(recent.length ? 'bad' : a.bigDay.length ? 'ok' : 'na');
+    C.push(card(c, '규칙 3 · 급등락(±7%) 당일 매매', `${recent.length}건 <small>최근 30일</small>`, `누적 ${a.bigDay.length}건 (추정: 같은 날 일기에 그 종목과 ±7% 이상 숫자가 함께 등장)${recent.length ? '<br>' + recent.slice(0, 3).map(x => `${x.d} ${x.type} ${esc(x.name)}`).join('<br>') : ''}`, recent.length ? '위반' : a.bigDay.length ? '준수' : '보류')); }
+  // 6 일기 공백
+  { const c = tally(a.diaryGap == null ? 'na' : a.diaryGap > LIMITS.diaryGap ? 'bad' : a.diaryGap >= 3 ? 'warn' : 'ok');
+    C.push(card(c, '규칙 9 · 마지막 일기', a.diaryGap == null ? '—' : `${a.diaryGap}일 전 <small>/ 상한 ${LIMITS.diaryGap}일</small>`, `${a.lastDiary || ''} · 누적 ${a.diaryDays}일`)); }
+  // 7 수동 규칙 안내
+  C.push(card('na', '규칙 6·7·8 · 수동 점검', '☐ ☐ ☐', '남의 포지션으로 바꾸지 않았는가 · 첫 매수는 절반이었는가 · 레버리지·기한 있는 돈은 없는가 — 일기에 한 줄로 답하기', '수동'));
+  $('#checks').innerHTML = C.join('');
+  const pct = tot ? Math.round(ok / tot * 100) : 0; const g = pct >= 80 ? 'g' : pct >= 50 ? 'y' : 'r';
+  $('#score').innerHTML = `<div class="big ${g}">${ok}/${tot}</div><div class="txt"><b>자동 점검 ${tot}항목 중 ${ok}개 준수</b> (${pct}%)<br>데이터: ${srcLabel} · 포트 이력 ${a.last ? a.last.d : '—'} · 일기 ${a.diaryDays}일 · 매매 ${Object.values(a.byMo).reduce((s, x) => s + x, 0)}건</div>`;
+  $('#chk-s').textContent = `${ymd(KST())} 기준`;
+  // 추이 표
+  const mos = Object.keys(a.byMo).sort();
+  $('#t-month').innerHTML = `<table><thead><tr><th>월</th><th>매매 횟수</th><th>판정</th></tr></thead><tbody>${mos.map(m => `<tr><td>${m}</td><td>${a.byMo[m]}</td><td class="${a.byMo[m] > LIMITS.tradesMo ? 'bad-t' : 'ok-t'}">${a.byMo[m] > LIMITS.tradesMo ? '과다' : '양호'}</td></tr>`).join('') || '<tr><td colspan=3>매매 기록 없음</td></tr>'}</tbody></table>`;
+  $('#t-pf').innerHTML = `<table><thead><tr><th>포트 이력</th><th>종목</th><th>최대 비중</th><th>1위 종목</th><th>총액(억)</th></tr></thead><tbody>${a.hist.slice().reverse().map(h => `<tr><td>${h.d}</td><td class="${h.n < LIMITS.minN ? 'bad-t' : ''}">${h.n}</td><td class="${h.maxW > LIMITS.maxW ? 'bad-t' : 'ok-t'}">${h.maxW.toFixed(0)}%</td><td style="text-align:left">${esc(h.top)}</td><td>${(h.tot / 1e8).toFixed(2)}</td></tr>`).join('') || '<tr><td colspan=5>포트 이력 없음</td></tr>'}</tbody></table>`;
+  $('#note').textContent = '판정 기준: 최대 비중 35%(50% 초과 시 위반) · 최소 3종목 · 이달 매매 10건 · ±7% 당일 매매(추정) · 일기 5일 공백. 기준값은 rules/index.html 상단 LIMITS 에서 바꿀 수 있습니다. 급등락 당일 매매는 가격 데이터가 아니라 일기 문장에서 추정하므로 참고용입니다.';
+}
+function renderRules() {
+  $('#rules').innerHTML = RULES.map(r => `<div class="rc"><h3><span class="no">규칙 ${r.n}</span>${esc(r.h)}</h3><p class="rule">${r.rule}</p>
+    <div class="why"><b>왜:</b> ${esc(r.why)}${(r.q || []).map(q => `<span class="q">${esc(q)}</span>`).join('')}</div>
+    <div class="chk">${r.auto ? `<span class="auto">자동 점검 · ${esc(r.auto)}</span>` : '<span>수동 점검 · 일기에 한 줄</span>'}</div></div>`).join('');
+}
+async function main() {
+  renderRules();
+  const ls = lsDiary();
+  if (ls && (ls.pfHist || ls.scenario)) { render(ls, '이 기기의 Diary 사본'); $('#meta').textContent = 'GitHub 최신본 확인 중…'; }
+  const g = await ghDiary();
+  if (g.data) { render(g.data, 'GitHub invest-private (최신)'); $('#meta').textContent = 'GitHub 최신 다이어리 기준'; }
+  else if (ls) $('#meta').textContent = `GitHub 미연결 (${g.err}) — 이 기기 사본으로 점검`;
+  else { $('#meta').textContent = `다이어리를 읽을 수 없습니다 (${g.err})`; $('#score').innerHTML = '<div class="txt">메인 대시보드 ⚙️ 에서 GitHub 토큰을 저장하거나, Diary 탭을 한 번 열어 동기화한 뒤 다시 점검하세요.</div>'; }
+}
+$('#rf').onclick = main;
+main();
+</script>
+</body>
+</html>
