@@ -70,3 +70,12 @@ python3 -I gh_push.py --repo <owner/name> --ls briefings                  # 원�
 - 여러 `--file` 은 커밋 하나로 묶인다. `--dir LOCAL=REMOTE_PREFIX` 로 폴더 통째도 가능.
 - 클라우드 클론에서 만든 파일은 먼저 Mac 연결 폴더(`~/Desktop/Claude/...`)로 옮긴 뒤(SendUserFile → device_commit_files) 실행.
 - 다른 커밋이 먼저 들어오면 ref 갱신 실패 → 그냥 다시 실행.
+
+---
+## Mac VM 디스크 가득 참 → 작업 폴더는 `/tmp/<이름>_$(id -un)` 에 (2026-10-30)
+device_bash 의 `$HOME`(`/sessions/<세션>/`)이 있는 디스크는 세션 홈 수천 개가 쌓여 100% 찰 수 있다(`mkdir: No space left on device`). 다른 세션 소유라 우리가 지울 수 없다.
+반면 `/tmp` 는 다른 디스크라 여유가 있다. 그래서 **스크립트 작업 폴더는 `$HOME` 아래가 아니라 `/tmp/<작업명>_$(id -un)` 로 잡는다.**
+- 사용자 이름을 붙이는 이유: `/tmp/tg` 같은 공유 이름은 먼저 만든 다른 세션 사용자 소유라 `unable to open database file` 로 실패한다.
+- 텔레그램 예약 작업은 `TG_WORK=/tmp/tgwork_$(id -un)` 으로 이미 변경(2026-10-30). `tg_collect.py` 는 TG_WORK 쓰기 실패 시 `/tmp/tg_<pid>` 로 자동 우회하니, 그 메시지가 나오면 이후 단계도 그 폴더를 쓸 것.
+- 다른 예약 작업(`scrwork`, `inv`, `s1029` 등)도 `$HOME` 아래에 쓰고 있다면 같은 식으로 옮길 것. `pip --target` 도 `/tmp/pylibs` 로.
+- `/tmp` 역시 세션이 끝나면 지워질 수 있으니, 남겨야 하는 결과물은 `$HOME/mnt/Claude/...`(연결 폴더) 에 두거나 레포에 push.
