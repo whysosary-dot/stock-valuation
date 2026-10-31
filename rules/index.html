@@ -81,7 +81,7 @@ th:first-child,td:first-child{text-align:left}
 
 <script>
 /* ── 규칙 정의 ── */
-const LIMITS = { maxW: 35, minN: 3, tradesMo: 10, bigMove: 7, diaryGap: 5 };
+const LIMITS = { maxW: 35, minN: 3, tradesMo: 10, bigMove: 7, diaryGap: 5, rr: 3 };
 const RULES = [
   { n: 1, h: '매수 전 시나리오 시트 필수', rule: '매수 근거 · 매도 조건(시나리오가 깨지는 조건) · 안전가(safePx)가 비어 있으면 <b>사지 않는다</b>. 근거가 "모르겠음"이면 비중 10%를 넘길 수 없다.',
     why: '확신 없는 포지션이 급락일에 가장 먼저 흔들렸다.', q: ['알파벳 — 매수 근거 "모르겠음", 매도 "수익일 때". 포트 메모: "왜 들고 있는 건지 스스로 납득이 안 된다"', '7/2 한화오션 — "캐나다 잠수함 수주인 줄 알고 들어갔는데 국내 구축함… 제대로 확인도 안 하고 급하게 들어감"'], auto: '시나리오 미작성 보유종목' },
@@ -95,6 +95,8 @@ const RULES = [
     why: '제주반도체 시나리오의 매도 조건은 "2분기 어닝쇼크 시"였는데 실제 매도 사유는 "전닉보다 덜 오른다"였다. +60% 수익이 평단 아래 매도로 끝났다.', q: ['7/22 "수익률 60% 가까이 갔던 종목인데… 차라리 중간에 좀 팔 걸"', '5/22 "절대 많이 올랐다는 이유로 팔지 않기… 나중에 틀리면 복기하면 되지"'], auto: '시나리오 매도조건 공란' },
   { n: 6, h: '매일 쓴다 — 매매가 없어도', rule: '일기는 매매의 결과가 아니라 매매를 막는 장치다. 매매하고 싶은 날일수록 <b>먼저 쓴다</b>. 5일 이상 비우지 않는다.',
     why: '일기를 쓰지 않은 기간(8월 말~9월)에 자신감이 무너졌고, 매일 쓴 10월에 규칙과 행동이 처음으로 일치했다.', q: ['10/12 "내 스트라이크 존에 올 때까지 기다리고 아니면 보내버리기. 기억할 만한 매매다"', '10/16 "투자 아이디어의 기간을 6개월~1년으로 잡고 3종목 이상 다변화하면 리밸런싱에서 자유로워질 것"'], auto: '마지막 일기 경과일' },
+  { n: 7, h: '손익비 3 이상일 때만 접근', rule: '손익비 = <b>상방 ÷ 하방</b>. 상방 = (매도 주가 − 현재가) ÷ 현재가, 하방 = (현재가 − 안전마진가) ÷ 현재가. 이 값이 <b>3 미만이면 사지 않는다</b>. 매도 주가·안전마진가가 없으면 손익비를 계산할 수 없으므로 역시 사지 않는다.',
+    why: '기대수익이 작은데 들어간 포지션은 떨어지면 버티지 못하고, 올라도 금방 팔게 된다. 10/12 DN오토는 기대수익 10%일 때 참았다가 20%일 때 들어간 것이 "기억할 만한 매매"였다.', q: ['10/12 "NXT에서 -10%일 때 목표 시총 3조원 기준 수익률이 10% 정도여서 베팅하지 않았다… 기대 수익률이 20%일 때 베팅한 것이 참 잘한 일"', '8/12 "제주반도체 적정 시총은 이미 어느정도 왔고 더 먹을 룸과 떨어질 구간의 손익비가 좋은게 맞을까?"'], auto: '보유 종목 손익비 (시나리오 매도주가·안전마진가 · 현재가)' },
 ];
 
 /* ── 데이터 로드: localStorage(메인 대시보드 동기화 사본) → GitHub(invest-private) ── */
@@ -107,6 +109,21 @@ async function ghDiary() {
   const r = await fetch(`https://api.github.com/repos/whysosary-dot/invest-private/contents/sv/diary.json?ref=main&t=${Date.now()}`, { cache: 'no-store', headers: { Accept: 'application/vnd.github.raw+json', Authorization: `token ${pat}` } });
   if (!r.ok) return { err: `GitHub ${r.status}` };
   return { data: await r.json() };
+}
+/* Stock Valuation 의 현재가 (invest-private sv/stocks.json) — 손익비 계산용. 못 읽으면 시나리오의 평단(avgPx)으로 대체 */
+let STOCKS = null;
+async function ghStocks() {
+  try {
+    const pat = (localStorage.getItem('sv_github_pat') || '').trim(); if (!pat) return;
+    const r = await fetch(`https://api.github.com/repos/whysosary-dot/invest-private/contents/sv/stocks.json?ref=main&t=${Math.floor(Date.now() / 600000)}`, { headers: { Accept: 'application/vnd.github.raw+json', Authorization: `token ${pat}` } });
+    if (r.ok) STOCKS = (await r.json()).stocks || null;
+  } catch (_) {}
+}
+function findStock(name) {  // 대시보드 scFindStock 과 같은 규칙
+  if (!STOCKS) return null; const norm = x => String(x || '').toLowerCase().replace(/\s+/g, ''); const n = norm(name); if (!n) return null;
+  let hit = STOCKS.find(x => norm(x.name) === n);
+  if (!hit) { const c = STOCKS.filter(x => norm(x.name).includes(n) || n.includes(norm(x.name))); if (c.length === 1) hit = c[0]; }
+  return hit || null;
 }
 
 /* ── 분석 ── */
@@ -122,6 +139,14 @@ function analyze(d) {
   const tg = (Array.isArray(d.pfTarget) ? d.pfTarget : []).map(it => ({ name: it.name || '(이름 없음)', pct: +it.pct || 0, act: (+it.entryAct || 0) + (+it.coreAct || 0) + (+it.alphaAct || 0) })).filter(x => x.act > 0);
   if (tg.length) { tg.sort((x, y) => y.act - x.act); const sum = tg.reduce((s, x) => s + x.act, 0); out.tgt = { rows: tg, n: tg.length, maxW: tg[0].act, top: tg[0].name, topPct: tg[0].pct, cash: Math.max(0, 100 - sum) }; }
   else out.tgt = null;
+  // 손익비 (보유 종목): 상방/하방, 현재가 우선 · 없으면 평단
+  out.rr = (d.scenario || []).filter(x => x && !x.archived && x.held && x.name !== '현금').map(x => {
+    const stk = findStock(x.name); const px = stk && +stk.price_native > 0 ? +stk.price_native : (+x.avgPx > 0 ? +x.avgPx : 0);
+    const sellPx = +x.sellPx || 0, safePx = +x.safePx || 0;
+    const r = { name: x.name, px, pxSrc: stk && +stk.price_native > 0 ? '현재가' : (+x.avgPx > 0 ? '평단' : null), sellPx, safePx, up: null, dn: null, rr: null };
+    if (px > 0 && sellPx > 0 && safePx > 0 && safePx < px) { r.up = (sellPx - px) / px * 100; r.dn = (px - safePx) / px * 100; r.rr = r.dn > 0 ? r.up / r.dn : null; }
+    return r;
+  });
   // 시나리오(보유)
   const sc = (d.scenario || []).filter(s => !s.archived && s.held && s.name !== '현금');
   out.held = sc.map(s => { const buy = strip(s.buy).trim(), sell = strip(s.sell).trim(); // 비어 있거나, 짧은 자리표시 문구("모르겠음." "수익일 때." 등)뿐이면 미작성. 20자 이상 쓴 근거는 어떤 말로 시작하든 작성으로 인정
@@ -198,6 +223,12 @@ function render(d, srcLabel) {
   // 6 일기 공백
   { const c = tally(a.diaryGap == null ? 'na' : a.diaryGap > LIMITS.diaryGap ? 'bad' : a.diaryGap >= 3 ? 'warn' : 'ok');
     C.push(card(c, '규칙 6 · 마지막 일기', a.diaryGap == null ? '—' : `${a.diaryGap}일 전 <small>/ 상한 ${LIMITS.diaryGap}일</small>`, `${a.lastDiary || ''} · 누적 ${a.diaryDays}일`)); }
+  // 7 손익비
+  { const rows = a.rr; const calc = rows.filter(r => r.rr != null); const low = calc.filter(r => r.rr < LIMITS.rr); const miss = rows.filter(r => r.rr == null);
+    const c = tally(!rows.length ? 'na' : (low.length || miss.length) ? ((low.length + miss.length) >= 2 ? 'bad' : 'warn') : 'ok');
+    const fmt = r => r.rr == null ? `<b>${esc(r.name)}</b> 계산 불가(${!r.sellPx ? '매도주가' : !r.safePx ? '안전마진가' : !r.px ? '가격' : '안전가가 현재가 이상'})` : `<b>${esc(r.name)}</b> ${r.rr.toFixed(1)} <span style="color:var(--text-dim)">(상방 +${r.up.toFixed(0)}% / 하방 −${r.dn.toFixed(0)}%, ${r.pxSrc})</span>`;
+    C.push(card(c, '규칙 7 · 손익비 (상방÷하방)', rows.length ? `${calc.length ? Math.min(...calc.map(r => r.rr)).toFixed(1) : '—'} <small>최저 / 기준 ${LIMITS.rr}</small>` : '—',
+      rows.length ? rows.slice().sort((x, y) => (x.rr ?? -1) - (y.rr ?? -1)).map(fmt).join('<br>') : '보유 종목이 없습니다', !rows.length ? '보류' : (low.length || miss.length) ? ((low.length + miss.length) >= 2 ? '위반' : '주의') : '준수')); }
   $('#checks').innerHTML = C.join('');
   const pct = tot ? Math.round(ok / tot * 100) : 0; const g = pct >= 80 ? 'g' : pct >= 50 ? 'y' : 'r';
   $('#score').innerHTML = `<div class="big ${g}">${ok}/${tot}</div><div class="txt"><b>자동 점검 ${tot}항목 중 ${ok}개 준수</b> (${pct}%)<br>데이터: ${srcLabel} · 포트 이력 ${a.last ? a.last.d : '—'} · 일기 ${a.diaryDays}일 · 매매 ${Object.values(a.byMo).reduce((s, x) => s + x, 0)}건</div>`;
@@ -206,7 +237,7 @@ function render(d, srcLabel) {
   const mos = Object.keys(a.byMo).sort();
   $('#t-month').innerHTML = `<table><thead><tr><th>월</th><th>매매 횟수</th><th>판정</th></tr></thead><tbody>${mos.map(m => `<tr><td>${m}</td><td>${a.byMo[m]}</td><td class="${a.byMo[m] > LIMITS.tradesMo ? 'bad-t' : 'ok-t'}">${a.byMo[m] > LIMITS.tradesMo ? '과다' : '양호'}</td></tr>`).join('') || '<tr><td colspan=3>매매 기록 없음</td></tr>'}</tbody></table>`;
   $('#t-pf').innerHTML = `<table><thead><tr><th>포트 이력</th><th>종목</th><th>최대 비중</th><th>1위 종목</th><th>총액(억)</th></tr></thead><tbody>${a.hist.slice().reverse().map(h => `<tr><td>${h.d}</td><td class="${h.n < LIMITS.minN ? 'bad-t' : ''}">${h.n}</td><td class="${h.maxW > LIMITS.maxW ? 'bad-t' : 'ok-t'}">${h.maxW.toFixed(0)}%</td><td style="text-align:left">${esc(h.top)}</td><td>${(h.tot / 1e8).toFixed(2)}</td></tr>`).join('') || '<tr><td colspan=5>포트 이력 없음</td></tr>'}</tbody></table>`;
-  $('#note').textContent = '판정 기준: 최대 비중 35%(50% 초과 시 위반, 🎯 목표 포트의 실제 칸 기준 — 비어 있으면 포트 이력) · 최소 3종목 · 이달 매매 10건 · ±7% 당일 매매(추정) · 일기 5일 공백. 매매는 매매일지·일기 본문·포트 비중 스냅샷 변화(커밋 때 자동 기록)에서 모읍니다. 기준값은 rules/index.html 상단 LIMITS 에서 바꿀 수 있습니다. 급등락 당일 매매는 가격 데이터가 아니라 일기 문장에서 추정하므로 참고용입니다.';
+  $('#note').textContent = '판정 기준: 손익비 3 (보유 종목 중 하나라도 미만·계산 불가면 주의, 둘 이상이면 위반; 현재가는 Stock Valuation, 없으면 평단) · 최대 비중 35%(50% 초과 시 위반, 🎯 목표 포트의 실제 칸 기준 — 비어 있으면 포트 이력) · 최소 3종목 · 이달 매매 10건 · ±7% 당일 매매(추정) · 일기 5일 공백. 매매는 매매일지·일기 본문·포트 비중 스냅샷 변화(커밋 때 자동 기록)에서 모읍니다. 기준값은 rules/index.html 상단 LIMITS 에서 바꿀 수 있습니다. 급등락 당일 매매는 가격 데이터가 아니라 일기 문장에서 추정하므로 참고용입니다.';
 }
 function renderRules() {
   $('#rules').innerHTML = RULES.map(r => `<div class="rc"><h3><span class="no">규칙 ${r.n}</span>${esc(r.h)}</h3><p class="rule">${r.rule}</p>
@@ -215,6 +246,7 @@ function renderRules() {
 }
 async function main() {
   renderRules();
+  await ghStocks();
   const ls = lsDiary();
   if (ls && (ls.pfHist || ls.scenario)) { render(ls, '이 기기의 Diary 사본'); $('#meta').textContent = 'GitHub 최신본 확인 중…'; }
   const g = await ghDiary();
