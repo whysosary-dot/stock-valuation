@@ -6,6 +6,7 @@
   python3 insight_gen.py data etf     # ETF Monitor 탭 데이터 요약
   python3 insight_gen.py write sv /path/insight.json   # 검증 후 stock-valuation 리포 insights/sv.json (+history) 에 푸시
   python3 insight_gen.py write etf /path/insight.json
+  python3 insight_gen.py data chart    # Chart 탭(업종·섹터·매크로·스캔) 요약 → write chart /path.json (sections 5개)
 
 JSON 형식 (Claude 가 작성):
 {
@@ -125,7 +126,56 @@ def write(tab, path):
     c2 = gh_put(f"insights/history/{tab}_{d['date']}.json", txt, f"insight: {tab} {d['date']} (history)")
     print(f"✓ insights/{tab}.json {c1} · history {c2} · {d['headline']}")
 
+# ───────────── Chart 탭 (chart/data/*.json, 공개 리포) ─────────────
+def raw_pub(path):
+    rq = urllib.request.Request(f"https://raw.githubusercontent.com/{PUB}/main/{path}?t={datetime.datetime.now().timestamp()}", headers={"User-Agent": "sv-insight"})
+    return json.loads(urllib.request.urlopen(rq, timeout=60).read())
+
+def data_chart():
+    """Chart 탭 5개 섹션 요약 — Claude 가 읽고 sections 별 인사이트를 쓴다"""
+    meta = raw_pub("chart/data/meta.json")
+    print(f"# Chart 탭 데이터 요약 · 한국 {meta.get('kr_date')} · 미국 {meta.get('us_date')} · 갱신 {meta.get('updated_at')}")
+    try:
+        auto = raw_pub("chart/data/insights_auto.json")
+        print("\n## 자동 데이터 요약(build_chart.py 산출 — 이 사실들은 이미 패널에 있으니 반복하지 말고 '왜'를 쓸 것)")
+        for k, v in auto.items():
+            print(f"### {k} ({v.get('date')})"); [print("-", l) for l in v.get("lines", [])]
+    except Exception as e: print("(insights_auto 없음:", e, ")")
+    for key, bench in (("groups_kr", "코스피"), ("groups_us", "SPY"), ("groups_macro", None)):
+        d = raw_pub(f"chart/data/{key}.json")
+        print(f"\n## {key} · {d.get('date')} · 카드 {len(d['cards'])}")
+        for c in d["cards"]:
+            rel = "" if c.get("rel_3m") is None else f" · 3개월 상대 {c['rel_3m']:+.0f}%p"
+            print(f"- {c['name']}{(' ('+c['note']+')') if c.get('note') else ''}: {c['chg']:+.1f}% · 1개월 {c['ret_1m']:+.0f}% · 3개월 {c['ret_3m']:+.0f}%{rel} · 2년 {c['ret_2y']:+.0f}% · 52주고점대비 {c['off_hi52']:+.0f}% · 일{'▲' if c.get('d_above') else '▼'}주{'▲' if c.get('w_above') else '▼'}월{'▲' if c.get('m_above') else '▼'}{' ★뱃지변경' if (c.get('d_flip') or c.get('w_flip') or c.get('m_flip')) else ''}")
+    for key in ("scan_kr", "scan_us"):
+        d = raw_pub(f"chart/data/{key}.json")
+        print(f"\n## {key} · {d.get('date')} · 유니버스 {d.get('universe')} · 히트 {len(d['hits'])}")
+        for h in d["hits"]:
+            print(f"- {h['name']} ({h['tk']}) · {h.get('sector')}/{h.get('industry')} · {h['chg']:+.1f}% · 거래량 {h.get('vol_ratio')}배 · RS {h.get('rs')} · 52주고점대비 {h.get('off_hi52')}% · 태그 {h.get('tags')} 주봉 {h.get('wtags')}" + (f" · 시총 {h.get('mcap')}" if h.get('mcap') else "") + (f" · 뉴스: {h.get('news')}" if h.get('news') else ""))
+
+CHART_SECTIONS = ("kr", "us", "macro", "scan_kr", "scan_us")
+def write_chart(path):
+    """JSON: {"tab":"chart","date":"YYYY-MM-DD","as_of":"…","sections":{"kr":{headline,insights[],watch[],sources[]}, "us":…, "macro":…, "scan_kr":…, "scan_us":…}}
+       섹션당 insights 2~4개. 등락률 나열 금지(데이터 요약이 이미 있음) — '왜'와 '다음에 볼 것'."""
+    d = json.loads(Path(path).read_text(encoding="utf-8"))
+    assert d.get("tab") == "chart", "tab 불일치"
+    assert re.match(r"^\d{4}-\d{2}-\d{2}$", d.get("date", "")), "date 형식"
+    secs = d.get("sections") or {}
+    assert all(k in secs for k in CHART_SECTIONS), f"sections 5개 필요: {CHART_SECTIONS}"
+    for k in CHART_SECTIONS:
+        sec = secs[k]
+        assert sec.get("headline") and 2 <= len(sec.get("insights", [])) <= 5, f"{k}: headline/insights 2~5개"
+        for it in sec["insights"]: assert it.get("title") and it.get("body"), f"{k}: insight title/body"
+        for s_ in sec.get("sources", []): assert str(s_.get("url", "")).startswith("http"), f"{k}: source url"
+    bad = [w for w in ("매수 추천", "매도 추천", "사세요", "파세요", "적극 매수") if w in json.dumps(d, ensure_ascii=False)]
+    assert not bad, f"권유 표현 금지: {bad}"
+    d["generated_at"] = datetime.datetime.now(KST).isoformat(timespec="seconds")
+    txt = json.dumps(d, ensure_ascii=False, indent=1) + "\n"
+    c1 = gh_put("insights/chart.json", txt, f"insight: chart {d['date']}")
+    c2 = gh_put(f"insights/history/chart_{d['date']}.json", txt, f"insight: chart {d['date']} (history)")
+    print(f"✓ insights/chart.json {c1} · history {c2}")
+
 if __name__ == "__main__":
     cmd = sys.argv[1]; tab = sys.argv[2]
-    if cmd == "data": (data_sv if tab == "sv" else data_etf)()
-    elif cmd == "write": write(tab, sys.argv[3])
+    if cmd == "data": (data_chart if tab == "chart" else data_sv if tab == "sv" else data_etf)()
+    elif cmd == "write": (write_chart(sys.argv[3]) if tab == "chart" else write(tab, sys.argv[3]))

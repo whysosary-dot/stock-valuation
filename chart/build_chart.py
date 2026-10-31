@@ -310,7 +310,7 @@ def build_kr():
             for m in mem: inds[m["ind"]] = inds.get(m["ind"], 0) + 1
             card["industries"] = sorted(inds.items(), key=lambda x: -x[1])
             cards.append(card)
-    cards.sort(key=lambda x: -(x["rel_3m"] or -999))
+    cards.sort(key=lambda x: -(x["rel_3m"] if x["rel_3m"] is not None else -999))
     for nm, s in (("코스피", kospi), ("코스닥", kosdaq)):
         card = group_card(nm, "지수", s[0], s[4], None)
         if card: cards.insert(0 if nm == "코스닥" else 0, card)
@@ -497,12 +497,118 @@ def prune_history(days=90):
     files = sorted(os.listdir(sd))
     json.dump({"files": files}, open(os.path.join(sd, "index.json"), "w"))
 
+TAG_KO = {"gap_up": "거래량 갭상승", "new_high": "52주 신고가", "ma200_break": "200일선 돌파", "rs_leader": "RS 선두주",
+          "w_ma30_break": "30주선 돌파", "w_vol_surge": "주봉 거래량 급증"}
+
+def _load(p):
+    try: return json.load(open(os.path.join(DATA, p)))
+    except Exception: return None
+
+def _group_lines(d, bench_name, kind):
+    """업종/섹터 카드 → 사실 기반 문장 (토큰 0). 추세 폭·상대수익률 상하위·오늘 바뀐 뱃지"""
+    if not d or not d.get("cards"): return []
+    cards = [c for c in d["cards"] if c.get("rel_3m") is not None]
+    idx = [c for c in d["cards"] if c.get("rel_3m") is None]
+    L = []
+    for c in idx:
+        L.append(f"{c['name']} {c['chg']:+.1f}% · 1개월 {c['ret_1m']:+.0f}% · 52주 고점 대비 {c['off_hi52']:+.0f}% · "
+                 f"{'50일선 위' if c.get('d_above') else '50일선 아래'}/{'30주선 위' if c.get('w_above') else '30주선 아래'}/{'10개월선 위' if c.get('m_above') else '10개월선 아래'}")
+    n = len(cards)
+    if n:
+        w = sum(1 for c in cards if c.get("w_above")); dd = sum(1 for c in cards if c.get("d_above")); m = sum(1 for c in cards if c.get("m_above"))
+        L.append(f"추세 폭: {n}개 {kind} 중 30주선 위 {w}개({w/n*100:.0f}%) · 50일선 위 {dd}개 · 10개월선 위 {m}개"
+                 + (" — 장기 추세는 살아 있는데 중기가 꺾인 조정 국면" if m > n * 0.6 and w < n * 0.4 else
+                    " — 전 구간 약세, 반등은 30주선 회복 업종부터 확인" if w < n * 0.3 and m < n * 0.5 else
+                    " — 중·장기 모두 우위, 상승 추세 폭이 넓음" if w > n * 0.6 and m > n * 0.6 else ""))
+        top = cards[:3]; bot = cards[-3:]
+        L.append(f"3개월 상대수익({bench_name} 대비) 상위: " + " · ".join(f"{c['name']} {c['rel_3m']:+.0f}%p" for c in top)
+                 + " / 하위: " + " · ".join(f"{c['name']} {c['rel_3m']:+.0f}%p" for c in bot))
+        flips = [c for c in cards if c.get("d_flip") or c.get("w_flip") or c.get("m_flip")]
+        if flips:
+            L.append("오늘 뱃지가 바뀐 " + kind + ": " + " · ".join(
+                f"{c['name']}(" + ",".join(f"{k}{'▲' if c.get(a) else '▼'}" for k, a, f in (("일", "d_above", "d_flip"), ("주", "w_above", "w_flip"), ("월", "m_above", "m_flip")) if c.get(f)) + ")" for c in flips))
+        hot = [c for c in cards if c.get("w_above") and c.get("m_above") and c["rel_3m"] > 0]
+        if hot: L.append("주·월 추세 위 + 상대강세(주도 후보): " + " · ".join(c["name"] for c in hot[:6]))
+        turn = [c for c in cards if c.get("d_above") and not c.get("w_above")]
+        if turn: L.append("50일선은 회복했지만 30주선 아래(반등 초기 — 30주선 돌파 확인 필요): " + " · ".join(c["name"] for c in turn[:6]))
+    return L
+
+def _macro_lines(d):
+    if not d or not d.get("cards"): return []
+    by = {c.get("note"): c for c in d["cards"]}
+    L = []
+    mv = sorted(d["cards"], key=lambda c: -abs(c.get("chg") or 0))[:4]
+    L.append("당일 변동 큰 순: " + " · ".join(f"{c['name']} {c['chg']:+.1f}%" for c in mv))
+    mv1 = sorted(d["cards"], key=lambda c: -(c.get("ret_1m") or 0))
+    L.append("1개월 상위: " + " · ".join(f"{c['name']} {c['ret_1m']:+.0f}%" for c in mv1[:3]) + " / 하위: " + " · ".join(f"{c['name']} {c['ret_1m']:+.0f}%" for c in mv1[-3:]))
+    def st(k): c = by.get(k); return None if not c else f"{c['name']} {'▲' if c.get('w_above') else '▼'}30주선"
+    reg = [x for x in (st("DX-Y.NYB"), st("^TNX"), st("CL=F"), st("HG=F"), st("GC=F"), st("^VIX"), st("KRW=X")) if x]
+    if reg: L.append("추세 위치: " + " · ".join(reg))
+    dx, tnx, hg, gc = by.get("DX-Y.NYB"), by.get("^TNX"), by.get("HG=F"), by.get("GC=F")
+    hints = []
+    if dx and hg and dx.get("ret_1m") is not None and hg.get("ret_1m") is not None:
+        if dx["ret_1m"] < 0 and hg["ret_1m"] > 0: hints.append("달러 약세 + 구리 강세 조합은 경기민감·신흥국 위험선호에 유리한 국면")
+        if dx["ret_1m"] > 0 and hg["ret_1m"] < 0: hints.append("달러 강세 + 구리 약세 조합은 경기 둔화·위험회피 신호")
+    if gc and tnx and gc.get("ret_1m") is not None and tnx.get("ret_1m") is not None and gc["ret_1m"] > 0 and tnx["ret_1m"] < 0:
+        hints.append("금 상승 + 금리 하락은 실질금리 하락 베팅 — 성장주·귀금속에 우호적")
+    L += hints
+    return L
+
+def _scan_lines(cur, mkt):
+    if not cur or not cur.get("hits"): return ["오늘 조건에 걸린 종목이 없습니다"]
+    hits = cur["hits"]; L = []
+    cnt = {}
+    for h in hits:
+        for t in (h.get("tags") or []) + (h.get("wtags") or []): cnt[t] = cnt.get(t, 0) + 1
+    L.append(f"포착 {len(hits)}건 (유니버스 {cur.get('universe')}): " + " · ".join(f"{TAG_KO.get(k, k)} {v}" for k, v in sorted(cnt.items(), key=lambda x: -x[1])))
+    sec = {}
+    for h in hits: sec[h.get("sector") or "기타"] = sec.get(h.get("sector") or "기타", 0) + 1
+    top = sorted(sec.items(), key=lambda x: -x[1])[:4]
+    if top and top[0][1] >= 2: L.append("섹터 쏠림: " + " · ".join(f"{k} {v}건" for k, v in top) + (" — 한 섹터에 포착이 몰리면 개별 재료가 아니라 섹터 수급일 가능성" if top[0][1] >= 3 else ""))
+    multi = [h for h in hits if len(h.get("tags") or []) + len(h.get("wtags") or []) >= 3]
+    if multi: L.append("복수 조건 동시 충족(강한 신호): " + " · ".join(f"{h['name']}({len((h.get('tags') or [])) + len((h.get('wtags') or []))}개, RS {h.get('rs')})" for h in multi[:6]))
+    # 최근 5회 스캔 반복 등장
+    idx = _load("scan/index.json") or {}
+    files = sorted([f for f in idx.get("files", []) if f.endswith(f"_{mkt}.json")])[-6:-1]
+    seen = {}
+    for f in files:
+        d = _load("scan/" + f)
+        for h in (d or {}).get("hits", []): seen[h["name"]] = seen.get(h["name"], 0) + 1
+    rep = [(h["name"], seen[h["name"]]) for h in hits if seen.get(h["name"], 0) >= 1]
+    if rep: L.append("최근 5회 스캔에도 등장(지속 신호): " + " · ".join(f"{n}({c + 1}회)" for n, c in sorted(rep, key=lambda x: -x[1])[:8]))
+    lead = sorted([h for h in hits if (h.get("rs") or 0) >= 90 and h.get("above_ma200")], key=lambda h: -(h.get("rs") or 0))[:6]
+    if lead: L.append("RS 90↑ + 200일선 위(주도주 후보): " + " · ".join(f"{h['name']} RS{h['rs']}" for h in lead))
+    far = [h for h in hits if (h.get("off_hi52") or 0) <= -30]
+    if far: L.append("52주 고점 대비 −30% 이하에서 포착(바닥 반등형, 추세 확인 필요): " + " · ".join(h["name"] for h in far[:5]))
+    return L
+
+def auto_insights(which):
+    """토큰 0 데이터 요약 → data/insights_auto.json (섹션별). AI 인사이트(insights/chart.json)와 별개로 항상 생성"""
+    p = os.path.join(DATA, "insights_auto.json")
+    out = _load("insights_auto.json") or {}
+    now = datetime.datetime.now(KST).isoformat(timespec="seconds")
+    if which == "kr":
+        gk = _load("groups_kr.json"); sk = _load("scan_kr.json")
+        out["kr"] = {"date": (gk or {}).get("date"), "lines": _group_lines(gk, "코스피", "업종"), "at": now}
+        out["scan_kr"] = {"date": (sk or {}).get("date"), "lines": _scan_lines(sk, "kr"), "at": now}
+    else:
+        gu = _load("groups_us.json"); gm = _load("groups_macro.json"); su = _load("scan_us.json")
+        out["us"] = {"date": (gu or {}).get("date"), "lines": _group_lines(gu, "SPY", "섹터"), "at": now}
+        out["macro"] = {"date": (gm or {}).get("date"), "lines": _macro_lines(gm), "at": now}
+        out["scan_us"] = {"date": (su or {}).get("date"), "lines": _scan_lines(su, "us"), "at": now}
+    json.dump(out, open(p, "w"), ensure_ascii=False, indent=1)
+    print("  insights_auto:", {k: len(v.get("lines", [])) for k, v in out.items()})
+
 if __name__ == "__main__":
     which = sys.argv[1] if len(sys.argv) > 1 else "kr"
     meta_p = os.path.join(DATA, "meta.json")
     meta = json.load(open(meta_p)) if os.path.exists(meta_p) else {}
+    if which == "auto":
+        auto_insights("kr"); auto_insights("us"); sys.exit()
     meta.update(build_kr() if which == "kr" else build_us())
     meta["updated_at"] = datetime.datetime.now(KST).isoformat(timespec="seconds")
     json.dump(meta, open(meta_p, "w"), ensure_ascii=False, indent=1)
     prune_history()
+    try: auto_insights(which)
+    except Exception as e: print("  ⚠ auto_insights 실패:", e)
     print("done", meta)
