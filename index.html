@@ -3908,12 +3908,29 @@ function scList() {
   return diary.data.scenario;
 }
 
+/* 이력 비교용 키 — 서식·공백·문장 끝 마침표 차이는 같은 내용으로 본다 */
+function scHistKey(h) {
+  const txt = v => { const p = document.createElement('div'); p.innerHTML = v || ''; return (p.innerText || p.textContent || '').replace(/\s+/g, ' ').trim().replace(/[.。]+$/, ''); };
+  return JSON.stringify([txt(h.buy), txt(h.sell), txt(h.cmt), String(h.safePx || '').trim(), String(h.sellPx || '').trim(), String(h.sellWhen || '').trim()]);
+}
+/* 내용이 같은 이력이 연달아 있으면 과거 것 하나만 남김 (hist 는 최신순) */
+function scDedupeHist(item) {
+  if (!Array.isArray(item.hist) || item.hist.length < 2) return false;
+  const kept = []; let prevKey = null;
+  for (let i = item.hist.length - 1; i >= 0; i--) {
+    const k = scHistKey(item.hist[i]);
+    if (k === prevKey) continue;
+    kept.unshift(item.hist[i]); prevKey = k;
+  }
+  if (kept.length === item.hist.length) return false;
+  item.hist = kept; return true;
+}
 function scSave(item, field, value) {
   const today = todayDateStr();
-  // 다른 날짜에 수정 시작 → 수정 전 내용을 이력으로 스냅샷
+  // 다른 날짜에 수정 시작 → 수정 전 내용을 이력으로 스냅샷 (직전 이력과 내용이 같으면 스킵)
   if (item.updated && item.updated !== today) {
     if (!Array.isArray(item.hist)) item.hist = [];
-    if (!item.hist.length || item.hist[0].d !== item.updated) {
+    if ((!item.hist.length || item.hist[0].d !== item.updated) && !(item.hist.length && scHistKey(item.hist[0]) === scHistKey(item))) {
       const probe = document.createElement('div');
       probe.innerHTML = (item.buy || '') + (item.sell || '') + (item.cmt || '');
       if ((probe.innerText || '').trim()) {
@@ -5354,6 +5371,7 @@ function makePfReturnCard() {
 }
 
 function renderFeedScenario() {
+  try { let ch = false; scList().forEach(it => { if (scDedupeHist(it)) ch = true; }); if (ch) saveDiaryData(diary.data); } catch (_) {}
   const feed = document.getElementById('feed-scenario'); if (!feed) return;
   // 재렌더 후 스크롤 위치 유지 (기록·보유·보관 버튼 눌렀을 때 맨 위로 튀지 않게)
   // 실제 스크롤 주체는 피드 엘리먼트 (feed) 이지만, 기기에 따라 window/래퍼일 수도 있어 모두 보존
