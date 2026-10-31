@@ -294,7 +294,22 @@ def build_kr():
         k = next((i for i, x in enumerate(closes) if x is not None), 0)
         cd, cc, bc = axis[k:], closes[k:], bench_c[k:]
         card = group_card(grp, f"{len(members)}종목 · 시총가중", cd, cc, bc, n_members=len(members))
-        if card: cards.append(card)
+        if card:
+            # 구성종목 명세 (카드 제목 클릭 → 목록): 시총 내림차순, 비중·등락·1/3개월 수익률
+            mem = []
+            for tk in members:
+                c = series[tk][4]; u = univ[tk]
+                mem.append({"code": tk, "name": u["name"], "ind": u.get("industry"), "mkt": u.get("mkt"),
+                            "mcap": round(u["mcap"]), "w": round(u["mcap"] / tot * 100, 2),
+                            "chg": round(pct(c[-1], c[-2]), 2) if len(c) > 1 else None,
+                            "r1m": round(pct(c[-1], c[-22]), 1) if len(c) > 22 else None,
+                            "r3m": round(pct(c[-1], c[-64]), 1) if len(c) > 64 else None})
+            mem.sort(key=lambda x: -x["mcap"])
+            card["members"] = mem
+            inds = {}
+            for m in mem: inds[m["ind"]] = inds.get(m["ind"], 0) + 1
+            card["industries"] = sorted(inds.items(), key=lambda x: -x[1])
+            cards.append(card)
     cards.sort(key=lambda x: -(x["rel_3m"] or -999))
     for nm, s in (("코스피", kospi), ("코스닥", kosdaq)):
         card = group_card(nm, "지수", s[0], s[4], None)

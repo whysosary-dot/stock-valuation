@@ -66,6 +66,27 @@ body{padding:12px 14px 40px}
 .hist{margin-left:auto;font-size:12px}
 .hist select{font-size:12px;padding:3px 6px;border:1px solid var(--border-strong);border-radius:6px;background:var(--panel)}
 .legend{font-size:11px;color:var(--text-dim)}
+/* 그룹 제목 클릭 → 구성종목 */
+.gcard .nm.lk{cursor:pointer;text-decoration:underline dotted;text-decoration-color:var(--border-strong);text-underline-offset:3px}
+.gcard .nm.lk:hover{color:var(--accent);text-decoration-color:var(--accent)}
+.mb{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:50;display:flex;align-items:flex-start;justify-content:center;padding:24px 10px;overflow:auto}
+.md{background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);width:min(860px,100%);max-height:calc(100vh - 48px);display:flex;flex-direction:column}
+.md .hd{display:flex;align-items:baseline;gap:10px;padding:14px 16px 8px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.md .hd h2{font-size:16px;margin:0;font-weight:800}
+.md .hd .s{font-size:12px;color:var(--text-dim)}
+.md .hd .x{margin-left:auto;border:0;background:none;font-size:20px;cursor:pointer;color:var(--text-dim);line-height:1}
+.md .inds{padding:8px 16px;font-size:12px;color:var(--text-dim);line-height:1.7;border-bottom:1px solid var(--border)}
+.md .inds b{color:var(--text)}
+.md .bd2{overflow:auto;padding:0 8px 10px}
+.mt{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+.mt th{position:sticky;top:0;background:var(--panel);text-align:right;font-weight:700;padding:8px 8px;border-bottom:1px solid var(--border-strong);cursor:pointer;white-space:nowrap;color:var(--text-dim)}
+.mt th.on{color:var(--accent)}
+.mt th:nth-child(1),.mt th:nth-child(2),.mt td:nth-child(1),.mt td:nth-child(2){text-align:left}
+.mt td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+.mt td a{color:inherit;text-decoration:none;font-weight:600}
+.mt td a:hover{color:var(--accent)}
+.mt .wbar{display:inline-block;height:8px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:3px;vertical-align:middle;margin-right:6px}
+.mt .mk{font-size:10.5px;color:var(--text-dim);margin-left:4px}
 </style>
 </head>
 <body>
@@ -143,7 +164,7 @@ function badge(lbl, v, flip) { return `<span class="bd ${v == null ? '' : v ? 'u
 function renderBoard() {
   const key = state.board; const d = state.data['groups_' + key]; const el = $('#board'); el.innerHTML = '';
   const tip = {
-    kr: '<b>한국 업종</b> — 네이버 업종 분류(79개)를 21개 그룹으로 묶고 구성종목(시총 300억↑)의 <b>시총가중 가격지수</b>로 합성. 2년 주봉 종가 + 주황 30주선. 뱃지: 일=50일선 · 주=30주선 · 월=10개월선 위(▲)/아래(▼). 업종은 <b>3개월 상대수익률(코스피 대비)</b> 순.',
+    kr: '<b>한국 업종</b> — 네이버 업종 분류(79개)를 21개 그룹으로 묶고 구성종목(시총 300억↑)의 <b>시총가중 가격지수</b>로 합성. 2년 주봉 종가 + 주황 30주선. 뱃지: 일=50일선 · 주=30주선 · 월=10개월선 위(▲)/아래(▼). 업종은 <b>3개월 상대수익률(코스피 대비)</b> 순. <b>업종명을 클릭</b>하면 구성종목·비중·네이버 세부업종 목록이 열립니다.',
     us: '<b>미국 지수·섹터 ETF</b> — 야후 파이낸스 일봉. 섹터는 3개월 상대수익률(SPY 대비) 순. 주황 테두리 = 오늘 일·주·월 뱃지 중 하나가 바뀐 카드.',
     macro: '<b>상품·통화·금리</b> — 선물·환율·금리는 상대수익률 없음. 원/달러·엔/달러는 달러 기준(오르면 원화·엔화 약세). 금리는 수익률(%) 자체의 등락.',
   }[key];
@@ -154,11 +175,57 @@ function renderBoard() {
     const hot = (c.d_flip || c.w_flip || c.m_flip);
     if (hot) card.classList.add('hot');
     const foot = c.rel_3m != null ? `1개월 ${fmtPct(c.ret_1m, 0)} · 3개월 상대 ${c.rel_3m > 0 ? '+' : ''}${Math.round(c.rel_3m)}%p` : `1개월 ${fmtPct(c.ret_1m, 0)} · 52주 고점 대비 ${fmtPct(c.off_hi52, 0)}`;
-    card.innerHTML = `<div class="h"><span class="nm" title="${esc(c.name)}">${esc(c.name)}</span><span class="sb">${esc(c.n ? c.n + '종목' : (c.note || ''))}</span><span class="chg ${cls(c.chg)}">${fmtPct(c.chg)}</span></div>
+    const link = groupLink(c, key);
+    card.innerHTML = `<div class="h"><span class="nm${link ? ' lk' : ''}" title="${esc(link ? link.tip : c.name)}">${esc(c.name)}</span><span class="sb">${esc(c.n ? c.n + '종목' : (c.note || ''))}</span><span class="chg ${cls(c.chg)}">${fmtPct(c.chg)}</span></div>
       <canvas></canvas>
       <div class="f">${badge('일', c.d_above)}${badge('주', c.w_above)}${badge('월', c.m_above)}<span style="margin-left:auto">${foot}</span></div>`;
+    if (link) card.querySelector('.nm').addEventListener('click', link.go);
     el.appendChild(card); drawGroup(card.querySelector('canvas'), c);
   });
+}
+/* 제목 클릭: 한국 업종 → 구성종목 모달 / 코스피·코스닥 → 네이버 지수 / 미국 ETF → 야후 보유종목 / 상품·통화 → 야후 시세 */
+function groupLink(c, key) {
+  if (c.members && c.members.length) return { tip: `${c.name} 구성종목 ${c.members.length}개 보기`, go: () => openMembers(c) };
+  if (key === 'kr') { const u = c.name === '코스피' ? 'https://m.stock.naver.com/domestic/index/KOSPI/total' : c.name === '코스닥' ? 'https://m.stock.naver.com/domestic/index/KOSDAQ/total' : null; return u ? { tip: '네이버 지수 페이지', go: () => window.open(u, '_blank') } : null; }
+  if (!c.note) return null;
+  const sym = encodeURIComponent(c.note);
+  if (key === 'us') return { tip: `${c.note} 보유종목(야후)`, go: () => window.open(`https://finance.yahoo.com/quote/${sym}/holdings/`, '_blank') };
+  return { tip: `${c.note} 시세(야후)`, go: () => window.open(`https://finance.yahoo.com/quote/${sym}/`, '_blank') };
+}
+const MCOLS = [
+  { k: 'name', l: '종목', num: false }, { k: 'ind', l: '네이버 업종', num: false }, { k: 'mcap', l: '시총(억)' }, { k: 'w', l: '비중' },
+  { k: 'chg', l: '당일' }, { k: 'r1m', l: '1개월' }, { k: 'r3m', l: '3개월' },
+];
+function openMembers(c) {
+  let sort = { k: 'mcap', desc: true };
+  const bg = document.createElement('div'); bg.className = 'mb';
+  const wmax = Math.max(...c.members.map(m => m.w || 0)) || 1;
+  const inds = (c.industries || []).map(([n, k]) => `<b>${esc(n)}</b> ${k}`).join(' · ');
+  const render = () => {
+    const rows = c.members.slice().sort((a, b) => {
+      const x = a[sort.k], y = b[sort.k];
+      if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1;
+      const r = typeof x === 'string' ? x.localeCompare(y, 'ko') : x - y; return sort.desc ? -r : r;
+    });
+    const th = MCOLS.map(col => `<th data-k="${col.k}" class="${sort.k === col.k ? 'on' : ''}">${col.l}${sort.k === col.k ? (sort.desc ? ' ▼' : ' ▲') : ''}</th>`).join('');
+    const tr = rows.map(m => `<tr>
+      <td><a href="https://m.stock.naver.com/domestic/stock/${esc(m.code)}/total" target="_blank" rel="noopener">${esc(m.name)}</a><span class="mk">${esc(m.mkt || '')}</span></td>
+      <td style="color:var(--text-dim)">${esc(m.ind || '')}</td>
+      <td>${m.mcap == null ? '—' : Number(m.mcap).toLocaleString('ko-KR')}</td>
+      <td><span class="wbar" style="width:${Math.max(2, Math.round(m.w / wmax * 60))}px"></span>${m.w == null ? '—' : m.w.toFixed(1) + '%'}</td>
+      <td class="${cls(m.chg)}">${fmtPct(m.chg)}</td><td class="${cls(m.r1m)}">${fmtPct(m.r1m)}</td><td class="${cls(m.r3m)}">${fmtPct(m.r3m)}</td></tr>`).join('');
+    bg.innerHTML = `<div class="md" role="dialog">
+      <div class="hd"><h2>${esc(c.name)}</h2><span class="s">${c.members.length}종목 · 시총가중 (시총 300억↑) · 지수 ${fmtPct(c.chg)} · 1개월 ${fmtPct(c.ret_1m, 0)} · 3개월 ${fmtPct(c.ret_3m, 0)}</span><button class="x" title="닫기">×</button></div>
+      ${inds ? `<div class="inds">포함 네이버 업종 — ${inds}</div>` : ''}
+      <div class="bd2"><table class="mt"><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table></div></div>`;
+    bg.querySelectorAll('th').forEach(h => h.onclick = () => { const k = h.dataset.k; if (sort.k === k) sort.desc = !sort.desc; else sort = { k, desc: !(MCOLS.find(x => x.k === k).num === false) }; render(); });
+    bg.querySelector('.x').onclick = close;
+  };
+  const close = () => { bg.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  bg.addEventListener('click', e => { if (e.target === bg) close(); });
+  document.addEventListener('keydown', onKey);
+  render(); document.body.appendChild(bg);
 }
 
 /* ── 스캔 카드: 2년 일봉 캔들 + 50일(회색)·200일(주황) + 거래량 + RS 라인 ── */
