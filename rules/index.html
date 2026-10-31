@@ -124,7 +124,10 @@ function analyze(d) {
   else out.tgt = null;
   // 시나리오(보유)
   const sc = (d.scenario || []).filter(s => !s.archived && s.held && s.name !== '현금');
-  out.held = sc.map(s => { const buy = strip(s.buy).trim(), sell = strip(s.sell).trim(); const vague = t => !t || /모르겠|수익일 때|^-+$/.test(t) || t.length < 6; return { name: s.name, buyOk: !vague(buy), sellOk: !vague(sell), safeOk: !!s.safePx, amt: +s.amt || 0 }; });
+  out.held = sc.map(s => { const buy = strip(s.buy).trim(), sell = strip(s.sell).trim(); // 비어 있거나, 짧은 자리표시 문구("모르겠음." "수익일 때." 등)뿐이면 미작성. 20자 이상 쓴 근거는 어떤 말로 시작하든 작성으로 인정
+    const vague = t => { t = (t || '').replace(/\s+/g, ' ').trim(); if (!t) return true; if (t.length >= 20) return false; return /^(모르겠|수익일 때|수익 나면|-+$)/.test(t) || t.length < 6; };
+    // 매도 조건은 문장 또는 매도 주가 중 하나만 있어도 작성으로 인정
+    return { name: s.name, buyOk: !vague(buy), sellOk: !vague(sell) || !!s.sellPx, safeOk: !!s.safePx, amt: +s.amt || 0 }; });
   out.heldBad = out.held.filter(h => !(h.buyOk && h.sellOk && h.safeOk));
   // 매매 (trades + trades_backup + 일기 본문 '매도/매수 N주' 줄)
   const trades = {};
