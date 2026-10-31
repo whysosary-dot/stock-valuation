@@ -118,6 +118,10 @@ function analyze(d) {
   const hist = (d.pfHist || []).slice().sort((a, b) => a.d < b.d ? -1 : 1);
   out.hist = hist.map(h => { const tot = h.items.reduce((s, i) => s + (+i.amt || 0), 0); const st = h.items.filter(i => i.name !== '현금' && +i.amt > 0); const mx = st.reduce((m, i) => Math.max(m, +i.amt), 0); const top = st.find(i => +i.amt === mx); return { d: h.d, n: st.length, maxW: tot ? mx / tot * 100 : 0, top: top ? top.name : '', tot, cash: tot ? (h.items.find(i => i.name === '현금') || { amt: 0 }).amt / tot * 100 : 0 }; });
   out.last = out.hist[out.hist.length - 1] || null;
+  // 🎯 매수 목표 포트폴리오 — 각 종목의 '실제' 비중 = 진입(entryAct)+핵심(coreAct)+추가(alphaAct). 대시보드 목표 카드와 같은 계산
+  const tg = (Array.isArray(d.pfTarget) ? d.pfTarget : []).map(it => ({ name: it.name || '(이름 없음)', pct: +it.pct || 0, act: (+it.entryAct || 0) + (+it.coreAct || 0) + (+it.alphaAct || 0) })).filter(x => x.act > 0);
+  if (tg.length) { tg.sort((x, y) => y.act - x.act); const sum = tg.reduce((s, x) => s + x.act, 0); out.tgt = { rows: tg, n: tg.length, maxW: tg[0].act, top: tg[0].name, topPct: tg[0].pct, cash: Math.max(0, 100 - sum) }; }
+  else out.tgt = null;
   // 시나리오(보유)
   const sc = (d.scenario || []).filter(s => !s.archived && s.held && s.name !== '현금');
   out.held = sc.map(s => { const buy = strip(s.buy).trim(), sell = strip(s.sell).trim(); const vague = t => !t || /모르겠|수익일 때|^-+$/.test(t) || t.length < 6; return { name: s.name, buyOk: !vague(buy), sellOk: !vague(sell), safeOk: !!s.safePx, amt: +s.amt || 0 }; });
@@ -157,11 +161,14 @@ function card(cls, t, v, d, st) { return `<div class="ck ${cls}"><div class="t">
 function render(d, srcLabel) {
   const a = analyze(d); const C = []; let ok = 0, tot = 0;
   const tally = cls => { if (cls !== 'na') { tot++; if (cls === 'ok') ok++; } return cls; };
-  // 1 최대 비중
-  if (a.last) { const c = tally(a.last.maxW > LIMITS.maxW ? (a.last.maxW > 50 ? 'bad' : 'warn') : 'ok'); C.push(card(c, '규칙 2 · 한 종목 최대 비중', `${a.last.maxW.toFixed(0)}% <small>/ 상한 ${LIMITS.maxW}%</small>`, `${esc(a.last.top)} · 포트 이력 ${a.last.d} 기준${a.last.cash > 0.5 ? ` · 현금 ${a.last.cash.toFixed(0)}%` : ''}`)); }
-  else C.push(card(tally('na'), '규칙 2 · 한 종목 최대 비중', '—', '포트 이력이 없습니다'));
+  // 1 최대 비중 — 🎯 매수 목표 포트폴리오의 '실제' 칸(진입+핵심+추가 실제 비중) 기준. 실제 칸이 비어 있으면 포트 이력으로 대체
+  if (a.tgt) { const t = a.tgt; const c = tally(t.maxW > LIMITS.maxW ? (t.maxW > 50 ? 'bad' : 'warn') : 'ok');
+    C.push(card(c, '규칙 2 · 한 종목 최대 비중 (목표 포트 실제)', `${t.maxW.toFixed(1)}% <small>/ 상한 ${LIMITS.maxW}%</small>`, `${esc(t.top)} · 목표 ${t.topPct.toFixed(0)}% → 실제 ${t.maxW.toFixed(1)}%<br>${t.rows.map(r => `${esc(r.name)} ${r.act.toFixed(1)}%`).join(' · ')}${t.cash > 0.5 ? ` · 현금 ${t.cash.toFixed(1)}%` : ''}`)); }
+  else if (a.last) { const c = tally(a.last.maxW > LIMITS.maxW ? (a.last.maxW > 50 ? 'bad' : 'warn') : 'ok'); C.push(card(c, '규칙 2 · 한 종목 최대 비중', `${a.last.maxW.toFixed(0)}% <small>/ 상한 ${LIMITS.maxW}%</small>`, `${esc(a.last.top)} · 포트 이력 ${a.last.d} 기준 (목표 포트의 실제 칸이 비어 있어 대체)${a.last.cash > 0.5 ? ` · 현금 ${a.last.cash.toFixed(0)}%` : ''}`)); }
+  else C.push(card(tally('na'), '규칙 2 · 한 종목 최대 비중', '—', '목표 포트의 실제 비중도, 포트 이력도 없습니다'));
   // 2 종목 수
-  if (a.last) { const c = tally(a.last.n < LIMITS.minN ? (a.last.n <= 1 ? 'bad' : 'warn') : 'ok'); C.push(card(c, '규칙 2 · 종목 수', `${a.last.n}종목 <small>/ 최소 ${LIMITS.minN}</small>`, `몰빵(50%↑) 이력 <b>${a.mollbbang.length}회</b>${a.mollbbang.length ? ' · 마지막 ' + a.mollbbang[a.mollbbang.length - 1].d : ''}`)); }
+  { const n = a.tgt ? a.tgt.n : a.last ? a.last.n : null;
+    if (n != null) { const c = tally(n < LIMITS.minN ? (n <= 1 ? 'bad' : 'warn') : 'ok'); C.push(card(c, '규칙 2 · 종목 수', `${n}종목 <small>/ 최소 ${LIMITS.minN}</small>`, `${a.tgt ? '목표 포트에서 실제 비중이 입력된 종목' : '포트 이력 기준'} · 몰빵(50%↑) 이력 <b>${a.mollbbang.length}회</b>${a.mollbbang.length ? ' · 마지막 ' + a.mollbbang[a.mollbbang.length - 1].d : ''}`)); } }
   // 3 시나리오 미작성
   { const c = tally(a.held.length === 0 ? 'na' : a.heldBad.length ? (a.heldBad.length >= 2 ? 'bad' : 'warn') : 'ok');
     C.push(card(c, '규칙 1·5 · 시나리오 미작성 보유종목', `${a.heldBad.length}<small> / 보유 ${a.held.length}</small>`, a.heldBad.length ? a.heldBad.map(h => `<b>${esc(h.name)}</b> — ${[!h.buyOk && '매수근거', !h.sellOk && '매도조건', !h.safeOk && '안전가'].filter(Boolean).join('·')} 비어 있음`).join('<br>') : '보유 종목 모두 매수근거·매도조건·안전가 작성됨')); }
@@ -184,7 +191,7 @@ function render(d, srcLabel) {
   const mos = Object.keys(a.byMo).sort();
   $('#t-month').innerHTML = `<table><thead><tr><th>월</th><th>매매 횟수</th><th>판정</th></tr></thead><tbody>${mos.map(m => `<tr><td>${m}</td><td>${a.byMo[m]}</td><td class="${a.byMo[m] > LIMITS.tradesMo ? 'bad-t' : 'ok-t'}">${a.byMo[m] > LIMITS.tradesMo ? '과다' : '양호'}</td></tr>`).join('') || '<tr><td colspan=3>매매 기록 없음</td></tr>'}</tbody></table>`;
   $('#t-pf').innerHTML = `<table><thead><tr><th>포트 이력</th><th>종목</th><th>최대 비중</th><th>1위 종목</th><th>총액(억)</th></tr></thead><tbody>${a.hist.slice().reverse().map(h => `<tr><td>${h.d}</td><td class="${h.n < LIMITS.minN ? 'bad-t' : ''}">${h.n}</td><td class="${h.maxW > LIMITS.maxW ? 'bad-t' : 'ok-t'}">${h.maxW.toFixed(0)}%</td><td style="text-align:left">${esc(h.top)}</td><td>${(h.tot / 1e8).toFixed(2)}</td></tr>`).join('') || '<tr><td colspan=5>포트 이력 없음</td></tr>'}</tbody></table>`;
-  $('#note').textContent = '판정 기준: 최대 비중 35%(50% 초과 시 위반) · 최소 3종목 · 이달 매매 10건 · ±7% 당일 매매(추정) · 일기 5일 공백. 기준값은 rules/index.html 상단 LIMITS 에서 바꿀 수 있습니다. 급등락 당일 매매는 가격 데이터가 아니라 일기 문장에서 추정하므로 참고용입니다.';
+  $('#note').textContent = '판정 기준: 최대 비중 35%(50% 초과 시 위반, 🎯 목표 포트의 실제 칸 기준 — 비어 있으면 포트 이력) · 최소 3종목 · 이달 매매 10건 · ±7% 당일 매매(추정) · 일기 5일 공백. 기준값은 rules/index.html 상단 LIMITS 에서 바꿀 수 있습니다. 급등락 당일 매매는 가격 데이터가 아니라 일기 문장에서 추정하므로 참고용입니다.';
 }
 function renderRules() {
   $('#rules').innerHTML = RULES.map(r => `<div class="rc"><h3><span class="no">규칙 ${r.n}</span>${esc(r.h)}</h3><p class="rule">${r.rule}</p>
