@@ -155,6 +155,17 @@ function analyze(d) {
   out.diaryDays = days.length;
   // 몰빵 이력
   out.mollbbang = out.hist.filter(h => h.maxW > 50);
+  // 수동 규칙(6·7·8) — 일기 본문에 적은 답을 읽는다.
+  //   "#규칙 OOX"  (6·7·8 순서로 O/X)   또는   "규칙6 O", "규칙 7: X", "규칙8 ○" 같은 개별 표기
+  out.manual = {};
+  for (const day of days) {
+    const txt = strip(d.daily[day]); const r = {};
+    const m3 = txt.match(/#\s*규칙\s*([OXoxㅇㅌ○×✓✗]{3})/);
+    if (m3) [6, 7, 8].forEach((n, i) => r[n] = /[Ooㅇ○✓]/.test(m3[1][i]));
+    const re = /규칙\s*([678])\s*[:：]?\s*([OXoxㅇㅌ○×✓✗])(?![가-힣])/g; let m;
+    while ((m = re.exec(txt))) r[m[1]] = /[Ooㅇ○✓]/.test(m[2]);
+    if (Object.keys(r).length) out.manual[day] = r;
+  }
   return out;
 }
 
@@ -182,8 +193,17 @@ function render(d, srcLabel) {
   // 6 일기 공백
   { const c = tally(a.diaryGap == null ? 'na' : a.diaryGap > LIMITS.diaryGap ? 'bad' : a.diaryGap >= 3 ? 'warn' : 'ok');
     C.push(card(c, '규칙 9 · 마지막 일기', a.diaryGap == null ? '—' : `${a.diaryGap}일 전 <small>/ 상한 ${LIMITS.diaryGap}일</small>`, `${a.lastDiary || ''} · 누적 ${a.diaryDays}일`)); }
-  // 7 수동 규칙 안내
-  C.push(card('na', '규칙 6·7·8 · 수동 점검', '☐ ☐ ☐', '남의 포지션으로 바꾸지 않았는가 · 첫 매수는 절반이었는가 · 레버리지·기한 있는 돈은 없는가 — 일기에 한 줄로 답하기', '수동'));
+  // 7 수동 규칙(6·7·8) — 일기에 적은 O/X 를 읽는다
+  { const mdays = Object.keys(a.manual).sort(); const lastD = mdays[mdays.length - 1]; const last = lastD ? a.manual[lastD] : null;
+    const recent = mdays.filter(x => x >= ymd(new Date(KST() - 14 * 864e5)));
+    const fails = recent.reduce((s, x) => s + [6, 7, 8].filter(n => a.manual[x][n] === false).length, 0);
+    const c = tally(!last ? 'na' : fails ? (fails >= 2 ? 'bad' : 'warn') : 'ok');
+    const mark = v => v === true ? '<span style="color:#16a34a">O</span>' : v === false ? '<span style="color:#dc2626">X</span>' : '<span style="color:var(--text-dim)">·</span>';
+    const names = { 6: '남의 포지션 X', 7: '첫 매수 절반', 8: '레버리지·기한 돈 X' };
+    C.push(card(c, '규칙 6·7·8 · 수동 점검 (일기에 O/X)',
+      last ? [6, 7, 8].map(n => `<small>${n}</small>${mark(last[n])}`).join(' &nbsp;') : '· · ·',
+      (last ? `마지막 기록 ${lastD} · 최근 14일 X <b>${fails}</b>회` : '아직 기록 없음') + `<br>일기 끝에 <b>#규칙 OOX</b> (6·7·8 순서) 또는 "규칙6 O / 규칙7 X / 규칙8 O" 로 적으면 자동 집계`,
+      !last ? '기록 없음' : fails ? '위반' : '준수')); }
   $('#checks').innerHTML = C.join('');
   const pct = tot ? Math.round(ok / tot * 100) : 0; const g = pct >= 80 ? 'g' : pct >= 50 ? 'y' : 'r';
   $('#score').innerHTML = `<div class="big ${g}">${ok}/${tot}</div><div class="txt"><b>자동 점검 ${tot}항목 중 ${ok}개 준수</b> (${pct}%)<br>데이터: ${srcLabel} · 포트 이력 ${a.last ? a.last.d : '—'} · 일기 ${a.diaryDays}일 · 매매 ${Object.values(a.byMo).reduce((s, x) => s + x, 0)}건</div>`;
@@ -191,13 +211,16 @@ function render(d, srcLabel) {
   // 추이 표
   const mos = Object.keys(a.byMo).sort();
   $('#t-month').innerHTML = `<table><thead><tr><th>월</th><th>매매 횟수</th><th>판정</th></tr></thead><tbody>${mos.map(m => `<tr><td>${m}</td><td>${a.byMo[m]}</td><td class="${a.byMo[m] > LIMITS.tradesMo ? 'bad-t' : 'ok-t'}">${a.byMo[m] > LIMITS.tradesMo ? '과다' : '양호'}</td></tr>`).join('') || '<tr><td colspan=3>매매 기록 없음</td></tr>'}</tbody></table>`;
+  const mdays = Object.keys(a.manual).sort().slice(-14).reverse();
+  const mk = v => v === true ? '<span class="ok-t">O</span>' : v === false ? '<span class="bad-t">X</span>' : '<span style="color:var(--text-dim)">·</span>';
+  $('#t-month').innerHTML += `<table style="margin-top:14px"><thead><tr><th>수동 점검 (일기 기록)</th><th>규칙 6</th><th>규칙 7</th><th>규칙 8</th></tr></thead><tbody>${mdays.map(x => `<tr><td>${x}</td><td>${mk(a.manual[x][6])}</td><td>${mk(a.manual[x][7])}</td><td>${mk(a.manual[x][8])}</td></tr>`).join('') || '<tr><td colspan=4 style="color:var(--text-dim)">일기에 "#규칙 OOX" 를 적으면 여기에 쌓입니다</td></tr>'}</tbody></table>`;
   $('#t-pf').innerHTML = `<table><thead><tr><th>포트 이력</th><th>종목</th><th>최대 비중</th><th>1위 종목</th><th>총액(억)</th></tr></thead><tbody>${a.hist.slice().reverse().map(h => `<tr><td>${h.d}</td><td class="${h.n < LIMITS.minN ? 'bad-t' : ''}">${h.n}</td><td class="${h.maxW > LIMITS.maxW ? 'bad-t' : 'ok-t'}">${h.maxW.toFixed(0)}%</td><td style="text-align:left">${esc(h.top)}</td><td>${(h.tot / 1e8).toFixed(2)}</td></tr>`).join('') || '<tr><td colspan=5>포트 이력 없음</td></tr>'}</tbody></table>`;
   $('#note').textContent = '판정 기준: 최대 비중 35%(50% 초과 시 위반) · 최소 3종목 · 이달 매매 10건 · ±7% 당일 매매(추정) · 일기 5일 공백. 기준값은 rules/index.html 상단 LIMITS 에서 바꿀 수 있습니다. 급등락 당일 매매는 가격 데이터가 아니라 일기 문장에서 추정하므로 참고용입니다.';
 }
 function renderRules() {
   $('#rules').innerHTML = RULES.map(r => `<div class="rc"><h3><span class="no">규칙 ${r.n}</span>${esc(r.h)}</h3><p class="rule">${r.rule}</p>
     <div class="why"><b>왜:</b> ${esc(r.why)}${(r.q || []).map(q => `<span class="q">${esc(q)}</span>`).join('')}</div>
-    <div class="chk">${r.auto ? `<span class="auto">자동 점검 · ${esc(r.auto)}</span>` : '<span>수동 점검 · 일기에 한 줄</span>'}</div></div>`).join('');
+    <div class="chk">${r.auto ? `<span class="auto">자동 점검 · ${esc(r.auto)}</span>` : '<span>수동 점검 · 일기에 "#규칙 OOX" (6·7·8 순서)</span>'}</div></div>`).join('');
 }
 async function main() {
   renderRules();
