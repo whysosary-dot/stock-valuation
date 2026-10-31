@@ -1626,6 +1626,7 @@ const COLS = [
   { key: '_div',            label: '배당',           type: 'val', sortable: true, align: 'center' },
   { key: '_foreign',        label: '외인',           type: 'val', sortable: true, align: 'center' },
   { key: '_upside',         label: '상방 %',        type: 'calc',    sortable: true },
+  { key: '_rr',             label: '손익비',        type: 'calc',    sortable: true, align: 'center' },
   { key: '_downside',       label: '하방 %',        type: 'calc',    sortable: true },
   { key: '_chart3y',        label: '3년 차트',       type: 'chart3y', sortable: false, align: 'center' },
   { key: '_chart',          label: '1년 차트',       type: 'chart',   sortable: false, align: 'center' },
@@ -1794,6 +1795,8 @@ const por = s => { const mc = parseNum(s.market_cap_oku), sum = opSum(s); return
 const targetPor = s => { const t = parseNum(s.target_cap_oku), sum = opSum(s); return (!t || !sum) ? null : t/sum; };
 const upside = s => { const mc = parseNum(s.market_cap_oku), t = parseNum(s.target_cap_oku); return (!mc || !t) ? null : (t/mc-1)*100; };
 const downside = s => { const mc = parseNum(s.market_cap_oku), sf = parseNum(s.safety_cap_oku); return (!mc || !sf) ? null : (sf/mc-1)*100; };
+// 손익비 = 상방 ÷ 하방(절대값). 현재시총이 안전시총 이하(하방 ≥ 0)면 ∞ — 가장 좋은 접근 구간. 상방 ≤ 0 이면 0
+const riskReward = s => { const u = upside(s), d = downside(s); if (u === null || d === null) return null; if (u <= 0) return 0; if (d >= 0) return Infinity; return u / Math.abs(d); };
 
 /* N개월 수익률 — 3개월 일봉(price_history_3m)에서 거래일 기준 역산
    (1개월 ≈ 21거래일, 2개월 ≈ 42, 3개월 ≈ 63; 배열이 짧으면 맨 앞 값으로 클램프) */
@@ -1858,6 +1861,7 @@ function sortValue(s, k) {
     case '_pos52': return pos52(s);
     case '_upside': return upside(s);
     case '_downside': return downside(s);
+    case '_rr': return riskReward(s);
     // 정렬은 '개선폭'(최근 달 − 그 이전 달) 기준 — 턴어라운드가 위로 올라온다
     case '_trend': { const t = trendParts(s); return t ? t.M1 - t.M2 : null; }
     case '_op_sum': return opSum(s);
@@ -2212,6 +2216,9 @@ function renderRow(s) {
       if (c.key === '_upside') {
         const v = upside(s);
         if (v !== null) { text = fmt(v,1) + '%'; cls = v >= 0 ? 'down' : 'up'; }  // +: red, −: blue
+      } else if (c.key === '_rr') {
+        const v = riskReward(s);
+        if (v !== null) { text = v === Infinity ? '∞' : fmt(v, 1); cls = v >= 3 ? 'down' : 'up'; td.title = v === Infinity ? '현재시총이 안전시총 이하 — 하방 0, 최적 접근 구간' : `상방 ${fmt(upside(s),1)}% ÷ 하방 ${fmt(Math.abs(downside(s)),1)}% = ${fmt(v,2)} (3 이상이면 접근 가능)`; }
       } else if (c.key === '_downside') {
         const v = downside(s);
         if (v !== null) { text = fmt(v,1) + '%'; cls = v >= 0 ? 'down' : 'up'; }  // +: red, −: blue
