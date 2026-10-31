@@ -95,7 +95,7 @@ const RULES = [
     why: '제주반도체 시나리오의 매도 조건은 "2분기 어닝쇼크 시"였는데 실제 매도 사유는 "전닉보다 덜 오른다"였다. +60% 수익이 평단 아래 매도로 끝났다.', q: ['7/22 "수익률 60% 가까이 갔던 종목인데… 차라리 중간에 좀 팔 걸"', '5/22 "절대 많이 올랐다는 이유로 팔지 않기… 나중에 틀리면 복기하면 되지"'], auto: '시나리오 매도조건 공란' },
   { n: 6, h: '매일 쓴다 — 매매가 없어도', rule: '일기는 매매의 결과가 아니라 매매를 막는 장치다. 매매하고 싶은 날일수록 <b>먼저 쓴다</b>. 5일 이상 비우지 않는다.',
     why: '일기를 쓰지 않은 기간(8월 말~9월)에 자신감이 무너졌고, 매일 쓴 10월에 규칙과 행동이 처음으로 일치했다.', q: ['10/12 "내 스트라이크 존에 올 때까지 기다리고 아니면 보내버리기. 기억할 만한 매매다"', '10/16 "투자 아이디어의 기간을 6개월~1년으로 잡고 3종목 이상 다변화하면 리밸런싱에서 자유로워질 것"'], auto: '마지막 일기 경과일' },
-  { n: 7, h: '손익비 3 이상일 때만 접근', rule: '손익비 = <b>상방 ÷ 하방</b>. 상방 = (매도 주가 − 현재가) ÷ 현재가, 하방 = (현재가 − 안전마진가) ÷ 현재가. 이 값이 <b>3 미만이면 사지 않는다</b>. 매도 주가·안전마진가가 없으면 손익비를 계산할 수 없으므로 역시 사지 않는다.',
+  { n: 7, h: '손익비 3 이상일 때만 접근', rule: '손익비 = <b>상방 ÷ 하방</b>. 상방 = (매도 주가 − 현재가) ÷ 현재가, 하방 = (현재가 − 안전마진가) ÷ 현재가. 이 값이 <b>3 미만이면 사지 않는다</b>. 현재가가 <b>안전마진가 아래</b>면 하방이 0이라 손익비 ∞ — 가장 좋은 접근 구간. 매도 주가·안전마진가가 없으면 손익비를 알 수 없으므로 역시 사지 않는다.',
     why: '기대수익이 작은데 들어간 포지션은 떨어지면 버티지 못하고, 올라도 금방 팔게 된다. 10/12 DN오토는 기대수익 10%일 때 참았다가 20%일 때 들어간 것이 "기억할 만한 매매"였다.', q: ['10/12 "NXT에서 -10%일 때 목표 시총 3조원 기준 수익률이 10% 정도여서 베팅하지 않았다… 기대 수익률이 20%일 때 베팅한 것이 참 잘한 일"', '8/12 "제주반도체 적정 시총은 이미 어느정도 왔고 더 먹을 룸과 떨어질 구간의 손익비가 좋은게 맞을까?"'], auto: '보유 종목 손익비 (시나리오 매도주가·안전마진가 · 현재가)' },
 ];
 
@@ -139,12 +139,18 @@ function analyze(d) {
   const tg = (Array.isArray(d.pfTarget) ? d.pfTarget : []).map(it => ({ name: it.name || '(이름 없음)', pct: +it.pct || 0, act: (+it.entryAct || 0) + (+it.coreAct || 0) + (+it.alphaAct || 0) })).filter(x => x.act > 0);
   if (tg.length) { tg.sort((x, y) => y.act - x.act); const sum = tg.reduce((s, x) => s + x.act, 0); out.tgt = { rows: tg, n: tg.length, maxW: tg[0].act, top: tg[0].name, topPct: tg[0].pct, cash: Math.max(0, 100 - sum) }; }
   else out.tgt = null;
-  // 손익비 (보유 종목): 상방/하방, 현재가 우선 · 없으면 평단
-  out.rr = (d.scenario || []).filter(x => x && !x.archived && x.held && x.name !== '현금').map(x => {
+  // 손익비 (시나리오 전 종목 = 보유 + 관심): 상방 = (매도주가−현재가)/현재가, 하방 = (현재가−안전마진가)/현재가.
+  // 현재가가 안전마진가 이하면 하방 0 → 손익비 ∞ (가장 좋은 접근 구간). 현재가는 Stock Valuation 우선, 없으면 평단
+  out.rr = (d.scenario || []).filter(x => x && !x.archived && x.name !== '현금' && (+x.sellPx > 0 || +x.safePx > 0 || x.held)).map(x => {
     const stk = findStock(x.name); const px = stk && +stk.price_native > 0 ? +stk.price_native : (+x.avgPx > 0 ? +x.avgPx : 0);
     const sellPx = +x.sellPx || 0, safePx = +x.safePx || 0;
-    const r = { name: x.name, px, pxSrc: stk && +stk.price_native > 0 ? '현재가' : (+x.avgPx > 0 ? '평단' : null), sellPx, safePx, up: null, dn: null, rr: null };
-    if (px > 0 && sellPx > 0 && safePx > 0 && safePx < px) { r.up = (sellPx - px) / px * 100; r.dn = (px - safePx) / px * 100; r.rr = r.dn > 0 ? r.up / r.dn : null; }
+    const r = { name: x.name, held: !!x.held, px, pxSrc: stk && +stk.price_native > 0 ? '현재가' : (+x.avgPx > 0 ? '평단' : null), sellPx, safePx, up: null, dn: null, rr: null, state: 'miss' };
+    if (sellPx > 0 && safePx > 0 && !(px > 0)) r.state = 'nopx';
+    if (px > 0 && sellPx > 0 && safePx > 0) {
+      r.up = (sellPx - px) / px * 100; r.dn = Math.max(0, (px - safePx) / px * 100);
+      if (px <= safePx) { r.rr = Infinity; r.state = r.up > 0 ? 'best' : 'none'; }
+      else { r.rr = r.up / r.dn; r.state = r.up <= 0 ? 'none' : r.rr >= LIMITS.rr ? 'go' : 'no'; }
+    }
     return r;
   });
   // 시나리오(보유)
@@ -223,12 +229,18 @@ function render(d, srcLabel) {
   // 6 일기 공백
   { const c = tally(a.diaryGap == null ? 'na' : a.diaryGap > LIMITS.diaryGap ? 'bad' : a.diaryGap >= 3 ? 'warn' : 'ok');
     C.push(card(c, '규칙 6 · 마지막 일기', a.diaryGap == null ? '—' : `${a.diaryGap}일 전 <small>/ 상한 ${LIMITS.diaryGap}일</small>`, `${a.lastDiary || ''} · 누적 ${a.diaryDays}일`)); }
-  // 7 손익비
-  { const rows = a.rr; const calc = rows.filter(r => r.rr != null); const low = calc.filter(r => r.rr < LIMITS.rr); const miss = rows.filter(r => r.rr == null);
-    const c = tally(!rows.length ? 'na' : (low.length || miss.length) ? ((low.length + miss.length) >= 2 ? 'bad' : 'warn') : 'ok');
-    const fmt = r => r.rr == null ? `<b>${esc(r.name)}</b> 계산 불가(${!r.sellPx ? '매도주가' : !r.safePx ? '안전마진가' : !r.px ? '가격' : '안전가가 현재가 이상'})` : `<b>${esc(r.name)}</b> ${r.rr.toFixed(1)} <span style="color:var(--text-dim)">(상방 +${r.up.toFixed(0)}% / 하방 −${r.dn.toFixed(0)}%, ${r.pxSrc})</span>`;
-    C.push(card(c, '규칙 7 · 손익비 (상방÷하방)', rows.length ? `${calc.length ? Math.min(...calc.map(r => r.rr)).toFixed(1) : '—'} <small>최저 / 기준 ${LIMITS.rr}</small>` : '—',
-      rows.length ? rows.slice().sort((x, y) => (x.rr ?? -1) - (y.rr ?? -1)).map(fmt).join('<br>') : '보유 종목이 없습니다', !rows.length ? '보류' : (low.length || miss.length) ? ((low.length + miss.length) >= 2 ? '위반' : '주의') : '준수')); }
+  // 7 손익비 — 신호판. 점수에는 '매도주가·안전마진가 미설정 종목'만 반영 (설정 안 되면 손익비를 알 수 없으니 못 산다)
+  { const rows = a.rr; const miss = rows.filter(r => r.state === 'miss');
+    const c = tally(!rows.length ? 'na' : miss.length ? (miss.length >= 2 ? 'bad' : 'warn') : 'ok');
+    const ST = { nopx: ['◌', 'var(--text-dim)', '가격 없음 (Stock Valuation 에 없는 종목)'], best: ['⭐', '#16a34a', '안전마진 이하 — 최적 접근'], go: ['🟢', '#16a34a', '접근 가능'], no: ['🔴', '#dc2626', '접근 금지'], none: ['⚪', 'var(--text-dim)', '매도주가 이상 — 상방 없음'], miss: ['◌', '#d97706', '미설정'] };
+    const order = { best: 0, go: 1, no: 2, none: 3, miss: 4, nopx: 5 };
+    const fmt = r => { const [ic, col, lb] = ST[r.state]; const num = r.rr == null ? '' : r.rr === Infinity ? '∞' : r.rr.toFixed(1);
+      const detail = r.state === 'nopx' ? '' : r.state === 'miss' ? `(${[!r.sellPx && '매도주가', !r.safePx && '안전마진가', !r.px && '가격'].filter(Boolean).join('·')} 없음)` : `(상방 ${r.up >= 0 ? '+' : ''}${r.up.toFixed(0)}% / 하방 −${r.dn.toFixed(0)}%, ${r.pxSrc})`;
+      return `${ic} <b>${esc(r.name)}</b>${r.held ? '' : ' <small style="color:var(--text-dim)">관심</small>'} <span style="color:${col};font-weight:700">${num}</span> ${lb} <span style="color:var(--text-dim)">${detail}</span>`; };
+    const goN = rows.filter(r => r.state === 'best' || r.state === 'go').length;
+    C.push(card(c, '규칙 7 · 손익비 (상방÷하방) — 접근 신호', rows.length ? `${goN} <small>/ ${rows.length}종목 접근 가능 (기준 ${LIMITS.rr})</small>` : '—',
+      rows.length ? rows.slice().sort((x, y) => order[x.state] - order[y.state] || ((y.rr === Infinity ? 1e9 : y.rr || 0) - (x.rr === Infinity ? 1e9 : x.rr || 0))).map(fmt).join('<br>') : '시나리오에 종목이 없습니다',
+      !rows.length ? '보류' : miss.length ? (miss.length >= 2 ? '미설정' : '미설정') : '설정 완료')); }
   $('#checks').innerHTML = C.join('');
   const pct = tot ? Math.round(ok / tot * 100) : 0; const g = pct >= 80 ? 'g' : pct >= 50 ? 'y' : 'r';
   $('#score').innerHTML = `<div class="big ${g}">${ok}/${tot}</div><div class="txt"><b>자동 점검 ${tot}항목 중 ${ok}개 준수</b> (${pct}%)<br>데이터: ${srcLabel} · 포트 이력 ${a.last ? a.last.d : '—'} · 일기 ${a.diaryDays}일 · 매매 ${Object.values(a.byMo).reduce((s, x) => s + x, 0)}건</div>`;
@@ -237,7 +249,7 @@ function render(d, srcLabel) {
   const mos = Object.keys(a.byMo).sort();
   $('#t-month').innerHTML = `<table><thead><tr><th>월</th><th>매매 횟수</th><th>판정</th></tr></thead><tbody>${mos.map(m => `<tr><td>${m}</td><td>${a.byMo[m]}</td><td class="${a.byMo[m] > LIMITS.tradesMo ? 'bad-t' : 'ok-t'}">${a.byMo[m] > LIMITS.tradesMo ? '과다' : '양호'}</td></tr>`).join('') || '<tr><td colspan=3>매매 기록 없음</td></tr>'}</tbody></table>`;
   $('#t-pf').innerHTML = `<table><thead><tr><th>포트 이력</th><th>종목</th><th>최대 비중</th><th>1위 종목</th><th>총액(억)</th></tr></thead><tbody>${a.hist.slice().reverse().map(h => `<tr><td>${h.d}</td><td class="${h.n < LIMITS.minN ? 'bad-t' : ''}">${h.n}</td><td class="${h.maxW > LIMITS.maxW ? 'bad-t' : 'ok-t'}">${h.maxW.toFixed(0)}%</td><td style="text-align:left">${esc(h.top)}</td><td>${(h.tot / 1e8).toFixed(2)}</td></tr>`).join('') || '<tr><td colspan=5>포트 이력 없음</td></tr>'}</tbody></table>`;
-  $('#note').textContent = '판정 기준: 손익비 3 (보유 종목 중 하나라도 미만·계산 불가면 주의, 둘 이상이면 위반; 현재가는 Stock Valuation, 없으면 평단) · 최대 비중 35%(50% 초과 시 위반, 🎯 목표 포트의 실제 칸 기준 — 비어 있으면 포트 이력) · 최소 3종목 · 이달 매매 10건 · ±7% 당일 매매(추정) · 일기 5일 공백. 매매는 매매일지·일기 본문·포트 비중 스냅샷 변화(커밋 때 자동 기록)에서 모읍니다. 기준값은 rules/index.html 상단 LIMITS 에서 바꿀 수 있습니다. 급등락 당일 매매는 가격 데이터가 아니라 일기 문장에서 추정하므로 참고용입니다.';
+  $('#note').textContent = '판정 기준: 손익비 3 (신호판 — 🟢 3 이상 접근 가능, ⭐ 안전마진 이하면 하방 0으로 최적 구간, 🔴 3 미만 접근 금지; 점수에는 매도주가·안전마진가 미설정 종목만 반영; 현재가는 Stock Valuation, 없으면 평단) · 최대 비중 35%(50% 초과 시 위반, 🎯 목표 포트의 실제 칸 기준 — 비어 있으면 포트 이력) · 최소 3종목 · 이달 매매 10건 · ±7% 당일 매매(추정) · 일기 5일 공백. 매매는 매매일지·일기 본문·포트 비중 스냅샷 변화(커밋 때 자동 기록)에서 모읍니다. 기준값은 rules/index.html 상단 LIMITS 에서 바꿀 수 있습니다. 급등락 당일 매매는 가격 데이터가 아니라 일기 문장에서 추정하므로 참고용입니다.';
 }
 function renderRules() {
   $('#rules').innerHTML = RULES.map(r => `<div class="rc"><h3><span class="no">규칙 ${r.n}</span>${esc(r.h)}</h3><p class="rule">${r.rule}</p>
