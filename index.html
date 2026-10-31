@@ -1325,6 +1325,7 @@ td input, td textarea{border-radius:8px}
   <button class="page-tab-btn" data-page="research">🔬 Research</button>
   <button class="page-tab-btn" data-page="sheet">📁 Folder</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
+  <button class="page-tab-btn" data-page="rules">📏 Rules</button>
   <div class="tabs-spacer"></div>
   <button id="gh-settings-btn" class="gh-settings-btn" title="GitHub 토큰 설정">⚙️</button>
   <button id="gh-commit-btn" class="gh-commit-btn" title="밸류에이션 + 다이어리 GitHub에 커밋">☁️ 커밋 &amp; 푸시</button>
@@ -1499,13 +1500,15 @@ td input, td textarea{border-radius:8px}
   ></iframe>
 </div><!-- /page-etfmonitor -->
 
+<div id="page-rules" class="page">
+  <iframe id="rules-frame" style="width:100%;height:calc(100vh - 48px);border:none;display:block;" loading="lazy" title="Rules — 투자 규칙 · 자동 점검"></iframe>
+</div><!-- /page-rules -->
 <div id="page-diary" class="page">
   <div class="diary-topbar">
     <div class="diary-tabs">
       <button class="dtab active" data-tab="daily">📔 일기<span class="dtab-cnt" id="cnt-daily">0</span></button>
       <button class="dtab" data-tab="scenario">🎯 시나리오<span class="dtab-cnt" id="cnt-scenario">0</span></button>
       <button class="dtab" data-tab="highlights">🔴 강조<span class="dtab-cnt" id="cnt-highlights">0</span></button>
-      <button class="dtab" data-tab="rules">📏 규칙</button>
     </div>
     <span class="spacer"></span>
     <input id="diary-search" class="diary-search-inp" type="search" placeholder="🔍 내용 검색..." autocomplete="off" />
@@ -1516,9 +1519,6 @@ td input, td textarea{border-radius:8px}
     <div id="feed-daily"  class="diary-feed active"></div>
     <div id="feed-scenario" class="diary-feed"></div>
     <div id="feed-highlights" class="diary-feed"></div>
-    <div id="feed-rules" class="diary-feed" style="padding:0;overflow:hidden">
-      <iframe id="rules-frame" style="width:100%;height:100%;border:none;display:block;" title="규칙 — 투자 규칙 · 자동 점검"></iframe>
-    </div>
   </div>
 </div><!-- /page-diary -->
 
@@ -2724,6 +2724,7 @@ const IFRAME_TAB_SRC = {
   research:  'https://whysosary-dot.github.io/investment-notes/',
   report:    './report/index.html?v=' + Date.now(),  // 증권사 리포트 정리 (same-origin)
   telegram:  './telegram/index.html?v=' + Date.now(),  // 텔레그램 채널 언급 종목 (same-origin)
+  rules:     './rules/index.html?v=' + Date.now(),  // 투자 규칙 · 다이어리 기반 자동 점검 (same-origin, 토큰은 localStorage 공유)
   // sheet 은 X-Frame-Options 로 iframe 차단되어 안내 페이지로 대체 (IFRAME_TAB_SRC 등록 X)
 };
 
@@ -3334,6 +3335,55 @@ function loadDiary() {
   catch { return { daily: {}, weekly: {} }; }
 }
 function saveDiaryData(data) { localStorage.setItem(DIARY_KEY, JSON.stringify(data)); }
+
+/* ── 커밋 & 푸시 때 자동 기록 ──
+   시나리오 본문(매수근거·매도조건·코멘트·가격)·💼 포트 비중·🎯 목표 포트가 직전 기록과 다르면
+   오늘 날짜 스냅샷을 🕘 이력에 남긴다. (예전 📦/🗂 수동 보관 버튼을 대체 — 같은 날은 최신으로 교체) */
+function autoSnapshotDiary() {
+  const d = diary.data; if (!d) return [];
+  const today = todayDateStr(); const done = [];
+  const probeText = html => { const p = document.createElement('div'); p.innerHTML = html; return (p.innerText || '').trim(); };
+  const sc = Array.isArray(d.scenario) ? d.scenario : [];
+  sc.forEach(item => {
+    if (!item || item.archived) return;
+    if (!probeText((item.buy || '') + (item.sell || '') + (item.cmt || ''))) return;
+    if (!Array.isArray(item.hist)) item.hist = [];
+    const snap = { d: today, buy: item.buy || '', sell: item.sell || '', cmt: item.cmt || '',
+                   safePx: item.safePx || '', sellPx: item.sellPx || '', sellWhen: item.sellWhen || '' };
+    const last = item.hist[0];
+    if (last && ['buy','sell','cmt','safePx','sellPx','sellWhen'].every(k => (last[k] || '') === (snap[k] || ''))) return;
+    item.hist = item.hist.filter(h => h.d !== today); item.hist.unshift(snap);
+    if (item.hist.length > 30) item.hist.length = 30;
+    done.push('🗂 ' + (item.name || '(이름 없음)'));
+  });
+  const pItems = sc.filter(x => x && !x.archived && x.held).map(it => {
+    const o = { name: it.name || '(이름 없음)', amt: Number(it.amt) || 0 }; const q = Number(it.qty) || 0; if (q > 0) o.qty = q; return o;
+  }).filter(x => x.amt > 0);
+  if (pItems.length) {
+    if (!Array.isArray(d.pfHist)) d.pfHist = [];
+    const key = it => (it || []).map(x => `${x.name}:${x.amt}:${x.qty || 0}`).join('|');
+    const last = d.pfHist[0];
+    if (!(last && key(last.items) === key(pItems) && (last.memo || '') === (d.pfMemo || ''))) {
+      const h = d.pfHist.filter(x => x.d !== today); h.unshift({ d: today, items: pItems, memo: d.pfMemo || '' });
+      if (h.length > 30) h.length = 30; d.pfHist = h; done.push('💼 포트 비중');
+    }
+  }
+  const tItems = (Array.isArray(d.pfTarget) ? d.pfTarget : []).map(it => {
+    const o = { name: it.name || '(이름 없음)' };
+    for (const k of ['pct','amt','entry','core','alpha','entryAct','coreAct','alphaAct']) if (Number(it[k]) > 0) o[k] = Number(it[k]);
+    if (it.rank != null) o.rank = it.rank; return o;
+  }).filter(x => x.pct || x.amt);
+  if (tItems.length) {
+    if (!Array.isArray(d.pfTargetHist)) d.pfTargetHist = [];
+    const last = d.pfTargetHist[0];
+    if (!(last && JSON.stringify(last.items) === JSON.stringify(tItems) && (last.memo || '') === (d.pfTargetMemo || ''))) {
+      const h = d.pfTargetHist.filter(x => x.d !== today); h.unshift({ d: today, items: tItems, memo: d.pfTargetMemo || '' });
+      if (h.length > 30) h.length = 30; d.pfTargetHist = h; done.push('🎯 목표 포트');
+    }
+  }
+  if (done.length) { saveDiaryData(d); if (diary.activeTab === 'scenario' && typeof renderFeedScenario === 'function') renderFeedScenario(); }
+  return done;
+}
 
 /* GitHub(remote) 를 기준으로 하되, remote 에 '없는' 로컬 값만 채워 넣는 머지.
    - daily/weekly: remote 에 없는 날짜의 일기는 로컬 것 유지
@@ -3969,31 +4019,6 @@ function makeScenarioCard(item) {
     header.appendChild(histBtn);
   }
 
-  // 기록 남기기 — 현재 내용을 오늘 날짜 버전으로 이력에 보관 (이후 수정해도 과거본 유지)
-  const snapBtn = document.createElement('button'); snapBtn.className = 'sc-btn';
-  snapBtn.title = '지금 내용을 오늘 날짜 기록으로 남기기';
-  snapBtn.textContent = '🗂';
-  snapBtn.addEventListener('click', () => {
-    const probe = document.createElement('div');
-    probe.innerHTML = (item.buy || '') + (item.sell || '') + (item.cmt || '');
-    if (!(probe.innerText || '').trim()) { toast('기록할 내용이 없어요', 'err', 2200); return; }
-    if (!Array.isArray(item.hist)) item.hist = [];
-    const today = todayDateStr();
-    const snap = { d: today, buy: item.buy || '', sell: item.sell || '', cmt: item.cmt || '',
-                   safePx: item.safePx || '',
-                   sellPx: item.sellPx || '', sellWhen: item.sellWhen || '' };
-    const last = item.hist[0];
-    if (last && ['buy','sell','cmt','safePx','sellPx','sellWhen'].every(k => (last[k] || '') === (snap[k] || ''))) {
-      toast('직전 기록과 같은 내용이에요', 'err', 2200); return;
-    }
-    item.hist = item.hist.filter(h => h.d !== today); // 같은 날은 최신으로 교체
-    item.hist.unshift(snap);
-    if (item.hist.length > 30) item.hist.length = 30;
-    item.updated = today;
-    saveDiaryData(diary.data); renderFeedScenario();
-    toast(`🗂 ${today} 기록 보관됨`, 'ok', 2500);
-  });
-  header.appendChild(snapBtn);
 
   const heldBtn = document.createElement('button');
   heldBtn.className = 'sc-held' + (item.held ? ' on' : '');
@@ -4278,26 +4303,6 @@ function makePortfolioCard(activeItemsRaw) {
     histBtn.addEventListener('click', () => histBox.classList.toggle('show'));
     header.appendChild(histBtn);
   }
-  const snapBtn = document.createElement('button'); snapBtn.className = 'sc-btn';
-  snapBtn.title = '현재 비중을 날짜 스냅샷으로 보관'; snapBtn.textContent = '📦';
-  snapBtn.addEventListener('click', () => {
-    const items = activeItems.map(it => {
-      const o = { name: it.name || '(이름 없음)', amt: Number(it.amt) || 0 };
-      const q = Number(it.qty) || 0;
-      if (q > 0) o.qty = q;                       // 보유 수량도 같이 보관 (현금 등은 없을 수 있음)
-      return o;
-    }).filter(x => x.amt > 0);
-    if (!items.length) { toast('금액이 입력된 보유 종목이 없어요', 'err', 2500); return; }
-    const today = todayDateStr();
-    const h = pfHist().filter(x => x.d !== today); // 같은 날은 최신으로 교체
-    h.unshift({ d: today, items, memo: diary.data.pfMemo || '' });
-    if (h.length > 30) h.length = 30;
-    diary.data.pfHist = h;
-    saveDiaryData(diary.data);
-    toast('📦 오늘 비중을 보관했어요', 'ok', 2500);
-    renderFeedScenario();
-  });
-  header.appendChild(snapBtn);
   card.appendChild(header);
 
   const body = document.createElement('div'); body.className = 'pf-body';
@@ -4620,33 +4625,6 @@ function makeTargetPortfolioCard(heldItems) {
     histBtn.addEventListener('click', () => histBox.classList.toggle('show'));
     header.appendChild(histBtn);
   }
-  const snapBtn = document.createElement('button'); snapBtn.className = 'sc-btn';
-  snapBtn.title = '현재 목표 구성을 날짜 스냅샷으로 보관'; snapBtn.textContent = '📦';
-  snapBtn.addEventListener('click', () => {
-    const items = tgt().map(it => {
-      const o = { name: it.name || '(이름 없음)' };
-      if (Number(it.pct) > 0) o.pct = Number(it.pct);
-      if (Number(it.amt) > 0) o.amt = Number(it.amt);
-      if (Number(it.entry) > 0) o.entry = Number(it.entry);
-      if (Number(it.core) > 0) o.core = Number(it.core);
-      if (Number(it.alpha) > 0) o.alpha = Number(it.alpha);
-      if (Number(it.entryAct) > 0) o.entryAct = Number(it.entryAct);
-      if (Number(it.coreAct) > 0) o.coreAct = Number(it.coreAct);
-      if (Number(it.alphaAct) > 0) o.alphaAct = Number(it.alphaAct);
-      if (it.rank != null) o.rank = it.rank;
-      return o;
-    }).filter(x => x.pct || x.amt);
-    if (!items.length) { toast('비중이나 금액이 입력된 종목이 없어요', 'err', 2500); return; }
-    const today = todayDateStr();
-    const h = tHist().filter(x => x.d !== today); // 같은 날은 최신으로 교체
-    h.unshift({ d: today, items, memo: diary.data.pfTargetMemo || '' });
-    if (h.length > 30) h.length = 30;
-    diary.data.pfTargetHist = h;
-    saveDiaryData(diary.data);
-    toast('📦 오늘 목표 구성을 보관했어요', 'ok', 2500);
-    renderFeedScenario();
-  });
-  header.appendChild(snapBtn);
   card.appendChild(header);
 
   const body = document.createElement('div'); body.className = 'pf-body';
@@ -5599,7 +5577,6 @@ function initDiary() {
       // 강조·시나리오 탭은 들어올 때마다 최신 상태로 새로 그림
       if (diary.activeTab === 'highlights') renderFeedHighlights();
       if (diary.activeTab === 'scenario') renderFeedScenario();
-      if (diary.activeTab === 'rules') { const f = document.getElementById('rules-frame'); if (f) f.src = './rules/index.html?v=' + Date.now(); }
       // 탭이 보여진 후 모든 textarea 높이 재계산 (display:none 상태에서 scrollHeight=0 문제 해결)
       requestAnimationFrame(() => {
         document.querySelectorAll(`#feed-${diary.activeTab} textarea`).forEach(ta => {
@@ -6107,6 +6084,7 @@ async function ghCommitAllRun(pat) {
     // ── 2. diary.json : localStorage 다이어리 전체 커밋 ──
     let diaryFile = await ghApiGet(pat, 'sv/diary.json');
     if (!diaryFile) { await new Promise(r => setTimeout(r, 800)); diaryFile = await ghApiGet(pat, 'sv/diary.json'); }   // 일시적 404 대비 재조회
+    try { const snaps = autoSnapshotDiary(); if (snaps.length) toast('🕘 자동 기록: ' + snaps.join(', '), 'ok', 3500); } catch (e) { console.warn('[autoSnapshot]', e); }
     const diaryBody = JSON.stringify(diary.data, null, 2);
     let diaryPutRes;
     try {
