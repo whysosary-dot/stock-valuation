@@ -4677,15 +4677,26 @@ function makeTargetPortfolioCard(heldItems) {
     const b = document.createElement('b'); b.textContent = h.d;
     titleEl.appendChild(b);
     const pctS = h.items.reduce((a, x) => a + (Number(x.pct) || 0), 0);
-    if (pctS > 0 && pctS < 100 - 0.05) titleEl.appendChild(document.createTextNode(` · 현금 ${(100 - pctS).toFixed(1)}%`));
+    // 실제 비중 = 진입·핵심·추가 실제 칸의 합 (기록 시점 값). 목표 → 실제 로 함께 표시
+    const actOf = x => (Number(x.entryAct) || 0) + (Number(x.coreAct) || 0) + (Number(x.alphaAct) || 0);
+    const actS = h.items.reduce((a, x) => a + actOf(x), 0);
+    if (pctS > 0 && pctS < 100 - 0.05) titleEl.appendChild(document.createTextNode(` · 현금 목표 ${(100 - pctS).toFixed(1)}%${actS > 0 ? ` → 실제 ${Math.max(0, 100 - actS).toFixed(1)}%` : ''}`));
     div.appendChild(titleEl);
     const line = document.createElement('div');
-    line.textContent = h.items.map(x => {
+    const tot = Number(diary.data.pfTargetTotal) || 0;
+    h.items.forEach((x, i) => {
       const parts = [];
       if (x.pct) parts.push(x.pct + '%');
       if (x.amt) parts.push(fmtWon(x.amt) + '원');
-      return `${x.name} ${parts.join('·')}`;
-    }).join(' · ');
+      if (i) line.appendChild(document.createTextNode(' · '));
+      line.appendChild(document.createTextNode(`${x.name} ${parts.join('·')}`));
+      const act = actOf(x);
+      if (act > 0) {
+        const sp = document.createElement('span'); sp.style.color = '#dc2626';
+        sp.textContent = ` → 실제 ${act.toFixed(1)}%` + (tot > 0 ? ` · ${fmtWon(Math.round(tot * act / 100))}원` : '');
+        line.appendChild(sp);
+      }
+    });
     div.appendChild(line);
     if (h.memo) {
       const probe = document.createElement('div'); probe.innerHTML = h.memo;
