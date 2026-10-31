@@ -79,3 +79,12 @@ device_bash 의 `$HOME`(`/sessions/<세션>/`)이 있는 디스크는 세션 홈
 - 텔레그램 예약 작업은 `TG_WORK=/tmp/tgwork_$(id -un)` 으로 이미 변경(2026-10-30). `tg_collect.py` 는 TG_WORK 쓰기 실패 시 `/tmp/tg_<pid>` 로 자동 우회하니, 그 메시지가 나오면 이후 단계도 그 폴더를 쓸 것.
 - 다른 예약 작업(`scrwork`, `inv`, `s1029` 등)도 `$HOME` 아래에 쓰고 있다면 같은 식으로 옮길 것. `pip --target` 도 `/tmp/pylibs` 로.
 - `/tmp` 역시 세션이 끝나면 지워질 수 있으니, 남겨야 하는 결과물은 `$HOME/mnt/Claude/...`(연결 폴더) 에 두거나 레포에 push.
+
+---
+## Mac 작업 VM 디스크 가득 참 → 중간 파일은 `/tmp/<작업>_$(id -u)/` (2026-10-31)
+- device_bash 의 `$HOME` 이 있는 `/sessions` 디스크(9.8G)가 100%. 옛 Cowork 세션 홈 2,694개(`nobody` 소유)가 차지해 세션에서는 읽기·삭제 불가 — 앱 쪽에서 정리돼야 함. 루트(`/`, `/tmp`)는 ~4G 여유.
+- 증상: `$HOME/...` 에 쓰면 `OSError: [Errno 28] No space left on device`.
+- 대응: 중간 파일은 전부 `/tmp/<작업>_$(id -u)/` 에. 공유 `/tmp` 바로 아래 고정 이름(`/tmp/tg` 등)은 다른 uid 소유 파일과 충돌하니 uid 전용 폴더를 쓸 것. 결과물은 여전히 `$HOME/mnt/...` 연결 폴더에.
+- 아직 `$HOME` 을 쓰는 예약 작업(고쳐야 함): **Daily watchlist news brief** — `CAND_PATH=$HOME/brief_candidates.json`, `$HOME/picks.json` → `/tmp/wlb_$(id -u)/…` 로. 스크리너의 `WORK=$HOME/scrwork`, 클락슨의 `$HOME/scratch` 도 같은 위험.
+  예약 실행 세션(자동승인) 안에서는 `update_trigger` 프롬프트 변경이 승인 불가로 거부되므로, **일반 대화에서** 바꿀 것.
+- `watchlist-briefing/` 클론 `git pull` 이 "untracked working tree files would be overwritten" 으로 막혔던 건 2026-10-31 복구함: 원격과 동일한 미추적 `briefings/*.html` + 잔여 `.git/index.lock`·`ORIG_HEAD.lock` 을 삭제 권한(`device_request_delete_permission`) 받아 지우고 pull. 재발 시 `git cat-file -p origin/main:<f> | cmp -s - <f>` 로 동일 확인 후 같은 절차. 클론 안에 미추적 파일을 만들지 말 것(빌드 스크립트는 GitHub API 로 올리므로 로컬에 html 을 쓰지 않는다).
