@@ -139,6 +139,18 @@ function analyze(d) {
     const re = /(?:^|\n)\s*(매도|매수)\s+(\S+)\s+([\d,]+)주/g; let m;
     while ((m = re.exec(txt))) add(day, { type: m[1], name: m[2], memo: '' });
   }
+  // 💼 포트 비중 스냅샷(커밋 때 자동 기록) 사이의 변화로 매매 추정: 종목 편입·편출, 수량 변화 = 매매 1건 (같은 날 같은 종목의 매매일지가 있으면 중복 집계 안 함)
+  let pfInferred = 0;
+  for (let i = 1; i < hist.length; i++) {
+    const prev = {}, cur = {};
+    (hist[i - 1].items || []).forEach(x => { if (x.name && x.name !== '현금') prev[x.name] = +x.qty || 0; });
+    (hist[i].items || []).forEach(x => { if (x.name && x.name !== '현금') cur[x.name] = +x.qty || 0; });
+    const day = hist[i].d; const ev = [];
+    for (const n in cur) { if (!(n in prev)) ev.push({ type: '편입', name: n }); else if (prev[n] > 0 && cur[n] > 0 && prev[n] !== cur[n]) ev.push({ type: cur[n] > prev[n] ? '매수' : '매도', name: n }); }
+    for (const n in prev) if (!(n in cur)) ev.push({ type: '편출', name: n });
+    ev.forEach(e => { if ((trades[day] || []).some(t => t.name && (t.name.includes(e.name) || e.name.includes(t.name)))) return; add(day, { ...e, memo: '포트 비중 변화에서 추정', src: 'pf' }); pfInferred++; });
+  }
+  out.pfInferred = pfInferred;
   out.trades = trades;
   const byMo = {}; for (const day in trades) byMo[day.slice(0, 7)] = (byMo[day.slice(0, 7)] || 0) + trades[day].length;
   out.byMo = byMo;
@@ -178,7 +190,7 @@ function render(d, srcLabel) {
   // 4 월간 매매
   { const c = tally(a.thisMo > LIMITS.tradesMo ? 'bad' : a.thisMo > LIMITS.tradesMo / 2 ? 'warn' : 'ok');
     const prev = Object.keys(a.byMo).sort().slice(-3).map(k => `${k.slice(5)}월 ${a.byMo[k]}`).join(' · ');
-    C.push(card(c, '규칙 4 · 이달 매매 횟수', `${a.thisMo}건 <small>/ 상한 ${LIMITS.tradesMo}</small>`, `최근: ${prev || '—'}<br>매매일지(구조화)와 일기 본문의 "매도/매수 N주" 줄을 합산`)); }
+    C.push(card(c, '규칙 4 · 이달 매매 횟수', `${a.thisMo}건 <small>/ 상한 ${LIMITS.tradesMo}</small>`, `최근: ${prev || '—'}<br>매매일지 + 일기 본문 "매도/매수 N주" + 💼 포트 비중 변화(편입·편출·수량 변경, 누적 ${a.pfInferred}건) 합산`)); }
   // 5 급등락 당일 매매
   { const recent = a.bigDay.filter(x => x.d >= ymd(new Date(KST() - 30 * 864e5)));
     const c = tally(recent.length ? 'bad' : a.bigDay.length ? 'ok' : 'na');
@@ -194,7 +206,7 @@ function render(d, srcLabel) {
   const mos = Object.keys(a.byMo).sort();
   $('#t-month').innerHTML = `<table><thead><tr><th>월</th><th>매매 횟수</th><th>판정</th></tr></thead><tbody>${mos.map(m => `<tr><td>${m}</td><td>${a.byMo[m]}</td><td class="${a.byMo[m] > LIMITS.tradesMo ? 'bad-t' : 'ok-t'}">${a.byMo[m] > LIMITS.tradesMo ? '과다' : '양호'}</td></tr>`).join('') || '<tr><td colspan=3>매매 기록 없음</td></tr>'}</tbody></table>`;
   $('#t-pf').innerHTML = `<table><thead><tr><th>포트 이력</th><th>종목</th><th>최대 비중</th><th>1위 종목</th><th>총액(억)</th></tr></thead><tbody>${a.hist.slice().reverse().map(h => `<tr><td>${h.d}</td><td class="${h.n < LIMITS.minN ? 'bad-t' : ''}">${h.n}</td><td class="${h.maxW > LIMITS.maxW ? 'bad-t' : 'ok-t'}">${h.maxW.toFixed(0)}%</td><td style="text-align:left">${esc(h.top)}</td><td>${(h.tot / 1e8).toFixed(2)}</td></tr>`).join('') || '<tr><td colspan=5>포트 이력 없음</td></tr>'}</tbody></table>`;
-  $('#note').textContent = '판정 기준: 최대 비중 35%(50% 초과 시 위반, 🎯 목표 포트의 실제 칸 기준 — 비어 있으면 포트 이력) · 최소 3종목 · 이달 매매 10건 · ±7% 당일 매매(추정) · 일기 5일 공백. 기준값은 rules/index.html 상단 LIMITS 에서 바꿀 수 있습니다. 급등락 당일 매매는 가격 데이터가 아니라 일기 문장에서 추정하므로 참고용입니다.';
+  $('#note').textContent = '판정 기준: 최대 비중 35%(50% 초과 시 위반, 🎯 목표 포트의 실제 칸 기준 — 비어 있으면 포트 이력) · 최소 3종목 · 이달 매매 10건 · ±7% 당일 매매(추정) · 일기 5일 공백. 매매는 매매일지·일기 본문·포트 비중 스냅샷 변화(커밋 때 자동 기록)에서 모읍니다. 기준값은 rules/index.html 상단 LIMITS 에서 바꿀 수 있습니다. 급등락 당일 매매는 가격 데이터가 아니라 일기 문장에서 추정하므로 참고용입니다.';
 }
 function renderRules() {
   $('#rules').innerHTML = RULES.map(r => `<div class="rc"><h3><span class="no">규칙 ${r.n}</span>${esc(r.h)}</h3><p class="rule">${r.rule}</p>
