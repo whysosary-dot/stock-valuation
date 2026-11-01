@@ -383,11 +383,13 @@ function skinExt(f, key) {
       const st = d.createElement('style');
       // 배율 한 겹 상쇄 + 상단 바(제목·버튼·셀렉트·검색)를 Chart 탭 칩(.chip)과 같은 크기·여백으로
       st.textContent = 'body{zoom:1 !important}'
-        + (key === 'etf' ? '.topbar{padding:4px 0 8px !important;gap:6px !important}'
-          + '.topbar h1{font-size:14px !important;font-weight:800 !important}.topbar h1::after{font-size:12px !important}.topbar .meta{font-size:12px !important}'
-          + '.topbar .btn,.topbar button,.topbar select,.topbar select.cat-filter,.topbar select.sector-filter,.topbar input.filter,.topbar .gh-commit-btn,.topbar .gh-settings-btn{font-size:12.5px !important;padding:4px 10px !important;border-radius:8px !important;line-height:1.4 !important;min-height:0 !important;height:auto !important;box-shadow:none !important}'
-          + '.topbar select.cat-filter,.topbar select.sector-filter{padding-right:24px !important;background-position:calc(100% - 10px) 50%,calc(100% - 6px) 50% !important}'
-          + '.topbar input.filter{padding:4px 10px !important}' : '');
+        + (key === 'etf' ? (() => { const P = 'html[data-skin="etf"] body '; return [
+            '.topbar{padding:4px 0 8px;gap:6px}',
+            '.topbar h1{font-size:14px;font-weight:800}', '.topbar h1::after{font-size:12px}', '.topbar .meta{font-size:12px}',
+            '.topbar .btn,.topbar button,.topbar select,.topbar select.cat-filter,.topbar select.sector-filter,.topbar input.filter,.topbar .gh-commit-btn,.topbar .gh-settings-btn{font-size:12.5px;padding:4px 10px;border-radius:8px;line-height:1.4;min-height:0;height:auto;box-shadow:none}',
+            '.topbar select.cat-filter,.topbar select.sector-filter{padding-right:24px;background-position:calc(100% - 10px) 50%,calc(100% - 6px) 50%}',
+            '.topbar input.filter{padding:4px 10px;width:180px}',
+          ].map(r => { const [sel, body] = r.split('{'); return sel.split(',').map(x => P + x.trim()).join(',') + '{' + body.replace(/;/g, ' !important;').replace(/}$/, ' !important}'); }).join(''); })() : '');
       d.head.appendChild(st); } } catch (_) {}
 }
 function showExt(key) {
