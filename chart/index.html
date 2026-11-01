@@ -138,7 +138,20 @@ body{padding:12px 14px 40px}
   <div id="index-native"><div class="ixn-load">지표 불러오는 중…</div></div>
 </div>
 <div id="v-etf" style="display:none">
-  <iframe id="etf-frame" style="width:100%;border:none;display:block;min-height:600px" title="ETF Monitor"></iframe>
+  <div class="sub" id="etf-sub">
+    <button class="chip on" data-c="">전체</button>
+    <button class="chip" data-c="한국 ETF">한국 ETF</button>
+    <button class="chip" data-c="섹터/테마">섹터·테마</button>
+    <button class="chip" data-c="국가/지역">국가·지역</button>
+    <button class="chip" data-c="크로스에셋">크로스에셋</button>
+    <button class="chip" data-c="심리 지표">심리 지표</button>
+    <span style="width:10px"></span>
+    <select id="etf-sort" class="chip" style="padding:4px 8px"><option value="rel_3m">3개월 상대 순</option><option value="ret_1m">1개월 순</option><option value="chg">당일 순</option><option value="ret_2y">2년 순</option><option value="name">이름 순</option></select>
+    <input id="etf-q" class="chip" type="search" placeholder="🔍 이름·티커·섹터" style="min-width:160px">
+    <a class="legend" href="https://whysosary-dot.github.io/etf-monitor/" target="_blank" rel="noopener" style="margin-left:auto">표 형식(ETF Monitor) ↗</a>
+  </div>
+  <p class="tip" id="etf-tip"></p>
+  <div class="grid" id="etf-grid"></div>
 </div>
 
 <div id="v-scan" style="display:none">
@@ -258,6 +271,50 @@ function openMembers(c) {
   bg.addEventListener('click', e => { if (e.target === bg) close(); });
   document.addEventListener('keydown', onKey);
   render(); document.body.appendChild(bg);
+}
+
+/* ── ETF 카드: ETF Monitor 데이터(etfs.json)를 시장 그룹판과 같은 카드로. 3년 주봉(157주) 중 최근 2년 + 30주선, 뱃지 일=50일선(3개월 일봉)·주=30주선·월=43주선(≈10개월) ── */
+const ETF = { data: null, cat: '', q: '', sort: 'rel_3m' };
+function smaLast(a, n) { if (a.length < n) return null; let s = 0; for (let i = a.length - n; i < a.length; i++) s += a[i]; return s / n; }
+function etfCard(e, bench) {
+  const w = (e.price_history_3y || []).filter(Number.isFinite); const d3 = (e.price_history_3m || []).filter(Number.isFinite);
+  if (w.length < 60) return null;
+  const last = Number(e.price_native) || w[w.length - 1];
+  const wk = w.slice(-105); const ma = wk.map((_, i) => { const k = w.length - wk.length + i; return k >= 29 ? w.slice(k - 29, k + 1).reduce((s, x) => s + x, 0) / 30 : null; });
+  const end = new Date((e.priced_at || new Date().toISOString().slice(0, 10)) + 'T00:00:00'); const start = new Date(end); start.setDate(start.getDate() - 7 * (wk.length - 1));
+  const r = (a, b) => (a && b) ? (a / b - 1) * 100 : null;
+  const ret_1m = d3.length > 22 ? r(last, d3[d3.length - 23]) : (w.length > 4 ? r(last, w[w.length - 5]) : null);
+  const ret_3m = d3.length > 2 ? r(last, d3[0]) : (w.length > 13 ? r(last, w[w.length - 14]) : null);
+  const b3 = bench ? (bench.price_history_3m && bench.price_history_3m.length > 2 ? r(Number(bench.price_native) || bench.price_history_3m.slice(-1)[0], bench.price_history_3m[0]) : null) : null;
+  return { name: e.name, note: e.ticker, sub: e.sector, cat: e.category, link: e.naver_code ? (e.naver_path === 'domestic/stock' ? `https://m.stock.naver.com/domestic/stock/${e.naver_code}/total` : `https://m.stock.naver.com/worldstock/etf/${e.naver_code}/total`) : null,
+    chg: Number.isFinite(+e.price_change_pct) ? +e.price_change_pct : null, ret_1m, ret_3m, rel_3m: (ret_3m != null && b3 != null) ? ret_3m - b3 : null, benchName: bench ? bench.ticker : null,
+    ret_2y: r(last, wk[0]), off_hi52: r(last, Math.max(...w.slice(-52))),
+    d_above: d3.length >= 50 ? last > smaLast(d3, 50) : null, w_above: w.length >= 30 ? last > smaLast(w, 30) : null, m_above: w.length >= 43 ? last > smaLast(w, 43) : null,
+    w_dates: [start.toISOString().slice(0, 10), end.toISOString().slice(0, 10)], w_close: wk, w_ma30: ma };
+}
+async function renderEtf() {
+  const el = $('#etf-grid');
+  if (!ETF.data) {
+    el.innerHTML = '<div class="empty">ETF 데이터 불러오는 중…</div>';
+    try { const r = await fetch('https://whysosary-dot.github.io/etf-monitor/etfs.json?t=' + Math.floor(Date.now() / 600000), { cache: 'no-store' }); ETF.data = await r.json(); } catch (e) { el.innerHTML = '<div class="empty">ETF 데이터를 불러오지 못했습니다 (' + esc(e.message) + ')</div>'; return; }
+  }
+  const all = ETF.data.etfs || []; const spy = all.find(x => x.ticker === 'SPY'); const k200 = all.find(x => String(x.ticker).startsWith('069500')) || all.find(x => /^(Samsung )?KODEX 200( ETF)?$/i.test(x.name || '')) || all.find(x => x.sector === '한국 대표');
+  let cards = all.map(e => etfCard(e, e.category === '한국 ETF' ? (k200 || spy) : spy)).filter(Boolean);
+  if (ETF.cat) cards = cards.filter(c => c.cat === ETF.cat);
+  if (ETF.q) { const q = ETF.q.toLowerCase(); cards = cards.filter(c => (c.name + ' ' + c.note + ' ' + (c.sub || '')).toLowerCase().includes(q)); }
+  const k = ETF.sort; cards.sort((a, b) => k === 'name' ? String(a.name).localeCompare(b.name, 'ko') : ((b[k] ?? -1e9) - (a[k] ?? -1e9)));
+  $('#etf-tip').innerHTML = `<b>ETF</b> — ETF Monitor 데이터(${esc((ETF.data.updated_at || '').slice(0, 10))} 갱신 · 매주 토 06:00) ${all.length}개를 시장 그룹판과 같은 카드로. 2년 주봉 종가 + 주황 30주선. 뱃지: 일=50일선 · 주=30주선 · 월=10개월선(43주) 위(▲)/아래(▼). 3개월 상대는 한국 ETF는 KODEX 200, 그 외는 SPY 대비. ${cards.length}개 표시.`;
+  el.innerHTML = '';
+  cards.forEach(c => {
+    const card = document.createElement('div'); card.className = 'gcard';
+    const foot = c.rel_3m != null ? `1개월 ${fmtPct(c.ret_1m, 0)} · 3개월 상대 ${c.rel_3m > 0 ? '+' : ''}${Math.round(c.rel_3m)}%p` : `1개월 ${fmtPct(c.ret_1m, 0)} · 3개월 ${fmtPct(c.ret_3m, 0)}`;
+    card.innerHTML = `<div class="h"><span class="nm${c.link ? ' lk' : ''}" title="${esc(c.name)} · ${esc(c.note)}${c.link ? ' — 네이버 ETF 페이지' : ''}">${esc(c.name)}</span><span class="sb">${esc(c.sub || c.note)}</span><span class="chg ${cls(c.chg)}">${fmtPct(c.chg)}</span></div>
+      <canvas></canvas>
+      <div class="f">${badge('일', c.d_above)}${badge('주', c.w_above)}${badge('월', c.m_above)}<span style="margin-left:auto">${foot}</span></div>`;
+    if (c.link) card.querySelector('.nm').addEventListener('click', () => window.open(c.link, '_blank'));
+    el.appendChild(card); drawGroup(card.querySelector('canvas'), c);
+  });
+  if (!cards.length) el.innerHTML = '<div class="empty">조건에 맞는 ETF가 없습니다.</div>';
 }
 
 /* ── 스캔 카드: 2년 일봉 캔들 + 50일(회색)·200일(주황) + 거래량 + RS 라인 ── */
@@ -388,7 +445,7 @@ function openInsight(initKey) {
 }
 /* ETF Monitor — 별도 페이지(etf-monitor 리포)를 하위 탭으로 끼움. 탭을 열 때만 로드, 높이는 화면에 맞춤 */
 /* 외부 페이지 하위 탭(Index · ETF Monitor) — 탭을 열 때만 로드, 높이는 화면에 맞춤, 메인 대시보드와 같은 스킨 주입(같은 출처) */
-const EXT = { etf: { id: 'etf-frame', url: 'https://whysosary-dot.github.io/etf-monitor/', skin: 'etf' } };
+const EXT = {};
 function skinExt(f, key) {
   try { if (localStorage.getItem('sv_skin_off') === '1') return; const d = f.contentDocument; if (!d || !d.head) return;
     if (d.documentElement.getAttribute('data-skin') !== key) { d.documentElement.setAttribute('data-skin', key);
@@ -429,10 +486,13 @@ async function init() {
   if (INS.ai) $('#ins-btn').classList.add('has');
   $('#ins-btn').onclick = () => openInsight(state.view === 'scan' ? 'scan_' + state.mkt : (state.view === 'index' || state.view === 'etf') ? state.view : state.board);
   renderBoard(); renderScan(); loadHist();
-  document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('.tab').forEach(x => x.classList.remove('on')); b.classList.add('on'); state.view = b.dataset.v; $('#v-board').style.display = state.view === 'board' ? '' : 'none'; $('#v-scan').style.display = state.view === 'scan' ? '' : 'none'; $('#v-etf').style.display = state.view === 'etf' ? '' : 'none'; $('#v-index').style.display = state.view === 'index' ? '' : 'none'; if (state.view === 'index') { if (window.renderIndexNative) renderIndexNative(); } else if (EXT[state.view]) showExt(state.view); else if (state.view === 'board') renderBoard(); else renderScan(); }));
+  document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('.tab').forEach(x => x.classList.remove('on')); b.classList.add('on'); state.view = b.dataset.v; $('#v-board').style.display = state.view === 'board' ? '' : 'none'; $('#v-scan').style.display = state.view === 'scan' ? '' : 'none'; $('#v-etf').style.display = state.view === 'etf' ? '' : 'none'; $('#v-index').style.display = state.view === 'index' ? '' : 'none'; if (state.view === 'index') { if (window.renderIndexNative) renderIndexNative(); } else if (state.view === 'etf') renderEtf(); else if (EXT[state.view]) showExt(state.view); else if (state.view === 'board') renderBoard(); else renderScan(); }));
   document.querySelectorAll('[data-b]').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('[data-b]').forEach(x => x.classList.remove('on')); b.classList.add('on'); state.board = b.dataset.b; renderBoard(); }));
+  document.querySelectorAll('#etf-sub [data-c]').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('#etf-sub [data-c]').forEach(x => x.classList.remove('on')); b.classList.add('on'); ETF.cat = b.dataset.c; renderEtf(); }));
+  $('#etf-sort').addEventListener('change', e => { ETF.sort = e.target.value; renderEtf(); });
+  let qt; $('#etf-q').addEventListener('input', e => { clearTimeout(qt); qt = setTimeout(() => { ETF.q = e.target.value.trim(); renderEtf(); }, 200); });
   document.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('[data-m]').forEach(x => x.classList.remove('on')); b.classList.add('on'); state.mkt = b.dataset.m; state.tag = null; renderScan(); loadHist(); }));
-  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => state.view === 'index' ? null : EXT[state.view] ? showExt(state.view) : state.view === 'board' ? renderBoard() : renderScan(), 150); });
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => state.view === 'index' ? null : state.view === 'etf' ? renderEtf() : EXT[state.view] ? showExt(state.view) : state.view === 'board' ? renderBoard() : renderScan(), 150); });
 }
 init();
 </script>
