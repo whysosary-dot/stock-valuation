@@ -582,6 +582,35 @@ def _scan_lines(cur, mkt):
     if far: L.append("52주 고점 대비 −30% 이하에서 포착(바닥 반등형, 추세 확인 필요): " + " · ".join(h["name"] for h in far[:5]))
     return L
 
+def build_etf():
+    """ETF 카드(Chart 탭 ETF 하위 탭)용 일일 가격 — ETF Monitor 의 종목 목록(etfs.json)을 그대로 쓰되 가격·이력만 매일 갱신.
+       etfs.json 자체(주간 인사이트·스냅샷·자금흐름)는 etf-monitor 의 토요일 작업이 그대로 담당."""
+    import requests
+    src = requests.get("https://raw.githubusercontent.com/whysosary-dot/etf-monitor/main/etfs.json", timeout=60).json()
+    etfs = src.get("etfs") or []
+    syms = [e["ticker"] for e in etfs if e.get("ticker")]
+    print(f"ETF daily: {len(syms)} tickers …")
+    series = yf_download(syms, period="3y")
+    out = []
+    for e in etfs:
+        tk = e.get("ticker"); s_ = series.get(tk)
+        if not s_ or len(s_[0]) < 40:
+            # 야후 누락 시 ETF Monitor 주간값 유지
+            out.append({k: e.get(k) for k in ("name", "ticker", "category", "sector", "naver_code", "naver_path", "price_native", "price_change_pct", "price_history_3y", "price_history_3m", "priced_at")}); continue
+        d, o, h, l, c, v = s_
+        # 주봉 종가(ISO 주 마지막 거래일) — etfs.json 의 price_history_3y 와 같은 규약(주 1개, 최근 ~157개)
+        wk = {}
+        for day, px in zip(d, c):
+            y, w, _ = datetime.date.fromisoformat(day).isocalendar(); wk[(y, w)] = px
+        w_close = [round(x, 4) for x in list(wk.values())[-157:]]
+        out.append({"name": e.get("name"), "ticker": tk, "category": e.get("category"), "sector": e.get("sector"), "naver_code": e.get("naver_code"), "naver_path": e.get("naver_path"),
+                    "price_native": round(c[-1], 4), "price_change_pct": round(pct(c[-1], c[-2]), 2) if len(c) > 1 else None,
+                    "price_history_3y": w_close, "price_history_3m": [round(x, 4) for x in c[-65:]], "priced_at": d[-1]})
+    got = sum(1 for e in out if e.get("priced_at"))
+    json.dump({"updated_at": datetime.datetime.now(KST).isoformat(timespec="seconds"), "source": "etf-monitor/etfs.json 목록 + yfinance 일일 갱신", "n": len(out), "etfs": out},
+              open(os.path.join(DATA, "etf_daily.json"), "w"), ensure_ascii=False)
+    print(f"  etf_daily: {len(out)} etfs ({len(series)} fresh)")
+
 def auto_insights(which):
     """토큰 0 데이터 요약 → data/insights_auto.json (섹션별). AI 인사이트(insights/chart.json)와 별개로 항상 생성"""
     p = os.path.join(DATA, "insights_auto.json")
@@ -606,6 +635,8 @@ if __name__ == "__main__":
     if which == "auto":
         auto_insights("kr"); auto_insights("us"); sys.exit()
     meta.update(build_kr() if which == "kr" else build_us())
+    try: build_etf(); meta["etf_date"] = datetime.datetime.now(KST).strftime("%Y-%m-%d")
+    except Exception as e: print("  ⚠ build_etf 실패:", e)
     meta["updated_at"] = datetime.datetime.now(KST).isoformat(timespec="seconds")
     json.dump(meta, open(meta_p, "w"), ensure_ascii=False, indent=1)
     prune_history()

@@ -296,14 +296,16 @@ async function renderEtf() {
   const el = $('#etf-grid');
   if (!ETF.data) {
     el.innerHTML = '<div class="empty">ETF 데이터 불러오는 중…</div>';
-    try { const r = await fetch('https://whysosary-dot.github.io/etf-monitor/etfs.json?t=' + Math.floor(Date.now() / 600000), { cache: 'no-store' }); ETF.data = await r.json(); } catch (e) { el.innerHTML = '<div class="empty">ETF 데이터를 불러오지 못했습니다 (' + esc(e.message) + ')</div>'; return; }
+    // 일일 갱신본(chart/data/etf_daily.json, GitHub Actions 매일) 우선 → 없으면 ETF Monitor 주간본
+    try { ETF.data = await jget('etf_daily.json'); ETF.daily = true; } catch (_) {
+      try { const r = await fetch('https://whysosary-dot.github.io/etf-monitor/etfs.json?t=' + Math.floor(Date.now() / 600000), { cache: 'no-store' }); ETF.data = await r.json(); ETF.daily = false; } catch (e) { el.innerHTML = '<div class="empty">ETF 데이터를 불러오지 못했습니다 (' + esc(e.message) + ')</div>'; return; } }
   }
   const all = ETF.data.etfs || []; const spy = all.find(x => x.ticker === 'SPY'); const k200 = all.find(x => String(x.ticker).startsWith('069500')) || all.find(x => /^(Samsung )?KODEX 200( ETF)?$/i.test(x.name || '')) || all.find(x => x.sector === '한국 대표');
   let cards = all.map(e => etfCard(e, e.category === '한국 ETF' ? (k200 || spy) : spy)).filter(Boolean);
   if (ETF.cat) cards = cards.filter(c => c.cat === ETF.cat);
   if (ETF.q) { const q = ETF.q.toLowerCase(); cards = cards.filter(c => (c.name + ' ' + c.note + ' ' + (c.sub || '')).toLowerCase().includes(q)); }
   const k = ETF.sort; cards.sort((a, b) => k === 'name' ? String(a.name).localeCompare(b.name, 'ko') : ((b[k] ?? -1e9) - (a[k] ?? -1e9)));
-  $('#etf-tip').innerHTML = `<b>ETF</b> — ETF Monitor 데이터(${esc((ETF.data.updated_at || '').slice(0, 10))} 갱신 · 매주 토 06:00) ${all.length}개를 시장 그룹판과 같은 카드로. 2년 주봉 종가 + 주황 30주선. 뱃지: 일=50일선 · 주=30주선 · 월=10개월선(43주) 위(▲)/아래(▼). 3개월 상대는 한국 ETF는 KODEX 200, 그 외는 SPY 대비. ${cards.length}개 표시.`;
+  const _pa = all.map(x => x.priced_at || '').filter(Boolean).sort(); const pricedAt = _pa[Math.floor(_pa.length / 2)] || ''; $('#etf-tip').innerHTML = `<b>ETF</b> — ETF Monitor 종목 ${all.length}개를 시장 그룹판과 같은 카드로. 가격 ${esc(pricedAt)} 종가 기준${ETF.daily ? ' (매일 자동 갱신 · 한국 16:40 · 미국 06:40)' : ' (주간본 · 매주 토 06:00)'}. 2년 주봉 종가 + 주황 30주선. 뱃지: 일=50일선 · 주=30주선 · 월=10개월선(43주) 위(▲)/아래(▼). 3개월 상대는 한국 ETF는 KODEX 200, 그 외는 SPY 대비. ${cards.length}개 표시.`;
   el.innerHTML = '';
   cards.forEach(c => {
     const card = document.createElement('div'); card.className = 'gcard';
@@ -480,7 +482,7 @@ function flipBadges(d) {
 async function init() {
   const names = ['groups_kr', 'groups_us', 'groups_macro', 'scan_kr', 'scan_us'];
   await Promise.all(names.map(async n => { try { state.data[n] = await jget(n + '.json'); } catch (e) { console.warn(n, e.message); } }));
-  try { const m = await jget('meta.json'); $('#meta').textContent = `한국 ${m.kr_date || '—'} · 미국 ${m.us_date || '—'} 종가 기준 · 갱신 ${(m.updated_at || '').replace('T', ' ').slice(0, 16)} KST · 매일 자동(한국 16:40 · 미국 06:40)`; } catch (_) { $('#meta').textContent = ''; }
+  try { const m = await jget('meta.json'); $('#meta').textContent = `한국 ${m.kr_date || '—'} · 미국 ${m.us_date || '—'}${m.etf_date ? ' · ETF ' + m.etf_date : ''} 종가 기준 · 갱신 ${(m.updated_at || '').replace('T', ' ').slice(0, 16)} KST · 매일 자동(한국 16:40 · 미국 06:40)`; } catch (_) { $('#meta').textContent = ''; }
   ['groups_kr', 'groups_us'].forEach(k => state.data[k] && flipBadges(state.data[k]));
   await loadInsights();
   if (INS.ai) $('#ins-btn').classList.add('has');
