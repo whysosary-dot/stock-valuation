@@ -120,8 +120,8 @@ body{padding:12px 14px 40px}
 <div class="tabs">
   <button class="tab on" data-v="board">시장 그룹판</button>
   <button class="tab" data-v="scan">스캔 (일봉·주봉)</button>
-  <button class="tab" data-v="index">📈 Index</button>
-  <button class="tab" data-v="etf">📡 ETF Monitor</button>
+  <button class="tab" data-v="index">📈 인덱스</button>
+  <button class="tab" data-v="etf">📡 ETF</button>
 </div>
 
 <div id="v-board">
@@ -378,7 +378,9 @@ const EXT = { index: { id: 'index-frame', url: 'https://whysosary-dot.github.io/
 function skinExt(f, key) {
   try { if (localStorage.getItem('sv_skin_off') === '1') return; const d = f.contentDocument; if (!d || !d.head) return;
     if (d.documentElement.getAttribute('data-skin') !== key) { d.documentElement.setAttribute('data-skin', key);
-      for (const href of ['https://whysosary-dot.github.io/stock-valuation/theme.css', 'https://whysosary-dot.github.io/stock-valuation/skin.css?v=' + Date.now()]) { const l = d.createElement('link'); l.rel = 'stylesheet'; l.href = href; d.head.appendChild(l); } } } catch (_) {}
+      for (const href of ['https://whysosary-dot.github.io/stock-valuation/theme.css', 'https://whysosary-dot.github.io/stock-valuation/skin.css?v=' + Date.now()]) { const l = d.createElement('link'); l.rel = 'stylesheet'; l.href = href; d.head.appendChild(l); }
+      // theme.css 의 body zoom 1.08 이 대시보드→Chart→하위 페이지로 세 겹 쌓이지 않게 한 겹 상쇄 (메인 대시보드에 직접 있을 때와 같은 배율 유지)
+      const st = d.createElement('style'); st.textContent = 'body{zoom:1 !important}'; d.head.appendChild(st); } } catch (_) {}
 }
 function showExt(key) {
   const e = EXT[key]; const f = document.getElementById(e.id);
