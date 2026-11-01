@@ -1626,8 +1626,8 @@ const COLS = [
   { key: '_div',            label: '배당',           type: 'val', sortable: true, align: 'center' },
   { key: '_foreign',        label: '외인',           type: 'val', sortable: true, align: 'center' },
   { key: '_upside',         label: '상방 %',        type: 'calc',    sortable: true },
-  { key: '_downside',       label: '하방 %',        type: 'calc',    sortable: true },
   { key: '_rr',             label: '손익비',        type: 'calc',    sortable: true, align: 'center' },
+  { key: '_downside',       label: '하방 %',        type: 'calc',    sortable: true },
   { key: '_chart3y',        label: '3년 차트',       type: 'chart3y', sortable: false, align: 'center' },
   { key: '_chart',          label: '1년 차트',       type: 'chart',   sortable: false, align: 'center' },
   { key: '_chart3m',        label: '3개월 차트',     type: 'chart3m', sortable: false, align: 'center' },
@@ -2118,6 +2118,7 @@ function renderRow(s) {
         s[c.key] = v;
         inp.value = v === null ? '' : fmt(v, 0);
         queueSave();
+        if (c.key === 'target_cap_oku' || c.key === 'safety_cap_oku') { try { syncCapToDiary(s, c.key); } catch (e) { console.warn('[sync→diary]', e); } }
         render();
       });
       inp.addEventListener('keydown', e => {
@@ -4290,6 +4291,27 @@ function scFindStock(name) {
     if (cands.length === 1) hit = cands[0];
   }
   return hit || null;
+}
+
+/* Stock Valuation 목표시총·안전시총 → Diary 시나리오 매도 주가·안전마진가 자동 연동 (시총 비율 × 현재주가).
+   같은 이름의 시나리오 카드(보관 제외)가 있을 때만. 반대 방향(다이어리 → SV)은 하지 않는다 — SV 가 입력의 기준. */
+function syncCapToDiary(stk, key) {
+  if (!diary || !Array.isArray(diary.data && diary.data.scenario)) return;
+  const norm = x => String(x || '').toLowerCase().replace(/\s+/g, '');
+  const n = norm(stk.name); if (!n) return;
+  const items = diary.data.scenario.filter(it => it && !it.archived && norm(it.name) && (norm(it.name) === n || norm(it.name).includes(n) || n.includes(norm(it.name))));
+  if (items.length !== 1) return;
+  const it = items[0];
+  const mc = parseNum(stk.market_cap_oku), px = parseNum(stk.price_native); if (!mc || !px) return;
+  const cap = parseNum(stk[key]);
+  const field = key === 'target_cap_oku' ? 'sellPx' : 'safePx';
+  const isKrw = (stk.currency || 'KRW') === 'KRW';
+  const newPx = cap === null ? '' : (isKrw ? Math.round(px * cap / mc) : Math.round(px * cap / mc * 100) / 100);
+  if (String(it[field] ?? '') === String(newPx)) return;
+  it[field] = newPx; it.updated = todayDateStr();
+  saveDiaryData(diary.data);
+  if (typeof renderFeedScenario === 'function' && document.getElementById('page-diary') && document.getElementById('page-diary').classList.contains('active')) renderFeedScenario();
+  toast(`🎯 ${it.name} ${field === 'sellPx' ? '매도 주가' : '안전마진가'} → ${newPx === '' ? '삭제' : fmt(newPx, isKrw ? 0 : 2)} (다이어리 연동)`, 'ok', 2500);
 }
 
 /* 포트 비중용 원화 환산 주가.
