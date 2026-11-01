@@ -2711,7 +2711,7 @@ const IFRAME_TAB_SRC = {
   research:  'https://whysosary-dot.github.io/investment-notes/',
   report:    './report/index.html?v=' + Date.now(),  // 증권사 리포트 정리 (same-origin)
   telegram:  './telegram/index.html?v=' + Date.now(),  // 텔레그램 채널 언급 종목 (same-origin)
-  chart:     './chart/index.html?v=' + Math.floor(Date.now()/600000),  // Chart 탭 (same-origin, 10분 단위 캐시 무효화 — 사파리 iframe 캐시 대응)
+  chart:     './chart/index.html?v=' + Math.floor(Date.now()/60000),  // Chart 탭 (same-origin, 1분 단위 캐시 무효화 — Pages CDN·사파리 iframe 캐시 대응)
   // sheet 은 X-Frame-Options 로 iframe 차단되어 안내 페이지로 대체 (IFRAME_TAB_SRC 등록 X)
 };
 

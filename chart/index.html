@@ -380,7 +380,15 @@ function skinExt(f, key) {
     if (d.documentElement.getAttribute('data-skin') !== key) { d.documentElement.setAttribute('data-skin', key);
       for (const href of ['https://whysosary-dot.github.io/stock-valuation/theme.css', 'https://whysosary-dot.github.io/stock-valuation/skin.css?v=' + Date.now()]) { const l = d.createElement('link'); l.rel = 'stylesheet'; l.href = href; d.head.appendChild(l); }
       // theme.css 의 body zoom 1.08 이 대시보드→Chart→하위 페이지로 세 겹 쌓이지 않게 한 겹 상쇄 (메인 대시보드에 직접 있을 때와 같은 배율 유지)
-      const st = d.createElement('style'); st.textContent = 'body{zoom:1 !important}'; d.head.appendChild(st); } } catch (_) {}
+      const st = d.createElement('style');
+      // 배율 한 겹 상쇄 + 상단 바(제목·버튼·셀렉트·검색)를 Chart 탭 칩(.chip)과 같은 크기·여백으로
+      st.textContent = 'body{zoom:1 !important}'
+        + (key === 'etf' ? '.topbar{padding:4px 0 8px !important;gap:6px !important}'
+          + '.topbar h1{font-size:14px !important;font-weight:800 !important}.topbar h1::after{font-size:12px !important}.topbar .meta{font-size:12px !important}'
+          + '.topbar .btn,.topbar button,.topbar select,.topbar select.cat-filter,.topbar select.sector-filter,.topbar input.filter,.topbar .gh-commit-btn,.topbar .gh-settings-btn{font-size:12.5px !important;padding:4px 10px !important;border-radius:8px !important;line-height:1.4 !important;min-height:0 !important;height:auto !important;box-shadow:none !important}'
+          + '.topbar select.cat-filter,.topbar select.sector-filter{padding-right:24px !important;background-position:calc(100% - 10px) 50%,calc(100% - 6px) 50% !important}'
+          + '.topbar input.filter{padding:4px 10px !important}' : '');
+      d.head.appendChild(st); } } catch (_) {}
 }
 function showExt(key) {
   const e = EXT[key]; const f = document.getElementById(e.id);
