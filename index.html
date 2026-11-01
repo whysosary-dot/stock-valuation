@@ -1483,7 +1483,6 @@ td input, td textarea{border-radius:8px}
 <div id="page-chart" class="page">
   <iframe
     id="chart-frame"
-    src="https://whysosary-dot.github.io/stock-valuation/chart/"
     style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
     loading="lazy"
     title="Chart — 시장 그룹판 · 아이디어 포착기"
@@ -2732,6 +2731,7 @@ const IFRAME_TAB_SRC = {
   research:  'https://whysosary-dot.github.io/investment-notes/',
   report:    './report/index.html?v=' + Date.now(),  // 증권사 리포트 정리 (same-origin)
   telegram:  './telegram/index.html?v=' + Date.now(),  // 텔레그램 채널 언급 종목 (same-origin)
+  chart:     './chart/index.html?v=' + Math.floor(Date.now()/600000),  // Chart 탭 (same-origin, 10분 단위 캐시 무효화 — 사파리 iframe 캐시 대응)
   // sheet 은 X-Frame-Options 로 iframe 차단되어 안내 페이지로 대체 (IFRAME_TAB_SRC 등록 X)
 };
 
