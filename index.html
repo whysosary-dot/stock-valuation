@@ -1311,13 +1311,13 @@ td input, td textarea{border-radius:8px}
   <button id="tabs-collapse-btn" class="tabs-collapse-btn" title="탭 접기/펼치기">▲ 접기</button>
   <button class="page-tab-btn active" data-page="valuation">📊 Stock Valuation</button>
   <button class="page-tab-btn" data-page="calendar">📅 Calendar</button>
+  <button class="page-tab-btn" data-page="index">📈 Index</button>
   <button class="page-tab-btn" data-page="screener">🔍 KR Screener</button>
   <button class="page-tab-btn" data-page="dart">📋 Dart</button>
   <button class="page-tab-btn" data-page="usmarket">🇺🇸 US Market</button>
   <button class="page-tab-btn" data-page="krmarket">🇰🇷 KR Market</button>
   <button class="page-tab-btn" data-page="awake">🔔 Awake</button>
   <button class="page-tab-btn" data-page="chart">📉 Chart</button>
-  <button class="page-tab-btn" data-page="etfmonitor">📡 ETF Monitor</button>
   <button class="page-tab-btn" data-page="interest">👀 Interest</button>
   <button class="page-tab-btn" data-page="report">📑 Report</button>
   <button class="page-tab-btn" data-page="telegram">📨 Telegram</button>
@@ -1478,15 +1478,15 @@ td input, td textarea{border-radius:8px}
     title="Chart — 시장 그룹판 · 아이디어 포착기"
   ></iframe>
 </div><!-- /page-chart -->
-<div id="page-etfmonitor" class="page">
+<div id="page-index" class="page">
   <iframe
-    id="etfmonitor-frame"
-    src="https://whysosary-dot.github.io/etf-monitor/"
+    id="index-frame"
+    src="https://whysosary-dot.github.io/invest-index/"
     style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
     loading="lazy"
-    title="ETF Monitor"
+    title="Invest Index"
   ></iframe>
-</div><!-- /page-etfmonitor -->
+</div><!-- /page-index -->
 
 <div id="page-diary" class="page">
   <div class="diary-topbar">
@@ -2726,7 +2726,7 @@ const IFRAME_TAB_SRC = {
 };
 
 function activatePage(page, opts = {}) {
-  if (page === 'index' || page === 'rules') page = page === 'rules' ? 'diary' : 'chart';  // Chart·Diary 하위 탭으로 이동한 옛 탭
+  if (page === 'etfmonitor' || page === 'rules') page = page === 'rules' ? 'diary' : 'chart';  // Chart·Diary 하위 탭으로 이동한 옛 탭
   const btn = document.querySelector(`.page-tab-btn[data-page="${page}"]`);
   if (!btn) return;
   document.querySelectorAll('.page-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
