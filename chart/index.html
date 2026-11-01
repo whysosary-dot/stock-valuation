@@ -120,8 +120,8 @@ body{padding:12px 14px 40px}
 <div class="tabs">
   <button class="tab on" data-v="board">시장 그룹판</button>
   <button class="tab" data-v="scan">스캔 (일봉·주봉)</button>
-  <button class="tab" data-v="index">인덱스</button>
   <button class="tab" data-v="etf">ETF</button>
+  <button class="tab" data-v="index">인덱스</button>
 </div>
 
 <div id="v-board">
@@ -574,7 +574,6 @@ init();
         ${ind.category && ind.category!==(inds[i-1]||{}).category && ind.id && String(ind.id).startsWith('dk_') && !String((inds[i-1]||{}).id||'').startsWith('dk_') ? '<div class="ixn-cat">💊 '+ind.category+' 트래커</div>' : ''}
         <div class="ixn-card${ind.chartLines&&ind.products?' wide':''}"><h4 class="ixn-t" data-i="${i}">${ind.name} <span style="font-weight:400;font-size:11px;color:var(--text-dim)">${ind.unit||''}</span><span class="ixn-toggle">데이터 ▸</span></h4>
         <div class="src">${ind.source||''}${ind.category?' · '+ind.category:''}</div>
-        ${ind.warn?`<div class="ixn-warn">⚠ ${ind.warn}</div>`:''}${ind.desc?`<div class="ixn-desc">${ind.desc}</div>`:''}
         <div class="ixn-box"><canvas id="ixn-${i}"></canvas></div>
         <div class="ixn-data" id="ixnd-${i}" hidden></div></div>`).join('') + '</div>';
       inds.forEach((ind,i)=>{
