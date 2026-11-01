@@ -405,15 +405,22 @@ async function loadExtraInsight(key) {
   if (key === 'index' && !INS.indexAuto) {
     try { const inds = await window.fetchIndicators(); INS.indexAuto = { date: (inds.flatMap(i => (i.data || []).map(d => String(d.label))).sort().pop() || ''), lines: window.indexAutoLines(inds) }; } catch (_) { INS.indexAuto = { lines: [] }; }
   }
-  if (key === 'etf' && !INS.etfAi) {
-    try { const r = await fetch('https://whysosary-dot.github.io/stock-valuation/insights/etf.json?t=' + Math.floor(Date.now() / 300000), { cache: 'no-store' }); if (r.ok) INS.etfAi = await r.json(); } catch (_) {}
-    try { const r = await fetch('https://whysosary-dot.github.io/etf-monitor/etfs.json?t=' + Math.floor(Date.now() / 600000), { cache: 'no-store' }); if (r.ok) { const d = await r.json(); const ins = d.insights || {}; const lines = [...(ins.verdict || []), ...((ins.narrative || []).map(n => (n.title ? n.title + ' — ' : '') + n.body))]; INS.etfAuto = { date: (ins.computed_at || d.updated_at || '').slice(0, 10), lines }; } } catch (_) { INS.etfAuto = { lines: [] }; }
-    if (!INS.etfAi) INS.etfAi = null;
+  if (key === 'etf' && !INS.etfLoaded) {
+    INS.etfLoaded = true;
+    // 일일 AI(chart.json sections.etf) 가 있으면 그것, 없으면 주간(insights/etf.json)
+    const daily = INS.ai && INS.ai.sections && INS.ai.sections.etf;
+    if (daily) INS.etfAi = Object.assign({ date: INS.ai.date, as_of: INS.ai.as_of }, daily);
+    else { try { const r = await fetch('https://whysosary-dot.github.io/stock-valuation/insights/etf.json?t=' + Math.floor(Date.now() / 300000), { cache: 'no-store' }); if (r.ok) INS.etfAi = await r.json(); } catch (_) {} }
+    // 데이터 요약: 일일(insights_auto.etf, 일·주·월·3개월 흐름) + 주간 ETF Monitor 판정
+    const lines = []; let date = '';
+    if (INS.auto && INS.auto.etf) { lines.push(...(INS.auto.etf.lines || [])); date = INS.auto.etf.date || ''; }
+    try { const r = await fetch('https://whysosary-dot.github.io/etf-monitor/etfs.json?t=' + Math.floor(Date.now() / 600000), { cache: 'no-store' }); if (r.ok) { const d = await r.json(); const ins = d.insights || {}; const wk = [...(ins.verdict || []).slice(0, 4)]; if (wk.length) lines.push('[주간 ETF Monitor ' + (ins.computed_at || '').slice(0, 10) + '] ' + wk.join(' / ')); if (!date) date = (ins.computed_at || '').slice(0, 10); } } catch (_) {}
+    INS.etfAuto = { date, lines };
   }
 }
 function insightHtml(key) {
   let ai, au, aiDate, asOf, sched = '평일 18:10';
-  if (key === 'etf') { ai = INS.etfAi; au = INS.etfAuto; aiDate = ai ? (ai.date || '') : ''; asOf = ai ? ai.as_of : ''; sched = '매주 토 10:00'; }
+  if (key === 'etf') { ai = INS.etfAi; au = INS.etfAuto; aiDate = ai ? (ai.date || '') : ''; asOf = ai ? ai.as_of : ''; sched = '평일 18:10'; }
   else { ai = INS.ai && INS.ai.sections ? INS.ai.sections[key] : null; au = key === 'index' ? INS.indexAuto : (INS.auto ? INS.auto[key] : null); aiDate = ai ? (INS.ai.date || '') : ''; asOf = ai ? INS.ai.as_of : ''; }
   const kst = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
   const stale = key !== 'etf' && key !== 'index' && ai && aiDate && aiDate < (au && au.date ? au.date : kst);
@@ -423,8 +430,8 @@ function insightHtml(key) {
     (ai.insights || []).forEach(it => { h += `<div class="ic"><div class="t">${esc(it.title)}</div><div class="b">${esc(it.body)}</div>${it.tags && it.tags.length ? `<div class="tags">${it.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}</div>`; });
     if (ai.watch && ai.watch.length) h += `<div class="ic" style="border-left-color:#f59e0b"><div class="t">👀 다음에 볼 것</div><ul>${ai.watch.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`;
     if (ai.sources && ai.sources.length) h += `<div class="src"><details><summary>출처 ${ai.sources.length}건</summary>${ai.sources.map(x => `<div>· <a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a>${x.date ? ' (' + esc(x.date) + ')' : ''}</div>`).join('')}</details></div>`;
-  } else h += `<div class="none">AI 인사이트가 아직 없습니다. ${key === 'etf' ? '매주 토 10:00 KST 스케줄 작업이 insights/etf.json 을' : '평일 18:10 KST 스케줄 작업이 insights/chart.json 을'} 만듭니다.</div>`;
-  if (au && au.lines && au.lines.length) h += `<div class="auto"><div class="lab">📊 데이터 요약 (자동 · 토큰 0 · ${esc(au.date || '')} 기준${key === 'etf' ? ' · ETF Monitor 계산' : key === 'index' ? ' · 인덱스 지표 계산' : ''})</div><ul>${au.lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul></div>`;
+  } else h += `<div class="none">AI 인사이트가 아직 없습니다. 평일 18:10 KST 스케줄 작업이 insights/chart.json 을 만듭니다.</div>`;
+  if (au && au.lines && au.lines.length) h += `<div class="auto"><div class="lab">📊 데이터 요약 (자동 · 토큰 0 · ${esc(au.date || '')} 기준${key === 'etf' ? ' · 일·주·월·3개월 흐름' : key === 'index' ? ' · 인덱스 지표 계산' : ''})</div><ul>${au.lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul></div>`;
   if (!ai && !(au && au.lines && au.lines.length)) h += `<div class="none">이 섹션의 인사이트 데이터가 없습니다.</div>`;
   return h + '</div>';
 }

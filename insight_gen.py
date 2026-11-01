@@ -154,6 +154,8 @@ def data_chart():
             print(f"- {h['name']} ({h['tk']}) · {h.get('sector')}/{h.get('industry')} · {h['chg']:+.1f}% · 거래량 {h.get('vol_ratio')}배 · RS {h.get('rs')} · 52주고점대비 {h.get('off_hi52')}% · 태그 {h.get('tags')} 주봉 {h.get('wtags')}" + (f" · 시총 {h.get('mcap')}" if h.get('mcap') else "") + (f" · 뉴스: {h.get('news')}" if h.get('news') else ""))
     try: data_index()
     except Exception as e: print("\n## index (인덱스 탭) — 수집 실패:", e)
+    try: data_etf_daily()
+    except Exception as e: print("\n## etf (ETF 탭) — 수집 실패:", e)
 
 def data_index():
     """인덱스 탭(invest-index INDICATORS, JS 배열) — node 로 파싱해 지표별 최근 12개 값·직전비·YoY 요약"""
@@ -181,7 +183,21 @@ for(const ind of inds){ const d=(ind.data||[]).filter(x=>x&&x.value!=null); if(!
     print("\n## index (invest-index 지표 — 인덱스 탭) · 각 지표의 최신값·직전비·YoY·최근 12개")
     print(out.stdout.strip() or ("(파싱 실패: " + out.stderr[:200] + ")"))
 
-CHART_SECTIONS = ("kr", "us", "macro", "scan_kr", "scan_us", "index")
+def data_etf_daily():
+    """ETF 탭(chart/data/etf_daily.json) — ETF 별 일·주·월·3개월 수익률 표 (섹션 'etf' 근거)"""
+    d = raw_pub("chart/data/etf_daily.json")
+    rows = []
+    for e in d.get("etfs", []):
+        c = e.get("price_history_3m") or []
+        if len(c) < 23: continue
+        last = c[-1]
+        rows.append((e.get("category"), e.get("sector"), e.get("name"), e.get("ticker"), e.get("price_change_pct"), (last / c[-6] - 1) * 100, (last / c[-23] - 1) * 100, (last / c[0] - 1) * 100))
+    pa = sorted(x.get("priced_at") or "" for x in d.get("etfs", []))
+    print(f"\n## etf (ETF 탭 · 일일 갱신) · 가격 {pa[len(pa)//2] if pa else '?'} · {len(rows)}개 · 열: 분류 | 섹터 | 이름 (티커) | 일 | 주 | 월 | 3개월")
+    for r in sorted(rows, key=lambda x: (x[0] or "", x[1] or "", -(x[5] or 0))):
+        print(f"- {r[0]} | {r[1]} | {r[2]} ({r[3]}) | {r[4]:+.1f}% | {r[5]:+.1f}% | {r[6]:+.1f}% | {r[7]:+.1f}%")
+
+CHART_SECTIONS = ("kr", "us", "macro", "scan_kr", "scan_us", "index", "etf")
 def write_chart(path):
     """JSON: {"tab":"chart","date":"YYYY-MM-DD","as_of":"…","sections":{"kr":{headline,insights[],watch[],sources[]}, "us":…, "macro":…, "scan_kr":…, "scan_us":…, "index":…(인덱스 탭 지표)}}
        섹션당 insights 2~4개. 등락률 나열 금지(데이터 요약이 이미 있음) — '왜'와 '다음에 볼 것'."""

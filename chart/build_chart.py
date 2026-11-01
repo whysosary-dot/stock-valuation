@@ -611,6 +611,47 @@ def build_etf():
               open(os.path.join(DATA, "etf_daily.json"), "w"), ensure_ascii=False)
     print(f"  etf_daily: {len(out)} etfs ({len(series)} fresh)")
 
+def _etf_lines(d):
+    """ETF 일일 데이터 → 일간·주간·월간·3개월 흐름 요약 (토큰 0)"""
+    if not d or not d.get("etfs"): return []
+    rows = []
+    for e in d["etfs"]:
+        c = e.get("price_history_3m") or []
+        if len(c) < 23: continue
+        last = c[-1]
+        rows.append({"name": e.get("name"), "tk": e.get("ticker"), "sec": e.get("sector") or "기타", "cat": e.get("category") or "",
+                     "d": e.get("price_change_pct"), "w": pct(last, c[-6]), "m": pct(last, c[-23]), "q": pct(last, c[0])})
+    if not rows: return []
+    L = []
+    def breadth(k): v = [r[k] for r in rows if r[k] is not None]; return (sum(1 for x in v if x > 0) / len(v) * 100, sum(v) / len(v)) if v else (None, None)
+    bd, bw, bm, bq = breadth("d"), breadth("w"), breadth("m"), breadth("q")
+    L.append(f"흐름(상승 비중·평균): 일간 {bd[0]:.0f}%·{bd[1]:+.1f}% / 주간 {bw[0]:.0f}%·{bw[1]:+.1f}% / 월간 {bm[0]:.0f}%·{bm[1]:+.1f}% / 3개월 {bq[0]:.0f}%·{bq[1]:+.1f}%"
+             + (" — 월간 약세 속 주간 반등 폭이 넓어짐(바닥 확인 시도)" if bm[0] < 40 and bw[0] > 55 else " — 일·주·월 모두 상승 우위(추세 장)" if min(bd[0], bw[0], bm[0]) > 55 else " — 전 기간 하락 우위(위험회피)" if max(bd[0], bw[0], bm[0]) < 45 else ""))
+    for cat in ("한국 ETF", "섹터/테마", "국가/지역"):
+        rs = [r for r in rows if r["cat"] == cat]
+        if len(rs) >= 3:
+            a = lambda k: sum(r[k] for r in rs if r[k] is not None) / max(1, sum(1 for r in rs if r[k] is not None))
+            L.append(f"{cat} 평균: 일 {a('d'):+.1f}% · 주 {a('w'):+.1f}% · 월 {a('m'):+.1f}% · 3개월 {a('q'):+.1f}%")
+    sec = {}
+    for r in rows:
+        if r["cat"] in ("크로스에셋", "심리 지표"): continue
+        sec.setdefault(r["sec"], []).append(r)
+    avg = {k: {kk: sum(r[kk] for r in v if r[kk] is not None) / max(1, sum(1 for r in v if r[kk] is not None)) for kk in ("d", "w", "m", "q")} for k, v in sec.items() if len(v) >= 1}
+    for kk, lab in (("w", "주간"), ("m", "월간")):
+        o = sorted(avg.items(), key=lambda x: -x[1][kk])
+        L.append(f"{lab} 섹터 상위: " + " · ".join(f"{k} {v[kk]:+.1f}%" for k, v in o[:4]) + " / 하위: " + " · ".join(f"{k} {v[kk]:+.1f}%" for k, v in o[-3:]))
+    cons = [k for k, v in avg.items() if v["w"] > 0 and v["m"] > 0 and v["q"] > 0]
+    if cons: L.append("주·월·3개월 모두 상승(구조적 강세 섹터): " + " · ".join(cons[:8]))
+    turn = [k for k, v in avg.items() if v["w"] > 2 and v["m"] < -5]
+    if turn: L.append("월간 -5% 이하인데 주간 +2% 이상(반등 시도 섹터 — 추세 전환인지 확인 필요): " + " · ".join(turn[:8]))
+    fade = [k for k, v in avg.items() if v["w"] < -2 and v["m"] > 5]
+    if fade: L.append("월간 +5% 이상인데 주간 -2% 이하(꺾임 신호 섹터): " + " · ".join(fade[:8]))
+    cx = {r["tk"]: r for r in rows if r["cat"] in ("크로스에셋", "심리 지표")}
+    if cx: L.append("크로스에셋·심리: " + " · ".join(f"{r['name'][:18]} 일 {r['d']:+.1f}%/주 {r['w']:+.1f}%/월 {r['m']:+.1f}%" for r in list(cx.values())[:8]))
+    top = sorted(rows, key=lambda r: -(r["w"] or -99))[:5]; bot = sorted(rows, key=lambda r: (r["w"] or 99))[:5]
+    L.append("주간 개별 상위: " + " · ".join(f"{r['name'][:16]} {r['w']:+.1f}%" for r in top) + " / 하위: " + " · ".join(f"{r['name'][:16]} {r['w']:+.1f}%" for r in bot))
+    return L
+
 def auto_insights(which):
     """토큰 0 데이터 요약 → data/insights_auto.json (섹션별). AI 인사이트(insights/chart.json)와 별개로 항상 생성"""
     p = os.path.join(DATA, "insights_auto.json")
@@ -625,6 +666,9 @@ def auto_insights(which):
         out["us"] = {"date": (gu or {}).get("date"), "lines": _group_lines(gu, "SPY", "섹터"), "at": now}
         out["macro"] = {"date": (gm or {}).get("date"), "lines": _macro_lines(gm), "at": now}
         out["scan_us"] = {"date": (su or {}).get("date"), "lines": _scan_lines(su, "us"), "at": now}
+    ed = _load("etf_daily.json")
+    if ed:
+        pa = sorted(x.get("priced_at") or "" for x in ed.get("etfs", [])); out["etf"] = {"date": pa[len(pa) // 2] if pa else None, "lines": _etf_lines(ed), "at": now}
     json.dump(out, open(p, "w"), ensure_ascii=False, indent=1)
     print("  insights_auto:", {k: len(v.get("lines", [])) for k, v in out.items()})
 
