@@ -336,29 +336,43 @@ function renderScan() {
 }
 /* ── 인사이트 패널 ── */
 const INS = { ai: null, auto: null };
-const INS_LABEL = { kr: '🇰🇷 한국 업종', us: '🇺🇸 미국 지수·섹터', macro: '🌐 상품·통화·금리', scan_kr: '🇰🇷 한국 스캔', scan_us: '🇺🇸 미국 스캔' };
+const INS_LABEL = { kr: '🇰🇷 한국 업종', us: '🇺🇸 미국 지수·섹터', macro: '🌐 상품·통화·금리', scan_kr: '🇰🇷 한국 스캔', scan_us: '🇺🇸 미국 스캔', index: '📈 인덱스', etf: '📡 ETF' };
 async function loadInsights() {
   try { const r = await fetch('../insights/chart.json?t=' + Math.floor(Date.now() / 300000), { cache: 'no-store' }); if (r.ok) INS.ai = await r.json(); } catch (_) {}
   try { INS.auto = await jget('insights_auto.json'); } catch (_) {}
 }
+/* 인덱스·ETF 섹션 데이터는 모달에서 그 칩을 눌렀을 때만 로드 (ETF etfs.json 이 큼) */
+async function loadExtraInsight(key) {
+  if (key === 'index' && !INS.indexAuto) {
+    try { const inds = await window.fetchIndicators(); INS.indexAuto = { date: (inds.flatMap(i => (i.data || []).map(d => String(d.label))).sort().pop() || ''), lines: window.indexAutoLines(inds) }; } catch (_) { INS.indexAuto = { lines: [] }; }
+  }
+  if (key === 'etf' && !INS.etfAi) {
+    try { const r = await fetch('https://whysosary-dot.github.io/stock-valuation/insights/etf.json?t=' + Math.floor(Date.now() / 300000), { cache: 'no-store' }); if (r.ok) INS.etfAi = await r.json(); } catch (_) {}
+    try { const r = await fetch('https://whysosary-dot.github.io/etf-monitor/etfs.json?t=' + Math.floor(Date.now() / 600000), { cache: 'no-store' }); if (r.ok) { const d = await r.json(); const ins = d.insights || {}; const lines = [...(ins.verdict || []), ...((ins.narrative || []).map(n => (n.title ? n.title + ' — ' : '') + n.body))]; INS.etfAuto = { date: (ins.computed_at || d.updated_at || '').slice(0, 10), lines }; } } catch (_) { INS.etfAuto = { lines: [] }; }
+    if (!INS.etfAi) INS.etfAi = null;
+  }
+}
 function insightHtml(key) {
-  const ai = INS.ai && INS.ai.sections ? INS.ai.sections[key] : null; const au = INS.auto ? INS.auto[key] : null;
+  let ai, au, aiDate, asOf, sched = '평일 18:10';
+  if (key === 'etf') { ai = INS.etfAi; au = INS.etfAuto; aiDate = ai ? (ai.date || '') : ''; asOf = ai ? ai.as_of : ''; sched = '매주 토 10:00'; }
+  else { ai = INS.ai && INS.ai.sections ? INS.ai.sections[key] : null; au = key === 'index' ? INS.indexAuto : (INS.auto ? INS.auto[key] : null); aiDate = ai ? (INS.ai.date || '') : ''; asOf = ai ? INS.ai.as_of : ''; }
   const kst = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
-  const aiDate = ai ? (INS.ai.date || '') : ''; const stale = ai && aiDate && aiDate < (au && au.date ? au.date : kst);
-  let h = `<div class="m${stale ? ' stale' : ''}">${ai ? `AI ${esc(aiDate)} 생성${INS.ai.as_of ? ' · ' + esc(INS.ai.as_of) : ''}${stale ? ' · ⚠ 데이터보다 이전 — 다음 스케줄(평일 18:10)에서 갱신' : ''}` : 'AI 인사이트 없음'}${au && au.date ? ` · 데이터 요약 ${esc(au.date)}` : ''} · Claude 작성 · 투자 권유 아님</div><div class="body">`;
+  const stale = key !== 'etf' && key !== 'index' && ai && aiDate && aiDate < (au && au.date ? au.date : kst);
+  let h = `<div class="m${stale ? ' stale' : ''}">${ai ? `AI ${esc(aiDate)} 생성${asOf ? ' · ' + esc(asOf) : ''}${stale ? ' · ⚠ 데이터보다 이전 — 다음 스케줄(' + sched + ')에서 갱신' : ''}` : 'AI 인사이트 없음'}${au && au.date ? ` · 데이터 요약 ${esc(au.date)}` : ''} · Claude 작성 · 투자 권유 아님</div><div class="body">`;
   if (ai) {
     if (ai.headline) h += `<div class="head">${esc(ai.headline)}</div>`;
     (ai.insights || []).forEach(it => { h += `<div class="ic"><div class="t">${esc(it.title)}</div><div class="b">${esc(it.body)}</div>${it.tags && it.tags.length ? `<div class="tags">${it.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}</div>`; });
     if (ai.watch && ai.watch.length) h += `<div class="ic" style="border-left-color:#f59e0b"><div class="t">👀 다음에 볼 것</div><ul>${ai.watch.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`;
     if (ai.sources && ai.sources.length) h += `<div class="src"><details><summary>출처 ${ai.sources.length}건</summary>${ai.sources.map(x => `<div>· <a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a>${x.date ? ' (' + esc(x.date) + ')' : ''}</div>`).join('')}</details></div>`;
-  } else h += `<div class="none">AI 인사이트가 아직 없습니다. 평일 18:10 KST 스케줄 작업이 insights/chart.json 을 만듭니다.</div>`;
-  if (au && au.lines && au.lines.length) h += `<div class="auto"><div class="lab">📊 데이터 요약 (자동 · 토큰 0 · ${esc(au.date || '')} 기준)</div><ul>${au.lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul></div>`;
+  } else h += `<div class="none">AI 인사이트가 아직 없습니다. ${key === 'etf' ? '매주 토 10:00 KST 스케줄 작업이 insights/etf.json 을' : '평일 18:10 KST 스케줄 작업이 insights/chart.json 을'} 만듭니다.</div>`;
+  if (au && au.lines && au.lines.length) h += `<div class="auto"><div class="lab">📊 데이터 요약 (자동 · 토큰 0 · ${esc(au.date || '')} 기준${key === 'etf' ? ' · ETF Monitor 계산' : key === 'index' ? ' · 인덱스 지표 계산' : ''})</div><ul>${au.lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul></div>`;
   if (!ai && !(au && au.lines && au.lines.length)) h += `<div class="none">이 섹션의 인사이트 데이터가 없습니다.</div>`;
   return h + '</div>';
 }
 function openInsight(initKey) {
   let key = initKey; const bg = document.createElement('div'); bg.className = 'mb';
-  const render = () => {
+  const render = async () => {
+    await loadExtraInsight(key);
     bg.innerHTML = `<div class="md" role="dialog">
       <div class="hd"><h2>💡 인사이트</h2><span class="s">${esc(INS_LABEL[key] || key)}</span><button class="x" title="닫기">×</button></div>
       <div class="ichips">${Object.keys(INS_LABEL).map(k => `<button class="chip${k === key ? ' on' : ''}" data-k="${k}">${INS_LABEL[k]}</button>`).join('')}</div>
@@ -413,7 +427,7 @@ async function init() {
   ['groups_kr', 'groups_us'].forEach(k => state.data[k] && flipBadges(state.data[k]));
   await loadInsights();
   if (INS.ai) $('#ins-btn').classList.add('has');
-  $('#ins-btn').onclick = () => openInsight(state.view === 'scan' ? 'scan_' + state.mkt : state.board);
+  $('#ins-btn').onclick = () => openInsight(state.view === 'scan' ? 'scan_' + state.mkt : (state.view === 'index' || state.view === 'etf') ? state.view : state.board);
   renderBoard(); renderScan(); loadHist();
   document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('.tab').forEach(x => x.classList.remove('on')); b.classList.add('on'); state.view = b.dataset.v; $('#v-board').style.display = state.view === 'board' ? '' : 'none'; $('#v-scan').style.display = state.view === 'scan' ? '' : 'none'; $('#v-etf').style.display = state.view === 'etf' ? '' : 'none'; $('#v-index').style.display = state.view === 'index' ? '' : 'none'; if (state.view === 'index') { if (window.renderIndexNative) renderIndexNative(); } else if (EXT[state.view]) showExt(state.view); else if (state.view === 'board') renderBoard(); else renderScan(); }));
   document.querySelectorAll('[data-b]').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('[data-b]').forEach(x => x.classList.remove('on')); b.classList.add('on'); state.board = b.dataset.b; renderBoard(); }));
@@ -465,14 +479,37 @@ init();
     }
     return null;
   }
+  let _indsP = null;
+  window.fetchIndicators = function(){
+    if(_indsP) return _indsP;
+    _indsP = fetch('https://raw.githubusercontent.com/whysosary-dot/invest-index/main/index.html?t='+Math.floor(Date.now()/3e5), {cache:'no-store'})
+      .then(r=>r.text()).then(html=>{ const inds = extractArr(html, 'const INDICATORS'); if(!inds||!inds.length) throw new Error('no data'); return inds; })
+      .catch(e=>{ _indsP = null; throw e; });
+    return _indsP;
+  };
+  /* 인덱스 데이터 요약(토큰 0): 지표별 최신값·직전 대비·최근 3개 추세·전년 동기 대비 */
+  window.indexAutoLines = function(inds){
+    const L = []; const fmtN = v => Number(v).toLocaleString('ko-KR', {maximumFractionDigits: 1});
+    const pc = (a,b) => (b&&a!=null)?((a/b-1)*100):null; const sg = v => v==null?'—':(v>0?'+':'')+v.toFixed(1)+'%';
+    const rising=[], falling=[], latest=[];
+    inds.forEach(ind=>{
+      const d=(ind.data||[]).filter(x=>x&&x.value!=null); if(d.length<2) return;
+      const last=d[d.length-1], prev=d[d.length-2]; const chg=pc(last.value, prev.value);
+      const t3 = d.slice(-4).map(x=>x.value); const up3 = t3.length>=3 && t3.every((v,i)=>i===0||v>=t3[i-1]); const dn3 = t3.length>=3 && t3.every((v,i)=>i===0||v<=t3[i-1]);
+      let yoy=null; const lab=String(last.label); const m=lab.match(/^(\d{4})(.*)$/); if(m){ const py=String(+m[1]-1)+m[2]; const hit=d.find(x=>String(x.label)===py); if(hit) yoy=pc(last.value,hit.value); }
+      latest.push(`${ind.name} ${fmtN(last.value)}${ind.unit?ind.unit:''} (${lab}, 직전比 ${sg(chg)}${yoy!=null?', YoY '+sg(yoy):''})`);
+      if(up3) rising.push(ind.name); if(dn3) falling.push(ind.name);
+    });
+    if(latest.length) L.push('최신값: '+latest.join(' · '));
+    if(rising.length) L.push('3기간 연속 상승: '+rising.join(' · '));
+    if(falling.length) L.push('3기간 연속 하락: '+falling.join(' · '));
+    return L;
+  };
   async function renderIndexNative(){
     if(loaded) return; loaded = true;
     const box = document.getElementById('index-native');
     try{
-      const r = await fetch('https://raw.githubusercontent.com/whysosary-dot/invest-index/main/index.html?t='+Math.floor(Date.now()/3e5), {cache:'no-store'});
-      const html = await r.text();
-      const inds = extractArr(html, 'const INDICATORS');
-      if(!inds || !inds.length) throw new Error('no data');
+      const inds = await window.fetchIndicators();
       box.innerHTML = '<div class="ixn-grid">' + inds.map((ind,i)=>`
         ${ind.category && ind.category!==(inds[i-1]||{}).category && ind.id && String(ind.id).startsWith('dk_') && !String((inds[i-1]||{}).id||'').startsWith('dk_') ? '<div class="ixn-cat">💊 '+ind.category+' 트래커</div>' : ''}
         <div class="ixn-card${ind.chartLines&&ind.products?' wide':''}"><h4 class="ixn-t" data-i="${i}">${ind.name} <span style="font-weight:400;font-size:11px;color:var(--text-dim)">${ind.unit||''}</span><span class="ixn-toggle">데이터 ▸</span></h4>

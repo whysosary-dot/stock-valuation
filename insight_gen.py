@@ -152,10 +152,38 @@ def data_chart():
         print(f"\n## {key} · {d.get('date')} · 유니버스 {d.get('universe')} · 히트 {len(d['hits'])}")
         for h in d["hits"]:
             print(f"- {h['name']} ({h['tk']}) · {h.get('sector')}/{h.get('industry')} · {h['chg']:+.1f}% · 거래량 {h.get('vol_ratio')}배 · RS {h.get('rs')} · 52주고점대비 {h.get('off_hi52')}% · 태그 {h.get('tags')} 주봉 {h.get('wtags')}" + (f" · 시총 {h.get('mcap')}" if h.get('mcap') else "") + (f" · 뉴스: {h.get('news')}" if h.get('news') else ""))
+    try: data_index()
+    except Exception as e: print("\n## index (인덱스 탭) — 수집 실패:", e)
 
-CHART_SECTIONS = ("kr", "us", "macro", "scan_kr", "scan_us")
+def data_index():
+    """인덱스 탭(invest-index INDICATORS, JS 배열) — node 로 파싱해 지표별 최근 12개 값·직전비·YoY 요약"""
+    import subprocess, tempfile
+    js = r"""
+const html = require('fs').readFileSync(process.argv[2],'utf8');
+function extractArr(txt, marker){ const i=txt.indexOf(marker); if(i<0) return null; const start=txt.indexOf('[',i); let d=0,inStr=null,escp=false;
+  for(let j=start;j<txt.length;j++){ const c=txt[j]; if(inStr){ if(escp)escp=false; else if(c==='\\')escp=true; else if(c===inStr)inStr=null; continue; }
+    if(c==='"'||c==="'"||c==='`'){inStr=c;continue;} if(c==='/'&&txt[j+1]==='/'){ j=txt.indexOf('\n',j); if(j<0)break; continue; }
+    if(c==='/'&&txt[j+1]==='*'){ j=txt.indexOf('*/',j)+1; if(j<1)break; continue; } if(c==='[')d++; else if(c===']'){ d--; if(!d){ try{ return new Function('return '+txt.slice(start,j+1))(); }catch(e){ return null; } } } } return null; }
+const inds = extractArr(html, 'const INDICATORS') || [];
+const pc=(a,b)=>(b&&a!=null)?((a/b-1)*100):null, sg=v=>v==null?'—':(v>0?'+':'')+v.toFixed(1)+'%';
+for(const ind of inds){ const d=(ind.data||[]).filter(x=>x&&x.value!=null); if(!d.length) continue;
+  const last=d[d.length-1], prev=d[d.length-2]; let yoy=null; const lab=String(last.label); const m=lab.match(/^(\d{4})(.*)$/);
+  if(m){ const hit=d.find(x=>String(x.label)===String(+m[1]-1)+m[2]); if(hit) yoy=pc(last.value,hit.value); }
+  console.log(`- ${ind.name} [${ind.unit||''}] · ${ind.source||''}${ind.category?' · '+ind.category:''} · 최신 ${lab} ${last.value} (직전比 ${prev?sg(pc(last.value,prev.value)):'—'}, YoY ${sg(yoy)})`);
+  console.log('  최근: ' + d.slice(-12).map(x=>`${x.label} ${x.value}${x.note?'('+String(x.note).slice(0,30)+')':''}`).join(' | '));
+  if(ind.warn) console.log('  ⚠ '+ind.warn); if(ind.desc) console.log('  설명: '+String(ind.desc).slice(0,200)); }
+"""
+    rq = urllib.request.Request("https://raw.githubusercontent.com/whysosary-dot/invest-index/main/index.html?t=%s" % datetime.datetime.now().timestamp(), headers={"User-Agent": "sv-insight"})
+    html = urllib.request.urlopen(rq, timeout=60).read().decode("utf-8")
+    with tempfile.TemporaryDirectory() as td:
+        hp = Path(td, "ii.html"); hp.write_text(html, encoding="utf-8"); jp = Path(td, "x.js"); jp.write_text(js, encoding="utf-8")
+        out = subprocess.run(["node", str(jp), str(hp)], capture_output=True, text=True, timeout=60)
+    print("\n## index (invest-index 지표 — 인덱스 탭) · 각 지표의 최신값·직전비·YoY·최근 12개")
+    print(out.stdout.strip() or ("(파싱 실패: " + out.stderr[:200] + ")"))
+
+CHART_SECTIONS = ("kr", "us", "macro", "scan_kr", "scan_us", "index")
 def write_chart(path):
-    """JSON: {"tab":"chart","date":"YYYY-MM-DD","as_of":"…","sections":{"kr":{headline,insights[],watch[],sources[]}, "us":…, "macro":…, "scan_kr":…, "scan_us":…}}
+    """JSON: {"tab":"chart","date":"YYYY-MM-DD","as_of":"…","sections":{"kr":{headline,insights[],watch[],sources[]}, "us":…, "macro":…, "scan_kr":…, "scan_us":…, "index":…(인덱스 탭 지표)}}
        섹션당 insights 2~4개. 등락률 나열 금지(데이터 요약이 이미 있음) — '왜'와 '다음에 볼 것'."""
     d = json.loads(Path(path).read_text(encoding="utf-8"))
     assert d.get("tab") == "chart", "tab 불일치"
