@@ -121,7 +121,6 @@ body{padding:12px 14px 40px}
   <button class="tab on" data-v="board">시장 그룹판</button>
   <button class="tab" data-v="scan">스캔 (일봉·주봉)</button>
   <button class="tab" data-v="index">인덱스</button>
-  <button class="tab" data-v="etf">ETF</button>
 </div>
 
 <div id="v-board">
@@ -136,9 +135,6 @@ body{padding:12px 14px 40px}
 
 <div id="v-index" style="display:none">
   <iframe id="index-frame" style="width:100%;border:none;display:block;min-height:600px" title="Index"></iframe>
-</div>
-<div id="v-etf" style="display:none">
-  <iframe id="etf-frame" style="width:100%;border:none;display:block;min-height:600px" title="ETF Monitor"></iframe>
 </div>
 
 <div id="v-scan" style="display:none">
@@ -374,7 +370,7 @@ function openInsight(initKey) {
 }
 /* ETF Monitor — 별도 페이지(etf-monitor 리포)를 하위 탭으로 끼움. 탭을 열 때만 로드, 높이는 화면에 맞춤 */
 /* 외부 페이지 하위 탭(Index · ETF Monitor) — 탭을 열 때만 로드, 높이는 화면에 맞춤, 메인 대시보드와 같은 스킨 주입(같은 출처) */
-const EXT = { index: { id: 'index-frame', url: 'https://whysosary-dot.github.io/invest-index/', skin: 'index' }, etf: { id: 'etf-frame', url: 'https://whysosary-dot.github.io/etf-monitor/', skin: 'etf' } };
+const EXT = { index: { id: 'index-frame', url: 'https://whysosary-dot.github.io/invest-index/', skin: 'index' } };
 function skinExt(f, key) {
   try { if (localStorage.getItem('sv_skin_off') === '1') return; const d = f.contentDocument; if (!d || !d.head) return;
     if (d.documentElement.getAttribute('data-skin') !== key) { d.documentElement.setAttribute('data-skin', key);
@@ -405,7 +401,7 @@ async function init() {
   if (INS.ai) $('#ins-btn').classList.add('has');
   $('#ins-btn').onclick = () => openInsight(state.view === 'scan' ? 'scan_' + state.mkt : state.board);
   renderBoard(); renderScan(); loadHist();
-  document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('.tab').forEach(x => x.classList.remove('on')); b.classList.add('on'); state.view = b.dataset.v; $('#v-board').style.display = state.view === 'board' ? '' : 'none'; $('#v-scan').style.display = state.view === 'scan' ? '' : 'none'; $('#v-etf').style.display = state.view === 'etf' ? '' : 'none'; $('#v-index').style.display = state.view === 'index' ? '' : 'none'; if (EXT[state.view]) showExt(state.view); else if (state.view === 'board') renderBoard(); else renderScan(); }));
+  document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('.tab').forEach(x => x.classList.remove('on')); b.classList.add('on'); state.view = b.dataset.v; $('#v-board').style.display = state.view === 'board' ? '' : 'none'; $('#v-scan').style.display = state.view === 'scan' ? '' : 'none'; $('#v-index').style.display = state.view === 'index' ? '' : 'none'; if (EXT[state.view]) showExt(state.view); else if (state.view === 'board') renderBoard(); else renderScan(); }));
   document.querySelectorAll('[data-b]').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('[data-b]').forEach(x => x.classList.remove('on')); b.classList.add('on'); state.board = b.dataset.b; renderBoard(); }));
   document.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('[data-m]').forEach(x => x.classList.remove('on')); b.classList.add('on'); state.mkt = b.dataset.m; state.tag = null; renderScan(); loadHist(); }));
   let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => EXT[state.view] ? showExt(state.view) : state.view === 'board' ? renderBoard() : renderScan(), 150); });
