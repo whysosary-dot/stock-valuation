@@ -1664,7 +1664,6 @@ const COLS = [
   { key: 'price_native',    label: '현재주가',      type: 'current-price', sortable: true },
   { key: 'price_change_pct', label: '등락률',        type: 'change-pct',  sortable: true,  align: 'center' },
   { key: '_pos52',          label: '52주 위치',      type: 'val', sortable: true, align: 'center' },
-  { key: '_chartW',         label: '주봉 2년',       type: 'chartw',  sortable: false, align: 'center' },
   { key: '_chartD',         label: '일봉',           type: 'chartd',  sortable: false, align: 'center' },
   { key: '_per',            label: 'PER / 추정',     type: 'val', sortable: true, align: 'center' },
   { key: '_pbr',            label: 'PBR',           type: 'val', sortable: true, align: 'center' },
@@ -1712,6 +1711,15 @@ const SVC = { ohlc: null, loading: false, failed: false };
 function svcSma(a, n) { const o = new Array(a.length).fill(null); let s = 0; for (let i = 0; i < a.length; i++) { s += a[i]; if (i >= n) s -= a[i - n]; if (i >= n - 1) o[i] = s / n; } return o; }
 function svcCanvas(w, h) { const cv = document.createElement('canvas'); const r = Math.min(2, window.devicePixelRatio || 1); cv.width = Math.round(w * r); cv.height = Math.round(h * r); cv.style.width = w + 'px'; cv.style.height = h + 'px'; const g = cv.getContext('2d'); g.setTransform(r, 0, 0, r, 0, 0); return [cv, g]; }
 function svcFont() { return (getComputedStyle(document.documentElement).getPropertyValue('--font') || 'sans-serif').trim(); }
+function svcBadges(s) {
+  const w = (s.price_history_3y || []).filter(Number.isFinite); const last = w[w.length - 1];
+  const sma = (arr, k) => arr.length >= k ? arr.slice(-k).reduce((a, b) => a + b, 0) / k : null;
+  const ohlc = SVC.ohlc && SVC.ohlc.stocks && SVC.ohlc.stocks[s.ticker]; const dAbove = ohlc && ohlc.c.length >= 50 ? ohlc.c[ohlc.c.length - 1] > sma(ohlc.c, 50) : null;
+  const wAbove = w.length && sma(w, 30) != null ? last > sma(w, 30) : null, mAbove = w.length && sma(w, 43) != null ? last > sma(w, 43) : null;
+  const b = (lbl, v) => `<span class="${v == null ? '' : v ? 'up' : 'dn'}">${lbl}${v == null ? '' : v ? '▲' : '▼'}</span>`;
+  const bd = document.createElement('div'); bd.className = 'svc-bd'; bd.innerHTML = b('일', dAbove) + b('주', wAbove) + b('월', mAbove); bd.title = '일=50일선 · 주=30주선 · 월=10개월선 위(▲)/아래(▼)';
+  return bd;
+}
 function svcWeeklyCell(td, s) {
   const w = (s.price_history_3y || []).filter(Number.isFinite);
   td.innerHTML = '';
@@ -1783,7 +1791,7 @@ function svcDailyCell(td, s) {
   const W = 230, H = 104; const [cv, g] = svcCanvas(W, H);
   const bench = SVC.ohlc.bench ? (s.ticker.endsWith('.KS') || s.ticker.endsWith('.KQ') ? SVC.ohlc.bench.KR : SVC.ohlc.bench.US) : null;
   svcDrawDaily(g, W, H, o, bench, 250, false);
-  td.appendChild(cv); td.title = '최근 6개월 일봉 · 회색 50일선 · 주황 200일선 · 거래량 · 보라 RS — 클릭하면 크게';
+  td.appendChild(cv); td.appendChild(svcBadges(s)); td.title = '최근 1년 일봉 · 회색 50일선 · 주황 200일선 · 거래량 · 보라 RS · 일/주/월 = 50일·30주·10개월선 위▲/아래▼ — 클릭하면 크게';
   td.addEventListener('click', () => svcOpenBig(s, o, bench));
 }
 function svcOpenBig(s, o, bench) {
@@ -2185,9 +2193,6 @@ function renderRow(s) {
       if (cls) td.classList.add(cls);
       td.classList.add('text-center', 'val-cell');
       if (v.asof) td.title = (c.key === '_pos52' ? '(현재가 − 52주 최저) ÷ (52주 최고 − 최저) · ' + (v.hi52_src ? '≈ 네이버에 52주 고저가 없어 1년 주봉 종가 최고·최저로 대체 · ' : '') : '') + '네이버 증권 ' + v.asof;
-    } else if (c.type === 'chartw') {
-      td.classList.add('chartw-cell');
-      svcWeeklyCell(td, s);
     } else if (c.type === 'chartd') {
       td.classList.add('chartd-cell');
       svcDailyCell(td, s);
