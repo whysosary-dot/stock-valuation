@@ -214,7 +214,7 @@
   .text-center { text-align: center; }
   td.chart-cell { width: 120px; min-width: 120px; padding: 6px 8px; text-align: center; }
   td.chartw-cell { width: 170px; min-width: 170px; padding: 4px 6px; text-align: center; }
-  td.chartd-cell { width: 230px; min-width: 230px; padding: 4px 6px; text-align: center; cursor: zoom-in; }
+  td.chartd-cell { width: 242px; min-width: 242px; padding: 4px 6px; text-align: center; cursor: zoom-in; }
   td.chartw-cell canvas, td.chartd-cell canvas { display: block; margin: 0 auto; }
   .svc-bd { display: inline-flex; gap: 3px; margin-top: 2px; }
   .svc-bd span { font-size: 10px; font-weight: 700; border: 1px solid var(--border-strong); border-radius: 4px; padding: 0 4px; line-height: 15px; color: var(--text-dim); }
@@ -1739,7 +1739,7 @@ async function svcLoadOhlc() {
   if (SVC.ohlc || SVC.loading || SVC.failed) return;
   SVC.loading = true;
   try { SVC.ohlc = await ghPrivateRaw('sv/ohlc.json'); if (typeof render === 'function') render(); }
-  catch (e) { SVC.failed = true; console.warn('[sv ohlc]', e.message); }
+  catch (e) { SVC.failed = true; console.warn('[sv ohlc]', e.message); if (typeof render === 'function') render(); }
   finally { SVC.loading = false; }
 }
 function svcDrawDaily(g, W, H, o, bench, bars, big) {
@@ -1747,7 +1747,7 @@ function svcDrawDaily(g, W, H, o, bench, bars, big) {
   const ma50 = svcSma(o.c, 50), ma200 = svcSma(o.c, 200);
   const S = { o: o.o.slice(start), h: o.h.slice(start), l: o.l.slice(start), c: o.c.slice(start), v: o.v.slice(start), d: o.d.slice(start), m1: ma50.slice(start), m2: ma200.slice(start) };
   const n = S.c.length; if (n < 5) return;
-  const padL = 2, padR = big ? 56 : 34, padT = big ? 8 : 4, axisH = big ? 14 : 0; const volH = big ? 40 : 12, rsH = big ? 34 : 10;
+  const padL = 2, padR = big ? 56 : 34, padT = big ? 8 : 4, axisH = big ? 14 : 0; const volH = big ? 40 : 18, rsH = big ? 34 : 15;
   const priceH = H - padT - volH - rsH - axisH - (big ? 8 : 4); const bottomP = padT + priceH;
   const lo = Math.min(...S.l), hi = Math.max(...S.h);
   const X = i => padL + (W - padL - padR) * (i + .5) / n, Y = v => padT + priceH * (1 - (v - lo) / (hi - lo || 1));
@@ -1780,7 +1780,7 @@ function svcDailyCell(td, s) {
   td.innerHTML = '';
   const o = SVC.ohlc && SVC.ohlc.stocks && SVC.ohlc.stocks[s.ticker];
   if (!o) { td.innerHTML = `<span class="dim" style="font-size:11px">${SVC.failed ? '일봉 없음' : SVC.ohlc ? '일봉 없음' : '불러오는 중…'}</span>`; if (!SVC.ohlc) svcLoadOhlc(); return; }
-  const W = 218, H = 64; const [cv, g] = svcCanvas(W, H);
+  const W = 230, H = 104; const [cv, g] = svcCanvas(W, H);
   const bench = SVC.ohlc.bench ? (s.ticker.endsWith('.KS') || s.ticker.endsWith('.KQ') ? SVC.ohlc.bench.KR : SVC.ohlc.bench.US) : null;
   svcDrawDaily(g, W, H, o, bench, 120, false);
   td.appendChild(cv); td.title = '최근 6개월 일봉 · 회색 50일선 · 주황 200일선 · 거래량 · 보라 RS — 클릭하면 크게';
