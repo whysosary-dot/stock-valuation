@@ -1782,7 +1782,7 @@ function svcDailyCell(td, s) {
   if (!o) { td.innerHTML = `<span class="dim" style="font-size:11px">${SVC.failed ? '일봉 없음' : SVC.ohlc ? '일봉 없음' : '불러오는 중…'}</span>`; if (!SVC.ohlc) svcLoadOhlc(); return; }
   const W = 230, H = 104; const [cv, g] = svcCanvas(W, H);
   const bench = SVC.ohlc.bench ? (s.ticker.endsWith('.KS') || s.ticker.endsWith('.KQ') ? SVC.ohlc.bench.KR : SVC.ohlc.bench.US) : null;
-  svcDrawDaily(g, W, H, o, bench, 120, false);
+  svcDrawDaily(g, W, H, o, bench, 250, false);
   td.appendChild(cv); td.title = '최근 6개월 일봉 · 회색 50일선 · 주황 200일선 · 거래량 · 보라 RS — 클릭하면 크게';
   td.addEventListener('click', () => svcOpenBig(s, o, bench));
 }
