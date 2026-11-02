@@ -213,6 +213,21 @@
   }
   .text-center { text-align: center; }
   td.chart-cell { width: 120px; min-width: 120px; padding: 6px 8px; text-align: center; }
+  td.chartw-cell { width: 170px; min-width: 170px; padding: 4px 6px; text-align: center; }
+  td.chartd-cell { width: 230px; min-width: 230px; padding: 4px 6px; text-align: center; cursor: zoom-in; }
+  td.chartw-cell canvas, td.chartd-cell canvas { display: block; margin: 0 auto; }
+  .svc-bd { display: inline-flex; gap: 3px; margin-top: 2px; }
+  .svc-bd span { font-size: 10px; font-weight: 700; border: 1px solid var(--border-strong); border-radius: 4px; padding: 0 4px; line-height: 15px; color: var(--text-dim); }
+  .svc-bd span.up { color: #b91c1c; border-color: #f3c3c9; background: #fdeef0; }
+  .svc-bd span.dn { color: #2563eb; border-color: #c7d2fb; background: #edf1fe; }
+  .svc-modal { position: fixed; inset: 0; background: rgba(15,23,42,.5); z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .svc-modal .box { background: var(--panel); border-radius: 14px; padding: 14px 16px; width: min(960px, 96vw); box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+  .svc-modal .hd { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+  .svc-modal .hd b { font-size: 16px; }
+  .svc-modal .hd span { font-size: 12px; color: var(--text-dim); }
+  .svc-modal .hd button { margin-left: auto; border: 0; background: none; font-size: 20px; cursor: pointer; color: var(--text-dim); }
+  .svc-modal canvas { display: block; width: 100%; }
+  .svc-modal .ft { font-size: 11.5px; color: var(--text-dim); margin-top: 6px; line-height: 1.6; }
   td.chart-cell svg { display: block; margin: 0 auto; }
 
   /* 월별 추세 (M3·M2·M1 분해) */
@@ -1648,6 +1663,8 @@ const COLS = [
   { key: 'market_cap_oku',  label: '현재시총 (억)',  type: 'current', sortable: true, capCol: true },
   { key: 'price_native',    label: '현재주가',      type: 'current-price', sortable: true },
   { key: 'price_change_pct', label: '등락률',        type: 'change-pct',  sortable: true,  align: 'center' },
+  { key: '_chartW',         label: '주봉 2년',       type: 'chartw',  sortable: false, align: 'center' },
+  { key: '_chartD',         label: '일봉',           type: 'chartd',  sortable: false, align: 'center' },
   { key: '_pos52',          label: '52주 위치',      type: 'val', sortable: true, align: 'center' },
   { key: '_per',            label: 'PER / 추정',     type: 'val', sortable: true, align: 'center' },
   { key: '_pbr',            label: 'PBR',           type: 'val', sortable: true, align: 'center' },
@@ -1657,9 +1674,6 @@ const COLS = [
   { key: '_upside',         label: '상방 %',        type: 'calc',    sortable: true },
   { key: '_rr',             label: '손익비',        type: 'calc',    sortable: true, align: 'center' },
   { key: '_downside',       label: '하방 %',        type: 'calc',    sortable: true },
-  { key: '_chart3y',        label: '3년 차트',       type: 'chart3y', sortable: false, align: 'center' },
-  { key: '_chart',          label: '1년 차트',       type: 'chart',   sortable: false, align: 'center' },
-  { key: '_chart3m',        label: '3개월 차트',     type: 'chart3m', sortable: false, align: 'center' },
   { key: 'target_cap_oku',  label: '목표시총 (억)',  type: 'num',     sortable: true, capCol: true },
   { key: 'safety_cap_oku',  label: '안전시총 (억)',  type: 'num',     sortable: true, capCol: true },
   { key: '_op_sum',         label: '영업이익 합',    type: 'calc',    sortable: false, toggle: 'quarterly' },
@@ -1689,6 +1703,105 @@ function renderSparkline(prices, w=110, h=38) {
     <path d="${areaPath}" fill="${fillColor}" stroke="none"/>
     <path d="${path}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
   </svg>`;
+}
+
+/* ───────── 주봉 2년(시장 그룹판 형식) · 일봉(Chart 탭 스캔 형식) 셀 ─────────
+   주봉: stocks.json price_history_3y(주간 종가 157개) → 최근 105주 + 30주선. 뱃지 주=30주선·월=43주선(≈10개월), 일=50일선(일봉 데이터 로드 후).
+   일봉: invest-private sv/ohlc.json (GitHub Actions 가 매일 생성, 250봉 OHLCV + 코스피·SPY 벤치) — 캔들·50일(회색)·200일(주황)·거래량·RS(보라). 셀 클릭 → 크게. */
+const SVC = { ohlc: null, loading: false, failed: false };
+function svcSma(a, n) { const o = new Array(a.length).fill(null); let s = 0; for (let i = 0; i < a.length; i++) { s += a[i]; if (i >= n) s -= a[i - n]; if (i >= n - 1) o[i] = s / n; } return o; }
+function svcCanvas(w, h) { const cv = document.createElement('canvas'); const r = Math.min(2, window.devicePixelRatio || 1); cv.width = Math.round(w * r); cv.height = Math.round(h * r); cv.style.width = w + 'px'; cv.style.height = h + 'px'; const g = cv.getContext('2d'); g.setTransform(r, 0, 0, r, 0, 0); return [cv, g]; }
+function svcFont() { return (getComputedStyle(document.documentElement).getPropertyValue('--font') || 'sans-serif').trim(); }
+function svcWeeklyCell(td, s) {
+  const w = (s.price_history_3y || []).filter(Number.isFinite);
+  td.innerHTML = '';
+  if (w.length < 40) { td.innerHTML = '<span class="dim">—</span>'; return; }
+  const W = 158, H = 54; const [cv, g] = svcCanvas(W, H);
+  const xs = w.slice(-105); const off = w.length - xs.length;
+  const ma = xs.map((_, i) => { const k = off + i; return k >= 29 ? w.slice(k - 29, k + 1).reduce((a, b) => a + b, 0) / 30 : null; });
+  const vals = xs.concat(ma.filter(x => x != null)); let lo = Math.min(...vals), hi = Math.max(...vals); if (hi === lo) hi = lo + 1;
+  const padT = 4, padB = 4, padR = 36, padL = 2; const n = xs.length;
+  const X = i => padL + (W - padL - padR) * i / (n - 1), Y = v => padT + (H - padT - padB) * (1 - (v - lo) / (hi - lo));
+  g.strokeStyle = '#e8792e'; g.lineWidth = 1.1; g.beginPath(); let st = false; ma.forEach((v, i) => { if (v == null) return; st ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)); st = true; }); g.stroke();
+  g.strokeStyle = '#1d2b4f'; g.lineWidth = 1.3; g.beginPath(); xs.forEach((v, i) => i ? g.lineTo(X(i), Y(v)) : g.moveTo(X(0), Y(v))); g.stroke();
+  g.fillStyle = '#1d2b4f'; g.beginPath(); g.arc(X(n - 1), Y(xs[n - 1]), 2, 0, 7); g.fill();
+  const r2 = (xs[n - 1] / xs[0] - 1) * 100; g.fillStyle = r2 >= 0 ? '#b91c1c' : '#2563eb'; g.font = 'bold 10px ' + svcFont(); g.textAlign = 'left';
+  g.fillText((r2 > 0 ? '+' : '') + r2.toFixed(0) + '%', X(n - 1) + 4, Math.max(9, Math.min(H - 3, Y(xs[n - 1]) + 3)));
+  td.appendChild(cv);
+  const last = w[w.length - 1]; const sma = (arr, k) => arr.length >= k ? arr.slice(-k).reduce((a, b) => a + b, 0) / k : null;
+  const ohlc = SVC.ohlc && SVC.ohlc.stocks && SVC.ohlc.stocks[s.ticker]; const dAbove = ohlc && ohlc.c.length >= 50 ? ohlc.c[ohlc.c.length - 1] > sma(ohlc.c, 50) : null;
+  const wAbove = sma(w, 30) != null ? last > sma(w, 30) : null, mAbove = sma(w, 43) != null ? last > sma(w, 43) : null;
+  const b = (lbl, v) => `<span class="${v == null ? '' : v ? 'up' : 'dn'}">${lbl}${v == null ? '' : v ? '▲' : '▼'}</span>`;
+  const bd = document.createElement('div'); bd.className = 'svc-bd'; bd.innerHTML = b('일', dAbove) + b('주', wAbove) + b('월', mAbove); bd.title = '일=50일선 · 주=30주선 · 월=10개월선 위(▲)/아래(▼)';
+  td.appendChild(bd);
+}
+async function svcLoadOhlc() {
+  if (SVC.ohlc || SVC.loading || SVC.failed) return;
+  SVC.loading = true;
+  try { SVC.ohlc = await ghPrivateRaw('sv/ohlc.json'); if (typeof render === 'function') render(); }
+  catch (e) { SVC.failed = true; console.warn('[sv ohlc]', e.message); }
+  finally { SVC.loading = false; }
+}
+function svcDrawDaily(g, W, H, o, bench, bars, big) {
+  const n0 = o.c.length; const start = Math.max(0, n0 - bars);
+  const ma50 = svcSma(o.c, 50), ma200 = svcSma(o.c, 200);
+  const S = { o: o.o.slice(start), h: o.h.slice(start), l: o.l.slice(start), c: o.c.slice(start), v: o.v.slice(start), d: o.d.slice(start), m1: ma50.slice(start), m2: ma200.slice(start) };
+  const n = S.c.length; if (n < 5) return;
+  const padL = 2, padR = big ? 56 : 34, padT = big ? 8 : 4, axisH = big ? 14 : 0; const volH = big ? 40 : 12, rsH = big ? 34 : 10;
+  const priceH = H - padT - volH - rsH - axisH - (big ? 8 : 4); const bottomP = padT + priceH;
+  const lo = Math.min(...S.l), hi = Math.max(...S.h);
+  const X = i => padL + (W - padL - padR) * (i + .5) / n, Y = v => padT + priceH * (1 - (v - lo) / (hi - lo || 1));
+  const bw = Math.max(1, (W - padL - padR) / n * 0.7);
+  if (big) { g.fillStyle = '#9aa3b8'; g.font = '10px ' + svcFont(); g.textAlign = 'center';
+    for (let i = 0; i < n; i++) { if (i === 0 || S.d[i].slice(0, 7) !== S.d[i - 1].slice(0, 7)) { if (S.d[i].slice(5, 7) % 2 === 1) { g.fillText(S.d[i].slice(2, 7), X(i), H - 2); g.strokeStyle = '#f0f2f7'; g.beginPath(); g.moveTo(X(i), padT); g.lineTo(X(i), bottomP + volH + rsH + 4); g.stroke(); } } } }
+  const line = (arr, col, lw) => { g.strokeStyle = col; g.lineWidth = lw; g.beginPath(); let st = false; arr.forEach((v, i) => { if (v == null) return; st ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)); st = true; }); g.stroke(); };
+  line(S.m1, '#9ca3af', big ? 1.3 : 1); line(S.m2, '#e8792e', big ? 1.4 : 1);
+  for (let i = 0; i < n; i++) { const up = S.c[i] >= S.o[i]; g.strokeStyle = g.fillStyle = up ? '#d3273e' : '#2f56e8'; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(X(i), Y(S.h[i])); g.lineTo(X(i), Y(S.l[i])); g.stroke();
+    const y1 = Y(Math.max(S.o[i], S.c[i])), y2 = Y(Math.min(S.o[i], S.c[i])); g.fillRect(X(i) - bw / 2, y1, bw, Math.max(1, y2 - y1)); }
+  // 현재가·고저 라벨
+  g.font = (big ? 'bold 11px ' : 'bold 9px ') + svcFont(); g.textAlign = 'left'; g.fillStyle = '#111827';
+  const lastC = S.c[n - 1]; g.fillText(Number(lastC).toLocaleString('ko-KR', { maximumFractionDigits: 2 }), X(n - 1) + bw, Math.max(10, Math.min(bottomP - 2, Y(lastC) + 3)));
+  if (big) { g.fillStyle = '#9aa3b8'; g.font = '10px ' + svcFont(); g.fillText(Number(hi).toLocaleString('ko-KR', { maximumFractionDigits: 2 }), W - padR + 4, padT + 9); g.fillText(Number(lo).toLocaleString('ko-KR', { maximumFractionDigits: 2 }), W - padR + 4, bottomP - 1); }
+  // 거래량
+  const vmax = Math.max(...S.v) || 1; const vTop = bottomP + 2;
+  for (let i = 0; i < n; i++) { g.fillStyle = S.c[i] >= S.o[i] ? 'rgba(211,39,62,.35)' : 'rgba(47,86,232,.35)'; const vh = volH * S.v[i] / vmax; g.fillRect(X(i) - bw / 2, vTop + volH - vh, bw, vh); }
+  // RS (벤치 대비 상대 강도)
+  if (bench && bench.c && bench.c.length) {
+    const bm = {}; bench.d.forEach((d, i) => bm[d] = bench.c[i]);
+    const rs = S.d.map((d, i) => bm[d] ? S.c[i] / bm[d] : null); const rv = rs.filter(x => x != null);
+    if (rv.length > 2) { const rlo = Math.min(...rv), rhi = Math.max(...rv); const rTop = vTop + volH + 3;
+      g.strokeStyle = '#6d4bd6'; g.lineWidth = big ? 1.4 : 1; g.beginPath(); let st = false;
+      rs.forEach((v, i) => { if (v == null) return; const y = rTop + rsH * (1 - (v - rlo) / (rhi - rlo || 1)); st ? g.lineTo(X(i), y) : g.moveTo(X(i), y); st = true; }); g.stroke();
+      if (big) { g.fillStyle = '#6d4bd6'; g.font = '10px ' + svcFont(); g.fillText('RS', W - padR + 4, rTop + rsH / 2 + 3); } }
+  }
+}
+function svcDailyCell(td, s) {
+  td.innerHTML = '';
+  const o = SVC.ohlc && SVC.ohlc.stocks && SVC.ohlc.stocks[s.ticker];
+  if (!o) { td.innerHTML = `<span class="dim" style="font-size:11px">${SVC.failed ? '일봉 없음' : SVC.ohlc ? '일봉 없음' : '불러오는 중…'}</span>`; if (!SVC.ohlc) svcLoadOhlc(); return; }
+  const W = 218, H = 64; const [cv, g] = svcCanvas(W, H);
+  const bench = SVC.ohlc.bench ? (s.ticker.endsWith('.KS') || s.ticker.endsWith('.KQ') ? SVC.ohlc.bench.KR : SVC.ohlc.bench.US) : null;
+  svcDrawDaily(g, W, H, o, bench, 120, false);
+  td.appendChild(cv); td.title = '최근 6개월 일봉 · 회색 50일선 · 주황 200일선 · 거래량 · 보라 RS — 클릭하면 크게';
+  td.addEventListener('click', () => svcOpenBig(s, o, bench));
+}
+function svcOpenBig(s, o, bench) {
+  const m = document.createElement('div'); m.className = 'svc-modal';
+  const W = Math.min(930, window.innerWidth - 60), H = 420; const [cv, g] = svcCanvas(W, H);
+  svcDrawDaily(g, W, H, o, bench, o.c.length, true);
+  const last = o.c[o.c.length - 1], prev = o.c[o.c.length - 2]; const chg = prev ? (last / prev - 1) * 100 : null;
+  const ma50 = svcSma(o.c, 50), ma200 = svcSma(o.c, 200); const a50 = ma50[ma50.length - 1], a200 = ma200[ma200.length - 1];
+  const hi52 = Math.max(...o.h.slice(-250));
+  m.innerHTML = `<div class="box"><div class="hd"><b>${s.name}</b><span>${s.ticker} · 일봉 ${o.c.length}봉 · ${o.d[o.d.length - 1]} 종가</span><button title="닫기">×</button></div></div>`;
+  const box = m.querySelector('.box'); box.appendChild(cv);
+  const ft = document.createElement('div'); ft.className = 'ft';
+  ft.innerHTML = `종가 <b>${Number(last).toLocaleString('ko-KR', { maximumFractionDigits: 2 })}</b>${chg != null ? ` (${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%)` : ''} · ${a50 ? (last > a50 ? '50일선 위' : '50일선 아래') : ''} · ${a200 ? (last > a200 ? '200일선 위' : '200일선 아래') : ''} · 52주 고점 대비 ${((last / hi52 - 1) * 100).toFixed(1)}%<br>회색 50일선 · 주황 200일선 · 하단 거래량 · 보라 RS(${s.ticker.endsWith('.KS') || s.ticker.endsWith('.KQ') ? '코스피' : 'SPY'} 대비 상대강도) · 데이터 ${(SVC.ohlc.updated_at || '').replace('T', ' ').slice(0, 16)} 갱신`;
+  box.appendChild(ft);
+  const close = () => { m.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  m.querySelector('.hd button').onclick = close; m.addEventListener('click', e => { if (e.target === m) close(); });
+  document.addEventListener('keydown', onKey); document.body.appendChild(m);
 }
 
 /* ───────── 상태 ───────── */
@@ -2072,15 +2185,12 @@ function renderRow(s) {
       if (cls) td.classList.add(cls);
       td.classList.add('text-center', 'val-cell');
       if (v.asof) td.title = (c.key === '_pos52' ? '(현재가 − 52주 최저) ÷ (52주 최고 − 최저) · ' + (v.hi52_src ? '≈ 네이버에 52주 고저가 없어 1년 주봉 종가 최고·최저로 대체 · ' : '') : '') + '네이버 증권 ' + v.asof;
-    } else if (c.type === 'chart3y') {
-      td.classList.add('chart-cell');
-      td.innerHTML = renderSparkline(s.price_history_3y);
-    } else if (c.type === 'chart3m') {
-      td.classList.add('chart-cell');
-      td.innerHTML = renderSparkline(s.price_history_3m);
-    } else if (c.type === 'chart') {
-      td.classList.add('chart-cell');
-      td.innerHTML = renderSparkline(s.price_history);
+    } else if (c.type === 'chartw') {
+      td.classList.add('chartw-cell');
+      svcWeeklyCell(td, s);
+    } else if (c.type === 'chartd') {
+      td.classList.add('chartd-cell');
+      svcDailyCell(td, s);
     } else if (c.type === 'sector') {
       td.classList.add('sector-cell');
       const cur = normSector(s.sector);
