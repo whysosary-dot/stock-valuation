@@ -66,6 +66,8 @@ jobs:
         run: pip install -q requests yfinance pandas lxml
       - name: build
         if: steps.m.outputs.mkt != 'none'
+        env:
+          SV_PAT: ${{ secrets.SV_PAT }}
         run: |
           M="${{ steps.m.outputs.mkt }}"
           case "$M" in both|kr|kr+us) python3 chart/build_chart.py kr 2>&1 | grep -v "Failed download\|possibly delisted\|Invalid Crumb" | tail -12 ;; esac

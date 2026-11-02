@@ -652,6 +652,44 @@ def _etf_lines(d):
     L.append("주간 개별 상위: " + " · ".join(f"{r['name'][:16]} {r['w']:+.1f}%" for r in top) + " / 하위: " + " · ".join(f"{r['name'][:16]} {r['w']:+.1f}%" for r in bot))
     return L
 
+def build_sv_ohlc():
+    """Stock Valuation 커버리지 종목의 일봉 OHLCV(최근 250봉) + 벤치마크 → invest-private sv/ohlc.json (비공개, SV 탭 일봉 캔들용).
+       토큰은 환경변수 SV_PAT (GitHub Actions secret). 없으면 건너뜀."""
+    import base64
+    tok = os.environ.get("SV_PAT", "").strip()
+    if not tok: print("  sv_ohlc: SV_PAT 없음 — 건너뜀"); return
+    HH = {"Authorization": "token " + tok, "Accept": "application/vnd.github.raw", "User-Agent": "chart-build"}
+    api = "https://api.github.com/repos/whysosary-dot/invest-private/contents/"
+    st = requests.get(api + "sv/stocks.json?ref=main", headers=HH, timeout=60).json()
+    stocks = [x for x in st.get("stocks", []) if x.get("ticker")]
+    kr = [x["ticker"] for x in stocks if x["ticker"].endswith((".KS", ".KQ"))]
+    other = [x["ticker"] for x in stocks if not x["ticker"].endswith((".KS", ".KQ"))]
+    print(f"  sv_ohlc: KR {len(kr)} · 기타 {len(other)}")
+    N = 250
+    out = {}
+    with ThreadPoolExecutor(8) as ex:
+        for tk, s_ in zip(kr, ex.map(lambda t: naver_daily(t.split(".")[0], N + 10), kr)):
+            if s_ and len(s_[0]) >= 30: out[tk] = s_
+    if other:
+        yd = yf_download(other, period="1y")
+        for tk, s_ in yd.items():
+            if s_ and len(s_[0]) >= 30: out[tk] = s_
+    bench = {}
+    k = naver_daily("KOSPI", N + 10); bench["KR"] = {"d": k[0][-N:], "c": [round(x, 2) for x in k[4][-N:]]} if k else None
+    spy = yf_download(["SPY"], period="1y").get("SPY"); bench["US"] = {"d": spy[0][-N:], "c": [round(x, 2) for x in spy[4][-N:]]} if spy else None
+    data = {"updated_at": datetime.datetime.now(KST).isoformat(timespec="seconds"), "bars": N, "bench": bench,
+            "stocks": {tk: {"d": s_[0][-N:], "o": [round(x, 4) for x in s_[1][-N:]], "h": [round(x, 4) for x in s_[2][-N:]], "l": [round(x, 4) for x in s_[3][-N:]],
+                            "c": [round(x, 4) for x in s_[4][-N:]], "v": [int(x) for x in s_[5][-N:]]} for tk, s_ in out.items()}}
+    body = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+    H2 = {"Authorization": "token " + tok, "Accept": "application/vnd.github+json", "User-Agent": "chart-build", "Content-Type": "application/json"}
+    sha = None
+    r = requests.get(api + "sv/ohlc.json?ref=main", headers=H2, timeout=60)
+    if r.status_code == 200: sha = r.json().get("sha")
+    payload = {"message": f"sv ohlc {data['updated_at'][:10]} ({len(out)} stocks)", "content": base64.b64encode(body.encode()).decode(), "branch": "main"}
+    if sha: payload["sha"] = sha
+    r = requests.put(api + "sv/ohlc.json", headers=H2, data=json.dumps(payload), timeout=120)
+    print(f"  sv_ohlc: {len(out)} stocks · {len(body)//1024}KB · PUT {r.status_code}")
+
 def auto_insights(which):
     """토큰 0 데이터 요약 → data/insights_auto.json (섹션별). AI 인사이트(insights/chart.json)와 별개로 항상 생성"""
     p = os.path.join(DATA, "insights_auto.json")
@@ -681,6 +719,8 @@ if __name__ == "__main__":
     meta.update(build_kr() if which == "kr" else build_us())
     try: build_etf(); meta["etf_date"] = datetime.datetime.now(KST).strftime("%Y-%m-%d")
     except Exception as e: print("  ⚠ build_etf 실패:", e)
+    try: build_sv_ohlc()
+    except Exception as e: print("  ⚠ build_sv_ohlc 실패:", e)
     meta["updated_at"] = datetime.datetime.now(KST).isoformat(timespec="seconds")
     json.dump(meta, open(meta_p, "w"), ensure_ascii=False, indent=1)
     prune_history()
