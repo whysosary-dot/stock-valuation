@@ -420,6 +420,24 @@
     box-shadow: 3px 0 8px -3px rgba(15,23,42,0.10);
   }
 
+
+  /* 섹터 그룹 헤더: 가로 스크롤해도 섹터명이 왼쪽에 붙어 보이도록 */
+  tr.group-row .group-inner { display: inline-flex; align-items: center; position: sticky; left: 14px; max-width: calc(100vw - 60px); }
+  /* ── 모바일·태블릿(≤1024px): 기업명 열만 고정, 섹터 열 숨김, 셀 압축 ── */
+  @media (max-width: 1024px) {
+    #tbl th:nth-child(2):not([colspan]), #tbl td:nth-child(2):not([colspan]) { display: none; }
+    #tbl th, #tbl td { padding: 7px 8px; font-size: 12.5px; }
+    #tbl th[data-sticky-idx="0"], #tbl td[data-sticky-idx="0"] {
+      width: 112px; min-width: 112px; max-width: 112px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      border-right: 2px solid var(--border-strong) !important; box-shadow: 3px 0 8px -3px rgba(15,23,42,0.10); padding-left: 10px;
+    }
+    #tbl td[data-sticky-idx="0"] a, #tbl td[data-sticky-idx="0"] .name-text { overflow: hidden; text-overflow: ellipsis; }
+    #tbl td.cap-col, #tbl th.cap-col { min-width: 90px; }
+    tr.group-row td { padding: 8px 10px 8px 12px; font-size: 13px; }
+    tr.group-row .group-inner { left: 8px; }
+    .table-wrap { padding: 6px 4px 12px; }
+  }
+
   /* ── 페이지 탭 ── */
   .page-tabs {
     flex: none; display: flex; align-items: center;
@@ -2426,8 +2444,9 @@ function buildGroupRow(sectorName, count, avgChange) {
   } else {
     meta.textContent = partsM.join(' · ');
   }
-  td.appendChild(span);
-  td.appendChild(meta);
+  const inner = document.createElement('div'); inner.className = 'group-inner';
+  inner.appendChild(span); inner.appendChild(meta);
+  td.appendChild(inner);
   tr.appendChild(td);
   // 클릭으로 접기/펼치기
   tr.addEventListener('click', () => {
