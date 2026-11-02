@@ -213,7 +213,7 @@
   }
   .text-center { text-align: center; }
   td.chart-cell { width: 120px; min-width: 120px; padding: 6px 8px; text-align: center; }
-  td.chartw-cell { width: 170px; min-width: 170px; padding: 4px 6px; text-align: center; }
+  td.chartw-cell { width: 182px; min-width: 182px; padding: 4px 6px; text-align: center; }
   td.chartd-cell { width: 242px; min-width: 242px; padding: 4px 6px; text-align: center; cursor: zoom-in; }
   td.chartw-cell canvas, td.chartd-cell canvas { display: block; margin: 0 auto; }
   .svc-bd { display: inline-flex; gap: 3px; margin-top: 2px; }
@@ -1664,6 +1664,7 @@ const COLS = [
   { key: 'price_native',    label: '현재주가',      type: 'current-price', sortable: true },
   { key: 'price_change_pct', label: '등락률',        type: 'change-pct',  sortable: true,  align: 'center' },
   { key: '_pos52',          label: '52주 위치',      type: 'val', sortable: true, align: 'center' },
+  { key: '_chartW',         label: '주봉 3년',       type: 'chartw',  sortable: false, align: 'center' },
   { key: '_chartD',         label: '일봉',           type: 'chartd',  sortable: false, align: 'center' },
   { key: '_per',            label: 'PER / 추정',     type: 'val', sortable: true, align: 'center' },
   { key: '_pbr',            label: 'PBR',           type: 'val', sortable: true, align: 'center' },
@@ -1724,8 +1725,8 @@ function svcWeeklyCell(td, s) {
   const w = (s.price_history_3y || []).filter(Number.isFinite);
   td.innerHTML = '';
   if (w.length < 40) { td.innerHTML = '<span class="dim">—</span>'; return; }
-  const W = 158, H = 54; const [cv, g] = svcCanvas(W, H);
-  const xs = w.slice(-105); const off = w.length - xs.length;
+  const W = 170, H = 72; const [cv, g] = svcCanvas(W, H);
+  const xs = w.slice(-160); const off = w.length - xs.length;
   const ma = xs.map((_, i) => { const k = off + i; return k >= 29 ? w.slice(k - 29, k + 1).reduce((a, b) => a + b, 0) / 30 : null; });
   const vals = xs.concat(ma.filter(x => x != null)); let lo = Math.min(...vals), hi = Math.max(...vals); if (hi === lo) hi = lo + 1;
   const padT = 4, padB = 4, padR = 36, padL = 2; const n = xs.length;
@@ -1736,12 +1737,7 @@ function svcWeeklyCell(td, s) {
   const r2 = (xs[n - 1] / xs[0] - 1) * 100; g.fillStyle = r2 >= 0 ? '#b91c1c' : '#2563eb'; g.font = 'bold 10px ' + svcFont(); g.textAlign = 'left';
   g.fillText((r2 > 0 ? '+' : '') + r2.toFixed(0) + '%', X(n - 1) + 4, Math.max(9, Math.min(H - 3, Y(xs[n - 1]) + 3)));
   td.appendChild(cv);
-  const last = w[w.length - 1]; const sma = (arr, k) => arr.length >= k ? arr.slice(-k).reduce((a, b) => a + b, 0) / k : null;
-  const ohlc = SVC.ohlc && SVC.ohlc.stocks && SVC.ohlc.stocks[s.ticker]; const dAbove = ohlc && ohlc.c.length >= 50 ? ohlc.c[ohlc.c.length - 1] > sma(ohlc.c, 50) : null;
-  const wAbove = sma(w, 30) != null ? last > sma(w, 30) : null, mAbove = sma(w, 43) != null ? last > sma(w, 43) : null;
-  const b = (lbl, v) => `<span class="${v == null ? '' : v ? 'up' : 'dn'}">${lbl}${v == null ? '' : v ? '▲' : '▼'}</span>`;
-  const bd = document.createElement('div'); bd.className = 'svc-bd'; bd.innerHTML = b('일', dAbove) + b('주', wAbove) + b('월', mAbove); bd.title = '일=50일선 · 주=30주선 · 월=10개월선 위(▲)/아래(▼)';
-  td.appendChild(bd);
+  td.appendChild(svcBadges(s)); td.title = '최근 3년 주봉 종가 · 주황 30주선 · 3년 수익률 · 일/주/월 = 50일·30주·10개월선 위▲/아래▼';
 }
 async function svcLoadOhlc() {
   if (SVC.ohlc || SVC.loading || SVC.failed) return;
@@ -1791,7 +1787,7 @@ function svcDailyCell(td, s) {
   const W = 230, H = 104; const [cv, g] = svcCanvas(W, H);
   const bench = SVC.ohlc.bench ? (s.ticker.endsWith('.KS') || s.ticker.endsWith('.KQ') ? SVC.ohlc.bench.KR : SVC.ohlc.bench.US) : null;
   svcDrawDaily(g, W, H, o, bench, 250, false);
-  td.appendChild(cv); td.appendChild(svcBadges(s)); td.title = '최근 1년 일봉 · 회색 50일선 · 주황 200일선 · 거래량 · 보라 RS · 일/주/월 = 50일·30주·10개월선 위▲/아래▼ — 클릭하면 크게';
+  td.appendChild(cv); td.title = '최근 1년 일봉 · 회색 50일선 · 주황 200일선 · 거래량 · 보라 RS — 클릭하면 크게';
   td.addEventListener('click', () => svcOpenBig(s, o, bench));
 }
 function svcOpenBig(s, o, bench) {
@@ -2193,6 +2189,9 @@ function renderRow(s) {
       if (cls) td.classList.add(cls);
       td.classList.add('text-center', 'val-cell');
       if (v.asof) td.title = (c.key === '_pos52' ? '(현재가 − 52주 최저) ÷ (52주 최고 − 최저) · ' + (v.hi52_src ? '≈ 네이버에 52주 고저가 없어 1년 주봉 종가 최고·최저로 대체 · ' : '') : '') + '네이버 증권 ' + v.asof;
+    } else if (c.type === 'chartw') {
+      td.classList.add('chartw-cell');
+      svcWeeklyCell(td, s);
     } else if (c.type === 'chartd') {
       td.classList.add('chartd-cell');
       svcDailyCell(td, s);
