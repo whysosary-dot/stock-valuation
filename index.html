@@ -422,7 +422,7 @@
 
 
   /* 섹터 그룹 헤더: 가로 스크롤해도 섹터명이 왼쪽에 붙어 보이도록 */
-  tr.group-row .group-inner { display: inline-flex; align-items: center; position: sticky; left: 14px; max-width: calc(100vw - 60px); }
+  tr.group-row .group-inner { display: inline-flex; align-items: center; position: sticky; left: 0; padding: 11px 13px 11px 18px; margin: -11px 0 -11px -18px; max-width: calc(100vw - 40px); }
   /* 섹터별 그룹 모드에서는 섹터 열 불필요(그룹 헤더에 있음) — 모든 화면에서 숨김 */
   #tbl.grouped th:nth-child(2):not([colspan]), #tbl.grouped td:nth-child(2):not([colspan]) { display: none; }
   #tbl.grouped th[data-sticky-idx="0"], #tbl.grouped td[data-sticky-idx="0"] { border-right: 2px solid var(--border-strong) !important; box-shadow: 3px 0 8px -3px rgba(15,23,42,0.10); }
@@ -437,7 +437,7 @@
     #tbl td[data-sticky-idx="0"] a, #tbl td[data-sticky-idx="0"] .name-text { overflow: hidden; text-overflow: ellipsis; }
     #tbl td.cap-col, #tbl th.cap-col { min-width: 90px; }
     tr.group-row td { padding: 8px 10px 8px 12px; font-size: 13px; }
-    tr.group-row .group-inner { left: 8px; }
+    tr.group-row .group-inner { padding: 8px 10px 8px 14px; margin: -8px 0 -8px -12px; }
     .table-wrap { padding: 6px 4px 12px; }
   }
 
@@ -2431,7 +2431,7 @@ function buildGroupRow(sectorName, count, avgChange) {
   td.className = 'text-left';
   // 그룹 헤더: 옅은 섹터 배경 + 좌측 진한 색 바
   td.style.backgroundColor = colors.headerBg;
-  td.style.boxShadow = `inset 5px 0 0 ${colors.bar}`;
+  td.style.boxShadow = 'none';
   const span = document.createElement('span');
   span.className = 'group-name';
   span.style.color = colors.fg;
@@ -2447,7 +2447,7 @@ function buildGroupRow(sectorName, count, avgChange) {
   } else {
     meta.textContent = partsM.join(' · ');
   }
-  const inner = document.createElement('div'); inner.className = 'group-inner';
+  const inner = document.createElement('div'); inner.className = 'group-inner'; inner.style.boxShadow = `inset 5px 0 0 ${colors.bar}`;
   inner.appendChild(span); inner.appendChild(meta);
   td.appendChild(inner);
   tr.appendChild(td);
