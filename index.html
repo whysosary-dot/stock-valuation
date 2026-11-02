@@ -213,7 +213,7 @@
   }
   .text-center { text-align: center; }
   td.chart-cell { width: 120px; min-width: 120px; padding: 6px 8px; text-align: center; }
-  td.chartw-cell { width: 182px; min-width: 182px; padding: 4px 6px; text-align: center; }
+  td.chartw-cell { width: 242px; min-width: 242px; padding: 4px 6px; text-align: center; }
   td.chartd-cell { width: 242px; min-width: 242px; padding: 4px 6px; text-align: center; cursor: zoom-in; }
   td.chartw-cell canvas, td.chartd-cell canvas { display: block; margin: 0 auto; }
   .svc-bd { display: inline-flex; gap: 3px; margin-top: 2px; }
@@ -1725,7 +1725,7 @@ function svcWeeklyCell(td, s) {
   const w = (s.price_history_3y || []).filter(Number.isFinite);
   td.innerHTML = '';
   if (w.length < 40) { td.innerHTML = '<span class="dim">—</span>'; return; }
-  const W = 170, H = 72; const [cv, g] = svcCanvas(W, H);
+  const W = 230, H = 72; const [cv, g] = svcCanvas(W, H);
   const xs = w.slice(-160); const off = w.length - xs.length;
   const ma = xs.map((_, i) => { const k = off + i; return k >= 29 ? w.slice(k - 29, k + 1).reduce((a, b) => a + b, 0) / 30 : null; });
   const vals = xs.concat(ma.filter(x => x != null)); let lo = Math.min(...vals), hi = Math.max(...vals); if (hi === lo) hi = lo + 1;
