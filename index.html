@@ -852,6 +852,51 @@
     color: #aab2bd; pointer-events: none;
   }
   /* 새 항목 버튼 */
+  /* ── 시나리오 새 UI(v2): 요약 띠 + 포트폴리오 패널(목표/비중/월간 전환) + 접힌 종목 행 ── */
+  .scn2-strip { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 12px; }
+  .scn2-chip { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:7px 12px; font-size:12.5px; box-shadow:var(--shadow); }
+  .scn2-chip b { font-weight:800; }
+  .scn2-chip .dim { color:var(--text-dim); margin-right:5px; }
+  .scn2-panel { background:var(--panel); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); margin:0 0 14px; overflow:hidden; }
+  .scn2-ph { display:flex; align-items:center; gap:8px; padding:10px 14px; border-bottom:1px solid var(--border); }
+  .scn2-ph .t { font-weight:800; font-size:14px; }
+  .scn2-seg { display:inline-flex; background:var(--panel-2); border-radius:9px; padding:3px; gap:2px; margin-left:6px; }
+  .scn2-seg button { border:0; background:transparent; border-radius:7px; padding:5px 11px; font-size:12.5px; font-weight:600; color:var(--text-dim); cursor:pointer; }
+  .scn2-seg button.on { background:var(--panel); color:var(--accent); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .scn2-ph .fold { margin-left:auto; border:0; background:none; color:var(--text-dim); cursor:pointer; font-size:12px; }
+  .scn2-pb > .dcard { margin:0 !important; border:0 !important; border-radius:0 !important; box-shadow:none !important; }
+  .scn2-lh { display:flex; align-items:center; gap:8px; margin:4px 0 8px; flex-wrap:wrap; }
+  .scn2-lh .t { font-weight:800; font-size:14px; }
+  .scn2-lh .sc-filter-bar { margin:0 !important; }
+  .scn2-lh .sc-search { margin:0 !important; flex:1; min-width:140px; }
+  .scn2-lh .add { border:1px solid var(--border-strong); background:var(--panel); border-radius:8px; padding:5px 10px; font-size:12.5px; font-weight:600; cursor:pointer; color:var(--text); }
+  .scn2-lh .add:hover { border-color:var(--accent); color:var(--accent); }
+  .scn2-item { background:var(--panel); border:1px solid var(--border); border-radius:12px; margin:0 0 8px; box-shadow:var(--shadow); overflow:hidden; }
+  .scn2-item.held { border-left:4px solid #16a34a; }
+  .scn2-row { display:grid; grid-template-columns: minmax(120px,1.3fr) minmax(220px,2.2fr) auto auto; gap:12px; align-items:center; padding:10px 14px; cursor:pointer; }
+  .scn2-row:hover { background:var(--panel-2); }
+  .scn2-nm { font-weight:800; font-size:14px; display:flex; align-items:center; gap:6px; min-width:0; }
+  .scn2-nm span.n { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .scn2-nm .hb { font-size:10.5px; font-weight:700; border-radius:5px; padding:1px 6px; background:#eef7ee; color:#166534; border:1px solid #bfe3c6; white-space:nowrap; }
+  .scn2-nm .sub { font-size:11px; color:var(--text-dim); font-weight:500; white-space:nowrap; }
+  .scn2-bar { min-width:0; }
+  .scn2-bar .lab { display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim); margin-bottom:3px; font-variant-numeric:tabular-nums; }
+  .scn2-bar .lab b { color:var(--text); font-weight:700; }
+  .scn2-bar .tr { position:relative; height:8px; border-radius:4px; background:linear-gradient(90deg,#edf1fe,#fdeef0); border:1px solid var(--border); }
+  .scn2-bar .tr i { position:absolute; top:-4px; width:14px; height:14px; border-radius:50%; background:var(--text); border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.3); transform:translateX(-50%); }
+  .scn2-bar .tr i.lo { background:#2f56e8; } .scn2-bar .tr i.hi { background:#d3273e; }
+  .scn2-bar .none { font-size:11.5px; color:var(--text-dim); }
+  .scn2-rr { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .scn2-rr .v { font-weight:800; font-size:14px; }
+  .scn2-rr .v.go { color:#16a34a; } .scn2-rr .v.no { color:#d3273e; } .scn2-rr .v.best { color:#16a34a; }
+  .scn2-rr .k { font-size:10.5px; color:var(--text-dim); }
+  .scn2-meta { font-size:11px; color:var(--text-dim); white-space:nowrap; text-align:right; }
+  .scn2-meta .chev { display:inline-block; margin-left:6px; transition:transform .15s; }
+  .scn2-item.open .scn2-meta .chev { transform:rotate(180deg); }
+  .scn2-body { display:none; border-top:1px dashed var(--border); padding:4px 6px 6px; }
+  .scn2-item.open .scn2-body { display:block; }
+  .scn2-body > .dcard { margin:0 !important; border:0 !important; box-shadow:none !important; }
+  @media (max-width: 700px) { .scn2-row { grid-template-columns: 1fr auto; } .scn2-bar { grid-column:1 / -1; } .scn2-meta { display:none; } }
   .diary-new-card-btn {
     width: 100%; padding: 15px; border: 2px dashed var(--border);
     border-radius: 12px; background: transparent; cursor: pointer;
@@ -1487,6 +1532,7 @@ td input, td textarea{border-radius:8px}
       <button class="dtab" data-tab="rules">📏 규칙</button>
     </div>
     <span class="spacer"></span>
+    <button id="scn-ui-btn" class="diary-fmt-btn" type="button" title="시나리오 UI 전환 (새 UI ↔ 예전 UI)" style="display:none;font-size:12px;font-weight:600">UI</button>
     <input id="diary-search" class="diary-search-inp" type="search" placeholder="🔍 내용 검색..." autocomplete="off" />
     <button id="diary-fmt-bold-red" class="diary-fmt-btn" type="button" title="선택한 글자를 볼드+빨간색으로"><span style="font-weight:700;color:var(--red);">B</span></button>
     <button id="diary-fmt-clear" class="diary-fmt-btn clear" type="button" title="선택한 부분만 원래 스타일로 원복 (검정·기본 굵기)"><span style="font-weight:400;color:var(--text);">B</span></button>
@@ -5391,6 +5437,7 @@ function makePfReturnCard() {
 }
 
 function renderFeedScenario() {
+  if (scnUiMode() === 'v2') return renderFeedScenarioV2();
   try { let ch = false; scList().forEach(it => { if (scDedupeHist(it)) ch = true; }); if (ch) saveDiaryData(diary.data); } catch (_) {}
   const feed = document.getElementById('feed-scenario'); if (!feed) return;
   // 재렌더 후 스크롤 위치 유지 (기록·보유·보관 버튼 눌렀을 때 맨 위로 튀지 않게)
@@ -5492,6 +5539,141 @@ function renderFeedScenario() {
     feed.appendChild(wrap);
   }
 }
+
+/* ── 시나리오 새 UI (v2) — 기능은 전부 기존 카드(makeTargetPortfolioCard·makePortfolioCard·makePfReturnCard·makeScenarioCard)를 그대로 쓰고
+   배치만 바꾼다: ① 요약 띠 ② 포트폴리오 패널(목표/비중/월간 중 하나만 표시) ③ 종목은 한 줄 요약(안전가–현재가–매도가 위치·손익비)으로 접고 클릭해 펼침.
+   예전 UI 로 돌아가려면 상단 'UI' 버튼 (localStorage sv_scn_ui = v1). */
+function scnUiMode() { try { return localStorage.getItem('sv_scn_ui') || 'v2'; } catch (_) { return 'v2'; } }
+function scnOpenSet() { try { return new Set(JSON.parse(localStorage.getItem('sv_scn_open') || '[]')); } catch (_) { return new Set(); } }
+function scnOpenSave(set) { try { localStorage.setItem('sv_scn_open', JSON.stringify([...set].slice(-50))); } catch (_) {} }
+function scnPriceInfo(item) {
+  const stk = scFindStock(item.name);
+  const px = stk && Number(stk.price_native) > 0 ? Number(stk.price_native) : (Number(item.avgPx) > 0 ? Number(item.avgPx) : 0);
+  const src = stk && Number(stk.price_native) > 0 ? '현재가' : (Number(item.avgPx) > 0 ? '평단' : '');
+  const sell = Number(item.sellPx) || 0, safe = Number(item.safePx) || 0, avg = Number(item.avgPx) || 0;
+  let rr = null, state = 'miss', up = null, dn = null;
+  if (px > 0 && sell > 0 && safe > 0) {
+    up = (sell / px - 1) * 100; dn = Math.max(0, (1 - safe / px) * 100);
+    if (px <= safe) { rr = Infinity; state = up > 0 ? 'best' : 'none'; } else { rr = up / dn; state = up <= 0 ? 'none' : rr >= 3 ? 'go' : 'no'; }
+  }
+  const ret = (src === '현재가' && px > 0 && avg > 0) ? (px / avg - 1) * 100 : null;   // 평단 대체 시에는 수익률 표시 안 함
+  const cur = stk ? (stk.currency || 'KRW') : 'KRW';
+  return { stk, px, src, sell, safe, avg, rr, state, up, dn, ret, cur };
+}
+function renderFeedScenarioV2() {
+  try { let ch = false; scList().forEach(it => { if (scDedupeHist(it)) ch = true; }); if (ch) saveDiaryData(diary.data); } catch (_) {}
+  const feed = document.getElementById('feed-scenario'); if (!feed) return;
+  const _feedTop = feed.scrollTop; const _wrap = document.querySelector('.diary-feed-wrap'); const _wrapTop = _wrap ? _wrap.scrollTop : 0; const _scrollY = window.scrollY || 0;
+  const _restore = () => { if (_feedTop) feed.scrollTop = _feedTop; if (_wrap && _wrapTop) _wrap.scrollTop = _wrapTop; if (_scrollY) window.scrollTo(0, _scrollY); };
+  requestAnimationFrame(() => { _restore(); requestAnimationFrame(_restore); }); setTimeout(_restore, 120);
+  feed.innerHTML = '';
+  const list = scList(); refreshPfMonthly();
+  const active = list.filter(s => s && !s.archived), archived = list.filter(s => s && s.archived);
+  const held = active.filter(s => s.held);
+  const fmtW = n => Number(n || 0).toLocaleString('ko-KR');
+  const fmtPx = (v, cur) => v ? (cur === 'KRW' ? Number(v).toLocaleString('ko-KR') : Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 })) : '—';
+
+  /* ① 요약 띠 */
+  const strip = document.createElement('div'); strip.className = 'scn2-strip';
+  const tot = held.reduce((s, it) => s + (Number(it.amt) || 0), 0);
+  const tgt = Array.isArray(diary.data.pfTarget) ? diary.data.pfTarget : [];
+  const tgtAct = tgt.reduce((s, it) => s + (Number(it.entryAct) || 0) + (Number(it.coreAct) || 0) + (Number(it.alphaAct) || 0), 0);
+  const tgtPct = tgt.reduce((s, it) => s + (Number(it.pct) || 0), 0);
+  const maxW = tgt.reduce((m, it) => Math.max(m, (Number(it.entryAct) || 0) + (Number(it.coreAct) || 0) + (Number(it.alphaAct) || 0)), 0);
+  const infos = active.map(it => [it, scnPriceInfo(it)]);
+  const goN = infos.filter(([, p]) => p.state === 'go' || p.state === 'best').length;
+  const chips = [
+    [`보유`, `${held.length}종목`], [`포트 합계`, `${fmtW(tot)}원`],
+    tgt.length ? [`목표 → 실제`, `${tgtPct.toFixed(0)}% → ${tgtAct.toFixed(1)}% · 현금 ${Math.max(0, 100 - tgtAct).toFixed(1)}%`] : null,
+    tgt.length ? [`최대 비중`, `${maxW.toFixed(1)}% ${maxW > 35 ? '⚠' : '✓'}`] : null,
+    [`손익비 3↑`, `${goN} / ${infos.length}종목`],
+  ].filter(Boolean);
+  chips.forEach(([k, v]) => { const c = document.createElement('div'); c.className = 'scn2-chip'; c.innerHTML = `<span class="dim">${k}</span><b>${v}</b>`; strip.appendChild(c); });
+  feed.appendChild(strip);
+
+  /* ② 포트폴리오 패널 — 목표 / 비중 / 월간 중 하나 */
+  const panel = document.createElement('div'); panel.className = 'scn2-panel';
+  const ph = document.createElement('div'); ph.className = 'scn2-ph';
+  const seg = document.createElement('div'); seg.className = 'scn2-seg';
+  let pv = localStorage.getItem('sv_scn_panel') || 'target';
+  let folded = localStorage.getItem('sv_scn_panel_fold') === '1';
+  const body = document.createElement('div'); body.className = 'scn2-pb';
+  const views = [['target', '🎯 목표 포트'], ['pf', '💼 포트 비중'], ['ret', '📈 월간 수익률']];
+  const drawPanel = () => {
+    seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === pv));
+    body.innerHTML = ''; body.style.display = folded ? 'none' : '';
+    if (folded) return;
+    body.appendChild(pv === 'target' ? makeTargetPortfolioCard(held) : pv === 'pf' ? makePortfolioCard(held) : makePfReturnCard());
+  };
+  views.forEach(([v, lab]) => { const b = document.createElement('button'); b.dataset.v = v; b.textContent = lab; b.addEventListener('click', () => { pv = v; folded = false; localStorage.setItem('sv_scn_panel', v); localStorage.setItem('sv_scn_panel_fold', '0'); drawPanel(); }); seg.appendChild(b); });
+  const t = document.createElement('span'); t.className = 't'; t.textContent = '포트폴리오';
+  const fold = document.createElement('button'); fold.className = 'fold'; fold.textContent = folded ? '펼치기 ▾' : '접기 ▴';
+  fold.addEventListener('click', () => { folded = !folded; localStorage.setItem('sv_scn_panel_fold', folded ? '1' : '0'); fold.textContent = folded ? '펼치기 ▾' : '접기 ▴'; drawPanel(); });
+  ph.appendChild(t); ph.appendChild(seg); ph.appendChild(fold); panel.appendChild(ph); panel.appendChild(body); feed.appendChild(panel);
+  drawPanel();
+
+  /* ③ 종목 시나리오 — 접힌 행 + 펼치면 기존 카드 */
+  const lh = document.createElement('div'); lh.className = 'scn2-lh';
+  const lt = document.createElement('span'); lt.className = 't'; lt.textContent = `종목 시나리오 ${active.length}`; lh.appendChild(lt);
+  const scFilt = localStorage.getItem('sv_sc_filter') || 'all';
+  const bar = document.createElement('div'); bar.className = 'sc-filter-bar';
+  [['all', `전체 ${active.length}`], ['held', `✓ 보유 ${held.length}`], ['unheld', `미보유 ${active.length - held.length}`]].forEach(([key, lab]) => {
+    const b = document.createElement('button'); b.className = 'sc-fbtn' + (scFilt === key ? ' on' : ''); b.textContent = lab;
+    b.addEventListener('click', () => { localStorage.setItem('sv_sc_filter', key); renderFeedScenario(); }); bar.appendChild(b);
+  });
+  lh.appendChild(bar);
+  const listWrap = document.createElement('div');
+  const search = document.createElement('input'); search.type = 'search'; search.className = 'sc-search'; search.placeholder = '🔍 종목 검색...'; search.autocomplete = 'off';
+  search.addEventListener('input', () => { const q = search.value.trim().toLowerCase(); listWrap.querySelectorAll('.scn2-item').forEach(c => { c.style.display = !q || (c.innerText || '').toLowerCase().includes(q) ? '' : 'none'; }); });
+  lh.appendChild(search);
+  const add = document.createElement('button'); add.className = 'add'; add.textContent = '+ 종목 추가';
+  add.addEventListener('click', () => {
+    const id = 'sc' + Date.now().toString(36);
+    scList().unshift({ id, name: '', buy: '', hold: '', sell: '', archived: false, updated: todayDateStr(), hist: [] });
+    const o = scnOpenSet(); o.add(id); scnOpenSave(o); saveDiaryData(diary.data); renderFeedScenario();
+    setTimeout(() => { const el = feed.querySelector('.sc-name'); if (el) el.focus(); }, 50);
+  });
+  lh.appendChild(add); feed.appendChild(lh);
+
+  const open = scnOpenSet();
+  const shown = active.filter(s => scFilt === 'held' ? s.held : scFilt === 'unheld' ? !s.held : true);
+  const rrOrder = { best: 0, go: 1, no: 2, none: 3, miss: 4 };
+  const mkItem = (item) => {
+    const p = scnPriceInfo(item);
+    const el = document.createElement('div'); el.className = 'scn2-item' + (item.held ? ' held' : '') + (open.has(item.id) || !item.name ? ' open' : '');
+    const row = document.createElement('div'); row.className = 'scn2-row';
+    const rrTxt = p.rr == null ? '—' : p.rr === Infinity ? '∞' : p.rr.toFixed(1);
+    const rrLab = { best: '안전가 이하', go: '접근 가능', no: '접근 금지', none: '상방 없음', miss: '가격 미설정' }[p.state];
+    let barHtml;
+    if (p.px > 0 && p.safe > 0 && p.sell > 0 && p.sell > p.safe) {
+      const pos = Math.max(0, Math.min(100, (p.px - p.safe) / (p.sell - p.safe) * 100));
+      barHtml = `<div class="lab"><span>안전 ${fmtPx(p.safe, p.cur)}</span><span><b>${p.src} ${fmtPx(p.px, p.cur)}</b>${p.ret != null ? ` <span class="${p.ret >= 0 ? 'up' : 'dn'}" style="color:${p.ret >= 0 ? '#d3273e' : '#2f56e8'}">${p.ret >= 0 ? '+' : ''}${p.ret.toFixed(1)}%</span>` : ''}</span><span>매도 ${fmtPx(p.sell, p.cur)}</span></div>
+        <div class="tr"><i class="${pos <= 0 ? 'lo' : pos >= 100 ? 'hi' : ''}" style="left:${pos}%"></i></div>`;
+    } else barHtml = `<div class="none">${p.px > 0 ? `${p.src} ${fmtPx(p.px, p.cur)}${p.ret != null ? ` · 수익률 ${p.ret >= 0 ? '+' : ''}${p.ret.toFixed(1)}%` : ''} · ` : ''}안전마진가·매도주가를 넣으면 위치와 손익비가 표시됩니다</div>`;
+    const sub = (item.sellWhen ? esc0(item.sellWhen) : '') || '';
+    row.innerHTML = `<div class="scn2-nm"><span class="n">${esc0(item.name || '(이름 없음)')}</span>${item.held ? '<span class="hb">보유</span>' : ''}${sub ? `<span class="sub">${sub}</span>` : ''}</div>
+      <div class="scn2-bar">${barHtml}</div>
+      <div class="scn2-rr"><div class="v ${p.state}">${rrTxt}</div><div class="k">손익비 · ${rrLab}</div></div>
+      <div class="scn2-meta">${item.updated ? '수정 ' + esc0(item.updated) : ''}${(item.hist || []).length ? ' · 🕘 ' + item.hist.length : ''}<span class="chev">▾</span></div>`;
+    const bodyEl = document.createElement('div'); bodyEl.className = 'scn2-body';
+    const mount = () => { if (!bodyEl.childElementCount) bodyEl.appendChild(makeScenarioCard(item)); };
+    if (el.classList.contains('open')) mount();
+    row.addEventListener('click', (e) => { if (e.target.closest('a,button,input,textarea,[contenteditable]')) return; const now = !el.classList.contains('open'); el.classList.toggle('open', now); if (now) { mount(); open.add(item.id); } else open.delete(item.id); scnOpenSave(open); });
+    el.appendChild(row); el.appendChild(bodyEl); return el;
+  };
+  shown.forEach(item => listWrap.appendChild(mkItem(item)));
+  if (active.length && !shown.length) { const e = document.createElement('div'); e.className = 'pf-empty'; e.textContent = scFilt === 'held' ? '보유중으로 표시한 종목이 없어요.' : '미보유 종목이 없어요.'; listWrap.appendChild(e); }
+  if (!active.length && !archived.length) { const e = document.createElement('div'); e.className = 'diary-empty-state'; e.textContent = '종목별로 매수·보유·매도 기준을 미리 정해두고, 흔들릴 때 꺼내보세요!'; listWrap.appendChild(e); }
+  feed.appendChild(listWrap);
+  if (archived.length) {
+    const head = document.createElement('div'); head.className = 'sc-arch-head'; const wrap = document.createElement('div'); wrap.style.display = 'none'; let o = false;
+    const label = () => `📦 보관됨 ${archived.length}개 ${o ? '접기 ▴' : '보기 ▾'}`; head.textContent = label();
+    head.addEventListener('click', () => { o = !o; wrap.style.display = o ? 'block' : 'none'; head.textContent = label(); });
+    archived.forEach(item => wrap.appendChild(mkItem(item)));
+    feed.appendChild(head); feed.appendChild(wrap);
+  }
+}
+function esc0(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
 /* ── 전체 렌더 ── */
 /* (일회성) 시나리오 '보유' 칸 제거 — 남아있는 내용은 코멘트로 이관 (GitHub 데이터는 이관 완료) */
@@ -5714,6 +5896,14 @@ function initDiary() {
     applyDiarySearch(e.target.value);
   });
 
+  // 시나리오 UI 전환 버튼 — 시나리오 탭에서만 표시
+  (function () {
+    const b = document.getElementById('scn-ui-btn'); if (!b) return;
+    const sync = () => { b.style.display = diary.activeTab === 'scenario' ? '' : 'none'; b.textContent = scnUiMode() === 'v2' ? '예전 UI' : '새 UI'; b.title = scnUiMode() === 'v2' ? '예전 시나리오 UI 로 돌아가기' : '새 시나리오 UI 로 전환'; };
+    b.addEventListener('click', () => { try { localStorage.setItem('sv_scn_ui', scnUiMode() === 'v2' ? 'v1' : 'v2'); } catch (_) {} sync(); renderFeedScenario(); });
+    document.querySelectorAll('.dtab').forEach(t => t.addEventListener('click', () => setTimeout(sync, 0)));
+    sync();
+  })();
   // 탭 전환 시 검색어 유지하며 재적용
   document.querySelectorAll('.dtab').forEach(btn => {
     btn.addEventListener('click', () => {
