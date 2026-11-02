@@ -423,6 +423,9 @@
 
   /* 섹터 그룹 헤더: 가로 스크롤해도 섹터명이 왼쪽에 붙어 보이도록 */
   tr.group-row .group-inner { display: inline-flex; align-items: center; position: sticky; left: 14px; max-width: calc(100vw - 60px); }
+  /* 섹터별 그룹 모드에서는 섹터 열 불필요(그룹 헤더에 있음) — 모든 화면에서 숨김 */
+  #tbl.grouped th:nth-child(2):not([colspan]), #tbl.grouped td:nth-child(2):not([colspan]) { display: none; }
+  #tbl.grouped th[data-sticky-idx="0"], #tbl.grouped td[data-sticky-idx="0"] { border-right: 2px solid var(--border-strong) !important; box-shadow: 3px 0 8px -3px rgba(15,23,42,0.10); }
   /* ── 모바일·태블릿(≤1024px): 기업명 열만 고정, 섹터 열 숨김, 셀 압축 ── */
   @media (max-width: 1024px) {
     #tbl th:nth-child(2):not([colspan]), #tbl td:nth-child(2):not([colspan]) { display: none; }
@@ -2467,7 +2470,7 @@ function render() {
   applyQuarterlyClass();
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
-  tbody.classList.remove('grouped');
+  tbody.classList.remove('grouped'); document.getElementById('tbl').classList.remove('grouped');
 
   let list = [...state.stocks];
   if (state.favoriteOnly) {
@@ -2498,7 +2501,7 @@ function render() {
     tr.appendChild(td);
     tbody.appendChild(tr);
   } else if (state.groupBySector) {
-    tbody.classList.add('grouped');
+    tbody.classList.add('grouped'); document.getElementById('tbl').classList.add('grouped');
     // 그룹 모드: 섹터별로 묶어서, 각 그룹 헤더 + 그룹 내부는 현재 정렬키로 정렬
     const groups = new Map();
     list.forEach(s => {
@@ -2538,7 +2541,7 @@ function render() {
       });
     });
   } else {
-    tbody.classList.remove('grouped');
+    tbody.classList.remove('grouped'); document.getElementById('tbl').classList.remove('grouped');
     list.forEach(s => tbody.appendChild(renderRow(s)));
   }
 
