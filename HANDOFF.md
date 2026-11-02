@@ -88,3 +88,11 @@ device_bash 의 `$HOME`(`/sessions/<세션>/`)이 있는 디스크는 세션 홈
 - 아직 `$HOME` 을 쓰는 예약 작업(고쳐야 함): **Daily watchlist news brief** — `CAND_PATH=$HOME/brief_candidates.json`, `$HOME/picks.json` → `/tmp/wlb_$(id -u)/…` 로. 스크리너의 `WORK=$HOME/scrwork`, 클락슨의 `$HOME/scratch` 도 같은 위험.
   예약 실행 세션(자동승인) 안에서는 `update_trigger` 프롬프트 변경이 승인 불가로 거부되므로, **일반 대화에서** 바꿀 것.
 - `watchlist-briefing/` 클론 `git pull` 이 "untracked working tree files would be overwritten" 으로 막혔던 건 2026-10-31 복구함: 원격과 동일한 미추적 `briefings/*.html` + 잔여 `.git/index.lock`·`ORIG_HEAD.lock` 을 삭제 권한(`device_request_delete_permission`) 받아 지우고 pull. 재발 시 `git cat-file -p origin/main:<f> | cmp -s - <f>` 로 동일 확인 후 같은 절차. 클론 안에 미추적 파일을 만들지 말 것(빌드 스크립트는 GitHub API 로 올리므로 로컬에 html 을 쓰지 않는다).
+
+---
+## 🧭 조언 (Diary 하위 탭) — advice_gen.py
+일기·시나리오·포트 이력을 읽고 Claude 가 주간/월간/연간 코칭(투자 과정·잘한 것·실수·비판·개선·조언·과제·규칙·점수)을 쓴다. 데이터는 invest-private `sv/advice.json`, 페이지는 `advice/index.html`.
+```
+python3 -I advice_gen.py data weekly [2026-W44]   # 자료 출력 → Claude 가 읽고 JSON 작성 (형식은 파일 상단 docstring)
+python3 -I advice_gen.py write weekly /tmp/x.json  # 검증 후 push (같은 기간은 교체, 이력 유지)
+```

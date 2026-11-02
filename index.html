@@ -1530,6 +1530,7 @@ td input, td textarea{border-radius:8px}
       <button class="dtab" data-tab="scenario">🎯 시나리오<span class="dtab-cnt" id="cnt-scenario">0</span></button>
       <button class="dtab" data-tab="highlights">🔴 강조<span class="dtab-cnt" id="cnt-highlights">0</span></button>
       <button class="dtab" data-tab="rules">📏 규칙</button>
+      <button class="dtab" data-tab="advice">🧭 조언</button>
     </div>
     <span class="spacer"></span>
     <button id="scn-ui-btn" class="diary-fmt-btn" type="button" title="시나리오 UI 전환 (새 UI ↔ 예전 UI)" style="display:none;font-size:12px;font-weight:600">UI</button>
@@ -1543,6 +1544,9 @@ td input, td textarea{border-radius:8px}
     <div id="feed-highlights" class="diary-feed"></div>
     <div id="feed-rules" class="diary-feed" style="padding:0;overflow:hidden">
       <iframe id="rules-frame" style="width:100%;height:100%;border:none;display:block;" title="규칙 — 투자 규칙 · 자동 점검"></iframe>
+    </div>
+    <div id="feed-advice" class="diary-feed" style="padding:0;overflow:hidden">
+      <iframe id="advice-frame" style="width:100%;height:100%;border:none;display:block;" title="조언 — 투자 과정 코칭"></iframe>
     </div>
   </div>
 </div><!-- /page-diary -->
@@ -5798,6 +5802,7 @@ function initDiary() {
       if (diary.activeTab === 'highlights') renderFeedHighlights();
       if (diary.activeTab === 'scenario') renderFeedScenario();
       if (diary.activeTab === 'rules') { const f = document.getElementById('rules-frame'); if (f) f.src = './rules/index.html?v=' + Date.now(); }
+      if (diary.activeTab === 'advice') { const f = document.getElementById('advice-frame'); if (f) f.src = './advice/index.html?v=' + Date.now(); }
       // 탭이 보여진 후 모든 textarea 높이 재계산 (display:none 상태에서 scrollHeight=0 문제 해결)
       requestAnimationFrame(() => {
         document.querySelectorAll(`#feed-${diary.activeTab} textarea`).forEach(ta => {

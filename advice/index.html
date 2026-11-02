@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>조언 — 투자 과정 코칭</title>
+<link rel="stylesheet" href="https://whysosary-dot.github.io/stock-valuation/theme.css">
+<style>
+/* Diary 하위 탭 「조언」: 일기·시나리오를 읽고 Claude 가 쓴 주간·월간·연간 코칭. 데이터 invest-private sv/advice.json (토큰은 메인 대시보드와 공유) */
+body{padding:12px 14px 40px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.top h1{font-size:16px;font-weight:800;margin:0}
+.top .meta{font-size:12px;color:var(--text-dim)}
+.intro{font-size:12.5px;color:var(--text-dim);line-height:1.65;margin:0 0 12px}
+.intro b{color:var(--text)}
+.bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.chip{border:1px solid var(--border-strong);background:var(--panel);border-radius:8px;padding:4px 10px;font-size:12.5px;cursor:pointer;color:var(--text)}
+.chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700}
+.hist{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim)}
+.hist select{font-size:12px;padding:4px 8px;border:1px solid var(--border-strong);border-radius:8px;background:var(--panel)}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);margin:0 0 12px}
+.hd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.hd .p{font-size:12px;color:var(--text-dim)}
+.hd .score{margin-left:auto;font-size:12px;color:var(--text-dim)}
+.hd .score b{font-size:20px;font-weight:900;color:var(--text)}
+.hd .score b.g{color:#16a34a}.hd .score b.y{color:#d97706}.hd .score b.r{color:#dc2626}
+.headline{font-size:16px;font-weight:800;line-height:1.5;margin:0 0 10px}
+.sec{margin:12px 0 0}
+.sec h3{font-size:13px;font-weight:800;margin:0 0 6px;display:flex;align-items:center;gap:6px}
+.sec p{font-size:13.5px;line-height:1.75;margin:0;white-space:pre-wrap}
+.sec ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.7}
+.sec li{margin:2px 0}
+.sec.good h3{color:#166534}.sec.bad h3{color:#b91c1c}.sec.crit h3{color:#7c2d12}.sec.imp h3{color:#1d4ed8}.sec.adv h3{color:#5b3fb5}
+.sec.adv p{background:#f7f5ff;border-left:3px solid #8b5cf6;padding:10px 12px;border-radius:8px}
+.rules{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.rules span{font-size:11.5px;border-radius:6px;padding:2px 8px;border:1px solid}
+.rules .k{background:#eef7ee;color:#166534;border-color:#bfe3c6}.rules .b{background:#fdeef0;color:#b91c1c;border-color:#f3c3c9}
+.ft{font-size:11.5px;color:var(--text-dim);margin-top:10px}
+.empty{color:var(--text-dim);font-size:13px;padding:14px 4px}
+.tl{font-size:12px;color:var(--text-dim);margin:14px 0 6px;font-weight:700}
+.tlrow{display:grid;grid-template-columns:90px 60px 1fr;gap:10px;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.tlrow:hover{color:var(--accent)}
+.tlrow b{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>🧭 조언 — 투자 과정 코칭</h1>
+  <span class="meta" id="meta">불러오는 중…</span>
+</div>
+<p class="intro">일기·시나리오·포트 이력·규칙 점검을 읽고 Claude 가 <b>과정</b>을 평가합니다(결과·수익률이 아니라). 주간은 매주 일요일 저녁, 월간은 매월 1일, 연간은 1월 1일에 생성되고, 생성될 때마다 🕘 이력에 쌓입니다. 매수·매도 권유 아님.</p>
+<div class="bar">
+  <button class="chip on" data-k="weekly">주간</button>
+  <button class="chip" data-k="monthly">월간</button>
+  <button class="chip" data-k="yearly">연간</button>
+  <span class="hist">🕘 이력 <select id="hist"></select></span>
+</div>
+<div id="view"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const state = { kind: 'weekly', data: null, sel: null };
+async function load() {
+  const pat = (localStorage.getItem('sv_github_pat') || '').trim();
+  if (!pat) { $('#meta').textContent = '토큰 없음 — 메인 ⚙️ 에서 GitHub 토큰을 저장하세요'; $('#view').innerHTML = '<div class="empty">조언은 비공개 저장소(invest-private)에 있어 토큰이 필요합니다.</div>'; return; }
+  try {
+    const r = await fetch(`https://api.github.com/repos/whysosary-dot/invest-private/contents/sv/advice.json?ref=main&t=${Date.now()}`, { cache: 'no-store', headers: { Accept: 'application/vnd.github.raw+json', Authorization: `token ${pat}` } });
+    if (!r.ok) throw new Error('GitHub ' + r.status);
+    state.data = await r.json();
+    $('#meta').textContent = `갱신 ${(state.data.updated_at || '').replace('T', ' ').slice(0, 16)} · 주간 ${(state.data.weekly || []).length} · 월간 ${(state.data.monthly || []).length} · 연간 ${(state.data.yearly || []).length}건`;
+  } catch (e) { $('#meta').textContent = '불러오기 실패 (' + e.message + ')'; $('#view').innerHTML = '<div class="empty">아직 생성된 조언이 없거나 읽을 수 없습니다.</div>'; return; }
+  render();
+}
+function render() {
+  const arr = ((state.data || {})[state.kind] || []).slice().sort((a, b) => a.period < b.period ? 1 : -1);
+  const sel = $('#hist'); sel.innerHTML = arr.map(x => `<option value="${esc(x.period)}">${esc(x.period)}${x.range ? ' · ' + esc(x.range) : ''}</option>`).join('');
+  if (!arr.length) { $('#view').innerHTML = `<div class="empty">${{ weekly: '주간', monthly: '월간', yearly: '연간' }[state.kind]} 조언이 아직 없습니다. 스케줄 작업이 생성하면 여기에 쌓입니다.</div>`; return; }
+  const cur = arr.find(x => x.period === state.sel) || arr[0]; sel.value = cur.period;
+  const sc = Number(cur.score); const cls = sc >= 8 ? 'g' : sc >= 5 ? 'y' : 'r';
+  const li = a => (a || []).map(x => `<li>${esc(x)}</li>`).join('');
+  const idx = arr.indexOf(cur); const prev = arr[idx + 1];
+  $('#view').innerHTML = `<div class="card">
+    <div class="hd"><span class="p">${{ weekly: '주간', monthly: '월간', yearly: '연간' }[cur.kind || state.kind]} · ${esc(cur.period)}${cur.range ? ' · ' + esc(cur.range) : ''}</span><span class="score">과정 점수 <b class="${cls}">${esc(cur.score)}</b>/10${prev ? ` <span style="font-size:11px">(직전 ${esc(prev.score)})</span>` : ''}</span></div>
+    <div class="headline">${esc(cur.headline)}</div>
+    <div class="sec"><h3>📜 투자 과정</h3><p>${esc(cur.process)}</p></div>
+    <div class="sec good"><h3>✅ 잘한 것 · 장점</h3><ul>${li(cur.good)}</ul></div>
+    <div class="sec bad"><h3>❌ 실수</h3><ul>${li(cur.mistakes)}</ul></div>
+    <div class="sec crit"><h3>🔍 비판적 검토</h3><p>${esc(cur.critique)}</p></div>
+    <div class="sec imp"><h3>🛠 개선 사항</h3><ul>${li(cur.improve)}</ul></div>
+    <div class="sec adv"><h3>🧭 조언</h3><p>${esc(cur.advice)}</p></div>
+    <div class="sec"><h3>📌 다음 ${{ weekly: '주', monthly: '달', yearly: '해' }[state.kind]} 과제</h3><ul>${li(cur.next)}</ul></div>
+    ${cur.rules ? `<div class="sec"><h3>📏 규칙</h3><div class="rules">${(cur.rules.kept || []).map(x => `<span class="k">✓ ${esc(x)}</span>`).join('')}${(cur.rules.broken || []).map(x => `<span class="b">✗ ${esc(x)}</span>`).join('')}</div></div>` : ''}
+    <div class="ft">${esc((cur.generated_at || '').replace('T', ' ').slice(0, 16))} 생성 · Claude 작성 · 투자 권유 아님</div>
+  </div>
+  ${arr.length > 1 ? `<div class="tl">🕘 이력 — 점수 추이</div>${arr.map(x => `<div class="tlrow" data-p="${esc(x.period)}"><b>${esc(x.period)}</b><b>${esc(x.score)}/10</b><span>${esc(x.headline)}</span></div>`).join('')}` : ''}`;
+  document.querySelectorAll('.tlrow').forEach(r => r.onclick = () => { state.sel = r.dataset.p; render(); window.scrollTo(0, 0); });
+}
+document.querySelectorAll('.chip[data-k]').forEach(b => b.onclick = () => { document.querySelectorAll('.chip[data-k]').forEach(x => x.classList.remove('on')); b.classList.add('on'); state.kind = b.dataset.k; state.sel = null; render(); });
+$('#hist').onchange = e => { state.sel = e.target.value; render(); };
+load();
+</script>
+</body>
+</html>
