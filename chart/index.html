@@ -646,7 +646,9 @@ init();
 #index-native{padding:4px 0 26px}
 .ixn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;max-width:1280px;margin:0 auto}
 @media(max-width:700px){.ixn-grid{grid-template-columns:1fr}}
-.ixn-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--sk-radius,14px);padding:14px;box-shadow:var(--sk-shadow,0 1px 3px rgba(0,0,0,.05))}
+.ixn-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--sk-radius,14px);padding:14px;box-shadow:var(--sk-shadow,0 1px 3px rgba(0,0,0,.05));min-width:0;overflow:hidden}
+.ixn-box{width:100%;min-width:0}.ixn-box canvas{max-width:100%}
+@media(max-width:700px){.ixn-card{padding:10px 10px}.ixn-box{height:150px}.ixn-card h4{font-size:13px}}
 .ixn-card h4{margin:0 0 2px;font-size:14px;font-weight:700}
 .ixn-card .src{font-size:11px;color:var(--text-dim);margin-bottom:8px}
 .ixn-box{height:170px;position:relative}
