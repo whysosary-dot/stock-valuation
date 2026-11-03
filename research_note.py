@@ -5,7 +5,7 @@ research_note.py — 리서치 노트(옛 🔬 Research 탭 = investment-notes �
 폴더 규칙
   기업 자료  → 주식 / 관심종목 / <기업명>   (폴더 없으면 생성)
   산업 자료  → 주식 / 산업 / <산업명>       (폴더 없으면 생성, --industry)
-  각 폴더에 「🔬 리서치 노트 (N건)」 웹문서 카드 하나. 카드(자료)가 추가될 때마다 이 문서를 다시 렌더.
+  자료(카드) 1건 = 폴더탭 웹문서 1개 (이름 = 「🔬 자료 제목」). 원본은 sv/research/<folder_id>.json
 
 데이터 (invest-private, 비공개)
   sv/research/<folder_id>.json      원본 구조화 데이터 {name, ticker, sector, tags, cards:[...]}  ← 진실의 원천
@@ -125,6 +125,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Ne
 .cf-chip.active{border-color:var(--accent);color:var(--accent)}.cf-dot{width:9px;height:9px;border-radius:50%;background:#999}
 .cf-chip.sw-red .cf-dot{background:#E24B4A}.cf-chip.sw-amber .cf-dot{background:#EF9F27}.cf-chip.sw-green .cf-dot{background:#639922}.cf-chip.sw-blue .cf-dot{background:#378ADD}.cf-chip.sw-purple .cf-dot{background:#7F77DD}.cf-chip.sw-pink .cf-dot{background:#D4537E}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;padding-bottom:50px}
+body.single .cards{grid-template-columns:minmax(0,760px)}body.single .card.collapsed .card-body{max-height:none;overflow:visible}body.single .card.collapsed .card-body::after,body.single .card-toggle{display:none}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 16px 14px;box-shadow:var(--shadow);display:flex;flex-direction:column}
 .card h3{margin:0 0 4px;font-size:15px;line-height:1.35}
 .card .date{color:var(--muted);font-size:12px;margin:0 0 10px}
@@ -209,26 +210,38 @@ JS = r"""
 
 def esc(s): return str(s if s is not None else "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
-def render_html(note):
+def render_html(note, single=False):
     cards = note.get("cards", [])
     dates = sorted([c.get("date", "") for c in cards if c.get("date")])
     link = f'<a href="https://m.stock.naver.com/domestic/stock/{esc(note["ticker"])}/total" target="_blank" rel="noopener">{esc(note["name"])} ↗</a>' if note.get("ticker") and re.fullmatch(r"\d{6}", str(note["ticker"])) else esc(note["name"])
     kind = "산업" if note.get("kind") == "industry" else "기업"
-    meta = " · ".join(x for x in [note.get("ticker") if note.get("ticker") else None, note.get("sector"), f"{len(cards)}건", f"{dates[0]} ~ {dates[-1]}" if dates else None] if x)
+    meta = " · ".join(x for x in [note.get("ticker") if note.get("ticker") else None, note.get("sector"), None if single else f"{len(cards)}건", None if single else (f"{dates[0]} ~ {dates[-1]}" if dates else None)] if x)
     tags = " ".join(f'<span class="kind">{esc(t)}</span>' for t in (note.get("tags") or [])[:8])
     data = {"cards": cards, "img_base": IMG_BASE}
     payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{NOTE_PREFIX} — {esc(note["name"])}</title><style>{CSS}</style></head><body>
+<title>{esc(cards[0].get("title")) if single and cards else NOTE_PREFIX + " — " + esc(note["name"])}</title><style>{CSS}</style></head><body>
 <header class="topbar"><div class="wrap"><h1><span class="kind">{kind}</span>{link}</h1><p class="subtitle">{esc(meta)} {tags}</p></div></header>
 <main class="wrap">
-<section class="toolbar"><input id="q" type="search" placeholder="이 노트 안에서 검색 (초성 가능)…" autocomplete="off"><div id="counter" class="counter"></div></section>
-<div id="cf" class="color-filter"></div><div id="tb" class="tagbar"></div>
+<section class="toolbar"{' style="display:none"' if single else ''}><input id="q" type="search" placeholder="이 노트 안에서 검색 (초성 가능)…" autocomplete="off"><div id="counter" class="counter"></div></section>
+<div id="cf" class="color-filter"{' style="display:none"' if single else ''}></div><div id="tb" class="tagbar"{' style="display:none"' if single else ''}></div>
 <section id="cards" class="cards"></section><section id="empty" class="empty" hidden>카드가 없습니다.</section>
 <p class="foot">옛 Research 탭(investment-notes)에서 이관된 리서치 카드 · 추가는 Claude 에게 "○○ 리서치 노트에 추가" (research_note.py) · 렌더 {TODAY}</p>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script>window.__RN={payload};</script><script>{JS}</script></body></html>"""
+<script>window.__RN={payload};{'document.body.classList.add("single");' if single else ''}</script><script>{JS}</script></body></html>"""
+
+def card_name(c):
+    t = re.sub(r"\s+", " ", str(c.get("title") or "")).strip() or "(제목 없음)"
+    return "🔬 " + (t if len(t) <= 70 else t[:69].rstrip() + "…")
+
+def card_sheet(fid, c, idx, ord_):
+    """리서치 카드 1장 = 폴더탭 웹문서 1개"""
+    return {"id": new_id(idx, "rc"), "name": card_name(c), "folder": fid, "updated": int(time.time() * 1000), "ord": ord_,
+            "type": "webdoc", "research": fid, "rcard": c["id"], "rdate": c.get("date", "")}
+
+def card_html(note, c):
+    return render_html({**note, "cards": [c]}, single=True)
 
 def note_name(note):
     """폴더탭에 보이는 카드 이름 = 가장 최근 자료의 제목 (+ 나머지 건수). 예: 「🔬 3Q26 IR — 시설투자 29조 외 20건」"""
@@ -272,33 +285,32 @@ def cmd_add(a):
         for t in c.get("tags", []):
             if t not in note["tags"] and len(note["tags"]) < 12: note["tags"].append(t)
     note["updated_at"] = TODAY
-    msg = f"research: {fld['name']} +{len(new_cards)} ({note_name(note)})"
+    added = note["cards"][-len(new_cards):]
+    msg = f"research: {fld['name']} +{len(new_cards)} — {added[-1].get('title','')[:40]}"
     put_text(f"sv/research/{fld['id']}.json", json.dumps(note, ensure_ascii=False, indent=1), msg)
-    sh = find_note(idx, fld["id"])
-    if not sh:
-        sid = new_id(idx, "rn")
-        ords = [s.get("ord", 0) for s in idx["sheets"] if s.get("folder") == fld["id"]]
-        sh = {"id": sid, "name": note_name(note), "folder": fld["id"], "updated": int(time.time() * 1000), "ord": (min(ords) - 10) if ords else 0, "type": "webdoc", "research": True}
-        idx["sheets"].append(sh)
-    else:
-        sh["name"] = note_name(note); sh["updated"] = int(time.time() * 1000); sh["research"] = True
-    put_data(sh["id"], json.dumps({"type": "webdoc", "html": render_html(note), "research": fld["id"]}, ensure_ascii=False), msg)
+    ords = [x.get("ord", 0) for x in idx["sheets"] if x.get("folder") == fld["id"]]
+    base = (min(ords) - 10) if ords else 0
+    new_sheets = []
+    for k, c in enumerate(sorted(added, key=lambda c: (c.get("date", ""), c.get("added_at", "")))):   # 오래된 것부터 → 최신이 맨 위(ord 최소)
+        sh = card_sheet(fld["id"], c, idx, base - k); idx["sheets"].append(sh); new_sheets.append(sh)
+        put_data(sh["id"], json.dumps({"type": "webdoc", "html": card_html(note, c), "research": fld["id"]}, ensure_ascii=False), msg)
     try: gh_put("sv/sheets/index.json", json.dumps(idx, ensure_ascii=False, indent=2), sha, msg)
     except urllib.error.HTTPError as e:
         if e.code not in (409, 422): raise
         idx2, sha2 = load_index()
         if created and fld["id"] not in {f["id"] for f in idx2["folders"]}: idx2["folders"].append(fld)
-        ex = next((s for s in idx2["sheets"] if s["id"] == sh["id"]), None)
-        if ex: ex.update(sh)
-        else: idx2["sheets"].append(sh)
+        idx2["sheets"] += new_sheets
         gh_put("sv/sheets/index.json", json.dumps(idx2, ensure_ascii=False, indent=2), sha2, msg)
-    print(f"✅ [{path_of(byid, fld)}] {note_name(note)} ← 카드 {len(new_cards)}건 추가{' (폴더 생성)' if created else ''} · sheet {sh['id']}")
+    for sh in new_sheets: print(f"✅ [{path_of(byid, fld)}] {sh['name']}  (sheet {sh['id']}){' — 폴더 생성' if created else ''}")
     print("   대시보드 폴더탭에서 새로고침 후 확인.")
 
 def cmd_list(a):
     idx, _ = load_index(); byid = {f["id"]: f for f in idx["folders"]}
-    for s in sorted([s for s in idx["sheets"] if s.get("research") or s.get("name", "").startswith(NOTE_PREFIX)], key=lambda s: path_of(byid, byid.get(s.get("folder"), {}))):
-        print(f"{s['id']}  {path_of(byid, byid.get(s.get('folder'), {'name': '?'}))}  —  {s['name']}")
+    cnt = {}
+    for x in idx["sheets"]:
+        if x.get("research"): cnt[x["folder"]] = cnt.get(x["folder"], 0) + 1
+    for fid, n in sorted(cnt.items(), key=lambda kv: path_of(byid, byid.get(kv[0], {"name": "?"}))):
+        print(f"{fid}  {path_of(byid, byid.get(fid, {'name': '?'}))}  —  리서치 카드 {n}건")
 
 def _load_note(a):
     idx, _ = load_index(); fld = find_folder(idx, a.name, a.industry)
