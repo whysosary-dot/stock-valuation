@@ -768,14 +768,19 @@ def build_sv_ohlc():
             "stocks": {tk: {"d": s_[0][-N:], "o": [round(x, 4) for x in s_[1][-N:]], "h": [round(x, 4) for x in s_[2][-N:]], "l": [round(x, 4) for x in s_[3][-N:]],
                             "c": [round(x, 4) for x in s_[4][-N:]], "v": [int(x) for x in s_[5][-N:]]} for tk, s_ in out.items()}}
     body = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
-    H2 = {"Authorization": "token " + tok, "Accept": "application/vnd.github+json", "User-Agent": "chart-build", "Content-Type": "application/json"}
-    sha = None
-    r = requests.get(api + "sv/ohlc.json?ref=main", headers=H2, timeout=60)
-    if r.status_code == 200: sha = r.json().get("sha")
-    payload = {"message": f"sv ohlc {data['updated_at'][:10]} ({len(out)} stocks)", "content": base64.b64encode(body.encode()).decode(), "branch": "main"}
-    if sha: payload["sha"] = sha
-    r = requests.put(api + "sv/ohlc.json", headers=H2, data=json.dumps(payload), timeout=120)
-    print(f"  sv_ohlc: {len(out)} stocks · {len(body)//1024}KB · PUT {r.status_code}")
+    # 이력 없는 orphan 브랜치 `ohlc` 에 단일 커밋으로 강제 덮어쓰기 (매일 1.8MB 가 main 이력에 쌓이지 않게). 대시보드는 ref=ohlc 로 읽음
+    import subprocess, tempfile
+    d = tempfile.mkdtemp(); os.makedirs(os.path.join(d, "sv"))
+    open(os.path.join(d, "sv", "ohlc.json"), "w").write(body)
+    def g(*a): return subprocess.run(["git", *a], cwd=d, capture_output=True, text=True)
+    g("init", "-q"); g("checkout", "-q", "--orphan", "ohlc"); g("config", "user.email", "whysosary@naver.com"); g("config", "user.name", "리송")
+    g("add", "-A"); g("commit", "-q", "-m", f"sv ohlc {data['updated_at'][:10]} ({len(out)} stocks, orphan)")
+    rr = None
+    for i in range(3):
+        rr = g("push", "-f", "-q", f"https://x-access-token:{tok}@github.com/whysosary-dot/invest-private.git", "ohlc:ohlc")
+        if rr.returncode == 0: break
+        time.sleep(5 * (i + 1))
+    print(f"  sv_ohlc: {len(out)} stocks · {len(body)//1024}KB · push {'ok' if rr.returncode == 0 else 'FAIL ' + rr.stderr.replace(tok, '***')[:200]}")
 
 def auto_insights(which):
     """토큰 0 데이터 요약 → data/insights_auto.json (섹션별). AI 인사이트(insights/chart.json)와 별개로 항상 생성"""

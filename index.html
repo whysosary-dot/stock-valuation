@@ -1648,10 +1648,10 @@ const GH = {
 };
 /* 비공개 리포 읽기: Contents API + raw 미디어타입 (base64 래핑 없음, 대용량 OK, PAT 필수) */
 function svPat() { return (localStorage.getItem('sv_github_pat') || '').trim() || null; }
-async function ghPrivateRaw(path) {
+async function ghPrivateRaw(path, ref) {
   const pat = svPat();
   if (!pat) throw new Error('NO_PAT');
-  const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/${path}?ref=${GH.BRANCH}&t=${Date.now()}`, {
+  const r = await fetch(`https://api.github.com/repos/${GH.OWNER}/${GH.REPO}/contents/${path}?ref=${ref || GH.BRANCH}&t=${Date.now()}`, {
     cache: 'no-store',
     headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github.raw' }
   });
@@ -1768,7 +1768,7 @@ function svcWeeklyCell(td, s) {
 async function svcLoadOhlc() {
   if (SVC.ohlc || SVC.loading || SVC.failed) return;
   SVC.loading = true;
-  try { SVC.ohlc = await ghPrivateRaw('sv/ohlc.json'); if (typeof render === 'function') render(); }
+  try { try { SVC.ohlc = await ghPrivateRaw('sv/ohlc.json', 'ohlc'); } catch (_) { SVC.ohlc = await ghPrivateRaw('sv/ohlc.json'); } if (typeof render === 'function') render(); }  // orphan 브랜치 ohlc(이력 없음) → 없으면 main
   catch (e) { SVC.failed = true; console.warn('[sv ohlc]', e.message); if (typeof render === 'function') render(); }
   finally { SVC.loading = false; }
 }

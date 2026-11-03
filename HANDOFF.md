@@ -62,6 +62,13 @@
 - 원본 데이터는 invest-private `sv/research/<folder_id>.json`, 렌더본은 `sv/sheets/data/<sheet_id>.json`(webdoc). 둘 다 스크립트가 갱신하므로 손으로 고치지 말 것.
 - 옛 저장소 whysosary-dot/investment-notes 는 보관용(이관 완료, 더 이상 추가하지 않음).
 
+
+## 매일 생성되는 데이터는 이력 없는 orphan 브랜치에 (2026-11-03, 저장소 크기 고정)
+- Chart 탭 데이터(옛 chart/data/*): stock-valuation 브랜치 `data` (루트 = 옛 chart/data). 읽기: https://raw.githubusercontent.com/whysosary-dot/stock-valuation/data/<파일>. main 에는 없음. chart-daily.yml 이 매일 단일 커밋으로 강제 push.
+- KR 스크리너 일봉 차트(전 종목, 종목코드 앞 2자리 조각): stock-screener 브랜치 `charts` (index.json·bench.json·<xx>.json). daily-screen.yml 의 마지막 단계.
+- SV 일봉(ohlc): invest-private 브랜치 `ohlc` (sv/ohlc.json). build_chart.py build_sv_ohlc 가 SV_PAT 으로 git push -f. 대시보드는 ref=ohlc 로 읽음.
+- 규칙: 새로 매일 덮어쓰는 큰 파일을 만들 때는 main 에 커밋하지 말고 이 방식(orphan 브랜치 + push -f)으로.
+
 ---
 ## 세션 소스에 없는 레포에 push 하기 (403 해결) — gh_push.py
 클라우드 세션의 git 프록시에 레포가 등록돼 있지 않으면 `git push` 가 403 이다. 이 경우 Mac 에 연결된 상태에서
@@ -105,3 +112,6 @@ device_bash 의 `$HOME`(`/sessions/<세션>/`)이 있는 디스크는 세션 홈
 python3 -I advice_gen.py data weekly [2026-W44]   # 자료 출력 → Claude 가 읽고 JSON 작성 (형식은 파일 상단 docstring)
 python3 -I advice_gen.py write weekly /tmp/x.json  # 검증 후 push (같은 기간은 교체, 이력 유지)
 ```
+
+## 관세청 품목별 수출입실적(GW) API 키 (2026-11-03)
+- `stock-valuation/.customs_key` 에 저장(data.go.kr 서비스 키). 스크립트는 이 파일에서 읽고, 값은 절대 출력·공개 저장소 커밋 금지. 관세청 수출입 통계 요청 시 사용.
