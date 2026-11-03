@@ -46,9 +46,15 @@ def H(raw=False):
     return {"Authorization": "token " + tok(), "Accept": "application/vnd.github.raw" if raw else "application/vnd.github+json",
             "User-Agent": "sv-research-note", "Content-Type": "application/json"}
 def api(path): return f"https://api.github.com/repos/{REPO}/contents/{path}"
+def _open(req, timeout=60):
+    for attempt in range(5):   # 네트워크 일시 오류(Connection refused 등) 재시도
+        try: return urllib.request.urlopen(req, timeout=timeout)
+        except urllib.error.URLError as e:
+            if isinstance(e, urllib.error.HTTPError) or attempt == 4: raise
+            time.sleep(3 * (attempt + 1))
 def gh_get(path, raw=False):
     try:
-        r = urllib.request.urlopen(urllib.request.Request(api(path) + f"?ref={BR}&t={int(time.time())}", headers=H(raw)), timeout=60)
+        r = _open(urllib.request.Request(api(path) + f"?ref={BR}&t={int(time.time())}", headers=H(raw)))
         d = r.read()
         return d.decode() if raw else json.loads(d)
     except urllib.error.HTTPError as e:
@@ -57,7 +63,7 @@ def gh_get(path, raw=False):
 def gh_put(path, text, sha, msg):
     body = {"message": msg, "content": base64.b64encode(text.encode()).decode(), "branch": BR}
     if sha: body["sha"] = sha
-    r = urllib.request.urlopen(urllib.request.Request(api(path), method="PUT", data=json.dumps(body).encode(), headers=H()), timeout=120)
+    r = _open(urllib.request.Request(api(path), method="PUT", data=json.dumps(body).encode(), headers=H()), timeout=120)
     return json.loads(r.read())
 def put_text(path, text, msg):
     ex = gh_get(path); return gh_put(path, text, ex and ex["sha"], msg)
@@ -224,7 +230,14 @@ def render_html(note):
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>window.__RN={payload};</script><script>{JS}</script></body></html>"""
 
-def note_name(note): return f"{NOTE_PREFIX} ({len(note.get('cards', []))}건)"
+def note_name(note):
+    """폴더탭에 보이는 카드 이름 = 가장 최근 자료의 제목 (+ 나머지 건수). 예: 「🔬 3Q26 IR — 시설투자 29조 외 20건」"""
+    cards = note.get("cards", [])
+    if not cards: return NOTE_PREFIX
+    latest = sorted(cards, key=lambda c: (c.get("date", ""), c.get("added_at", "")))[-1]
+    t = re.sub(r"\s+", " ", str(latest.get("title") or "")).strip() or "리서치 노트"
+    if len(t) > 42: t = t[:41].rstrip() + "…"
+    return f"🔬 {t}" + (f" 외 {len(cards) - 1}건" if len(cards) > 1 else "")
 
 def next_card_id(cards):
     mx = 0
@@ -328,7 +341,8 @@ def cmd_migrate(a):
         if ent.get("sector") and not note.get("sector"): note["sector"] = ent["sector"]
         for t in ent.get("tags") or []:
             if t not in note["tags"] and len(note["tags"]) < 12: note["tags"].append(t)
-        note.setdefault("src_ids", []); note["src_ids"].append(ent["id"])
+        note.setdefault("src_ids", [])
+        if ent["id"] not in note["src_ids"]: note["src_ids"].append(ent["id"])
         have = {(c.get("src"), c.get("src_id")) for c in note["cards"]}
         for c in ent["cards"]:
             if (ent["id"], c.get("id")) in have: continue
