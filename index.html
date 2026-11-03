@@ -1397,8 +1397,7 @@ td input, td textarea{border-radius:8px}
   <button class="page-tab-btn" data-page="calendar">📅 Calendar</button>
   <button class="page-tab-btn" data-page="screener">🔍 KR Screener</button>
   <button class="page-tab-btn" data-page="dart">📋 Dart</button>
-  <button class="page-tab-btn" data-page="usmarket">🇺🇸 US Market</button>
-  <button class="page-tab-btn" data-page="krmarket">🇰🇷 KR Market</button>
+  <button class="page-tab-btn" data-page="market">🌐 Market</button>
   <button class="page-tab-btn" data-page="awake">🔔 Awake</button>
   <button class="page-tab-btn" data-page="chart">📉 Chart</button>
   <button class="page-tab-btn" data-page="interest">👀 Interest</button>
@@ -1474,25 +1473,29 @@ td input, td textarea{border-radius:8px}
   ></iframe>
 </div><!-- /page-dart -->
 
-<div id="page-usmarket" class="page">
-  <iframe
-    id="usmarket-frame"
-    src="./view/index.html?src=us"
-    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
-    loading="lazy"
-    title="US Market Briefing"
-  ></iframe>
-</div><!-- /page-usmarket -->
-
-<div id="page-krmarket" class="page">
-  <iframe
-    id="krmarket-frame"
-    src="./view/index.html?src=kr"
-    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
-    loading="lazy"
-    title="KR Market Briefing"
-  ></iframe>
-</div><!-- /page-krmarket -->
+<div id="page-market" class="page">
+  <div class="diary-topbar" style="padding:6px 12px">
+    <div class="diary-tabs">
+      <button class="dtab active" data-mkt="kr">🇰🇷 한국</button>
+      <button class="dtab" data-mkt="us">🇺🇸 미국</button>
+    </div>
+  </div>
+  <iframe id="krmarket-frame" src="" data-src="./view/index.html?src=kr" style="width:100%;height:calc(100vh - 92px);border:none;display:block;" loading="lazy" title="KR Market Briefing"></iframe>
+  <iframe id="usmarket-frame" src="" data-src="./view/index.html?src=us" style="width:100%;height:calc(100vh - 92px);border:none;display:none;" loading="lazy" title="US Market Briefing"></iframe>
+</div><!-- /page-market -->
+<script>
+// Market 탭 하위(한국/미국) 전환 — iframe 은 처음 볼 때만 로드
+(function () {
+  const KEY = 'sv_market_sub';
+  function show(m, save) {
+    document.querySelectorAll('#page-market .dtab').forEach(b => b.classList.toggle('active', b.dataset.mkt === m));
+    ['kr', 'us'].forEach(k => { const f = document.getElementById(k + 'market-frame'); f.style.display = k === m ? 'block' : 'none'; if (k === m && !f.src) f.src = f.dataset.src + '&v=' + Math.floor(Date.now() / 600000); });
+    if (save) { try { localStorage.setItem(KEY, m); } catch (_) {} }
+  }
+  document.querySelectorAll('#page-market .dtab').forEach(b => b.addEventListener('click', () => show(b.dataset.mkt, true)));
+  window.svMarketShow = () => show((localStorage.getItem(KEY) || 'kr'), false);
+})();
+</script>
 
 <div id="page-awake" class="page">
   <iframe
@@ -2892,8 +2895,6 @@ const IFRAME_TAB_SRC = {
   index:     'https://whysosary-dot.github.io/invest-index/',
   screener:  'https://whysosary-dot.github.io/stock-screener/daily.html',   // 최신 일자 바로 (날짜는 페이지 안 드롭다운)
   dart:      'https://whysosary-dot.github.io/dart-monitoring/',
-  usmarket:  './view/index.html?src=us&v=' + Math.floor(Date.now()/600000),
-  krmarket:  './view/index.html?src=kr&v=' + Math.floor(Date.now()/600000),
   awake:     './view/index.html?src=awake&v=' + Math.floor(Date.now()/600000),
   interest:  './view/index.html?src=interest&v=' + Math.floor(Date.now()/600000),
   report:    './report/index.html?v=' + Date.now(),  // 증권사 리포트 정리 (same-origin)
@@ -2904,6 +2905,7 @@ const IFRAME_TAB_SRC = {
 
 function activatePage(page, opts = {}) {
   if (page === 'etfmonitor' || page === 'index' || page === 'rules' || page === 'research') page = page === 'rules' ? 'diary' : page === 'research' ? 'sheet' : 'chart';  // Chart·Diary·Folder 로 이동한 옛 탭
+  if (page === 'usmarket' || page === 'krmarket') { try { localStorage.setItem('sv_market_sub', page === 'usmarket' ? 'us' : 'kr'); } catch (_) {} page = 'market'; }  // US/KR Market → Market 탭 하위
   const btn = document.querySelector(`.page-tab-btn[data-page="${page}"]`);
   if (!btn) return;
   document.querySelectorAll('.page-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
@@ -2916,6 +2918,7 @@ function activatePage(page, opts = {}) {
   try { const _f = document.getElementById(page + '-frame'); if (_f && typeof svSkinWatch === 'function') svSkinWatch(_f); } catch (_) {}
   try { markTabVisited(page); } catch (e) { console.warn('[tab] markTabVisited 실패:', e); }
   if (page === 'diary' && typeof renderAllDiaryFeeds === 'function') renderAllDiaryFeeds();
+  if (page === 'market' && typeof svMarketShow === 'function') svMarketShow();
   const src = IFRAME_TAB_SRC[page];
   if (src) {
     const fr = document.getElementById(`${page}-frame`);
@@ -3113,8 +3116,7 @@ const TAB_REPOS = {
   index:     { repo: 'whysosary-dot/invest-index' },
   screener:  { repo: 'whysosary-dot/stock-screener' },
   dart:      { repo: 'whysosary-dot/dart-monitoring' },
-  usmarket:  { repo: 'whysosary-dot/us-market-briefing' },
-  krmarket:  { repo: 'whysosary-dot/kr-market-briefing' },
+  market:    { repos: ['whysosary-dot/kr-market-briefing', 'whysosary-dot/us-market-briefing'] },
   awake:     { repo: 'whysosary-dot/awake-disclosure' },
   interest:  { repo: 'whysosary-dot/watchlist-briefing' },
   diary:     { repo: 'whysosary-dot/invest-private', path: 'sv/diary.json' },
@@ -3214,7 +3216,7 @@ async function refreshTabUpdateDots(opts = {}) {
   const activePage = document.querySelector('.page-tab-btn.active')?.dataset.page;
   const entries = Object.entries(TAB_REPOS);
   await Promise.all(entries.map(async ([page, conf]) => {
-    const iso = await fetchLatestCommitISO(conf.repo, conf.path, forceFresh);
+    const iso = conf.repos ? (await Promise.all(conf.repos.map(r => fetchLatestCommitISO(r, null, forceFresh)))).filter(Boolean).sort().pop() : await fetchLatestCommitISO(conf.repo, conf.path, forceFresh);
     if (!iso) return;
     const btn = document.querySelector(`.page-tab-btn[data-page="${page}"]`);
     if (!btn) return;
