@@ -156,6 +156,7 @@ async function awakeValuation() {
     let dates;
     if (S.json) { const r = await fetch(S.base + S.json + '?t=' + Date.now()); dates = S.dates(await r.json()); }
     else { const r = await fetch(S.base + S.list + '?t=' + Date.now()); dates = S.dates(await r.text()); }
+    { const cut = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10); dates = dates.filter(d => d >= cut); }  // 1년 보관(retention.py) — 지워진 날짜는 목록에서도 숨김
     DATES = [...new Set(dates)].sort().reverse();
     if (!DATES.length) throw new Error('날짜 목록 없음');
     $('#sel').innerHTML = DATES.map(d => `<option value="${d}">${d}</option>`).join('');

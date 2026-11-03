@@ -54,7 +54,7 @@
   (폴더탭 페이지는 브라우저 localStorage 의 토큰으로 비공개 리포를 읽으므로, 다른 세션의 브라우저로 링크를 열면 빈 화면이 정상. 이 스크립트로 읽을 것)
 
 ## 리서치 노트 — 옛 🔬 Research 탭(investment-notes) 대체, 폴더탭에서 구동 (2026-11-03)
-- Research 탭은 대시보드에서 제거됨. 리서치 카드(요약 불릿 + Chart.js 차트 + 태그)는 📁 폴더탭의 **주식/관심종목/<기업>** 또는 **주식/산업/<산업>** 폴더 안 「🔬 리서치 노트 (N건)」 웹문서에 쌓인다.
+- Research 탭은 대시보드에서 제거됨. 리서치 카드(요약 불릿 + Chart.js 차트 + 태그)는 📁 폴더탭의 **주식/관심종목/<기업>** 또는 **주식/산업/<산업>** 폴더에 **자료 1건 = 웹문서 카드 1개**(이름 「🔬 자료 제목」, 최신이 위)로 들어간다 (2026-11-03 분리).
 - 스크립트: `stock-valuation/research_note.py` (docstring 참고). 사용자가 자료(이미지·리포트·공시)를 주며 "정리해줘/리서치 노트에 추가"라고 하면:
   1. 기업인지 산업인지 판단 → 카드 JSON 작성 (investment-notes 의 CLAUDE.md 규칙 그대로: title·date(원본 날짜)·summary 3~5불릿·tags 풍성하게·수치는 반드시 chart/charts, 주제가 여럿이면 카드 분할)
   2. `python3 research_note.py add --name <기업명> --card card.json [--ticker 005930 --sector 반도체]` / 산업은 `--industry`. 폴더 없으면 자동 생성.
@@ -68,6 +68,12 @@
 - KR 스크리너 일봉 차트(전 종목, 종목코드 앞 2자리 조각): stock-screener 브랜치 `charts` (index.json·bench.json·<xx>.json). daily-screen.yml 의 마지막 단계.
 - SV 일봉(ohlc): invest-private 브랜치 `ohlc` (sv/ohlc.json). build_chart.py build_sv_ohlc 가 SV_PAT 으로 git push -f. 대시보드는 ref=ohlc 로 읽음.
 - 규칙: 새로 매일 덮어쓰는 큰 파일을 만들 때는 main 에 커밋하지 말고 이 방식(orphan 브랜치 + push -f)으로.
+
+
+## 날짜별 파일 1년 보관 (2026-11-03)
+- `retention.py` + `.github/workflows/retention.yml`(매주 일 04:17 KST, SV_PAT): Market(us/kr)·Awake·Interest·Report·Telegram 의 날짜 파일 중 365일 지난 것을 삭제하고 manifest/index.json 항목도 제거. KR Screener 는 daily_screen.py 가 같은 규칙으로. Chart 스캔은 data 브랜치에서 90일.
+- 뷰어(view/index.html)는 1년 넘은 날짜를 목록에서 숨김.
+- 주의: main 에서 지워도 git 이력에는 남는다. 저장소 이력까지 줄이려면 이력 압축(main 단일 커밋으로 재작성)이 필요 — 사용자 승인 후에만.
 
 ---
 ## 세션 소스에 없는 레포에 push 하기 (403 해결) — gh_push.py

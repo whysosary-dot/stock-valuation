@@ -1,0 +1,19 @@
+name: retention
+# 날짜별 파일 1년 보관 — Market·Awake·Interest·Report·Telegram (retention.py). 매주 일요일 04:17 KST.
+on:
+  schedule:
+    - cron: '17 19 * * 6'
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: retention.py
+        env:
+          GH_TOKEN: ${{ secrets.SV_PAT }}
+        run: python3 retention.py
