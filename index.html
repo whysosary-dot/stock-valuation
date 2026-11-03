@@ -1480,8 +1480,8 @@ td input, td textarea{border-radius:8px}
       <button class="dtab" data-mkt="us">🇺🇸 미국</button>
     </div>
   </div>
-  <iframe id="krmarket-frame" src="" data-src="./view/index.html?src=kr" style="width:100%;height:calc(100vh - 92px);border:none;display:block;" loading="lazy" title="KR Market Briefing"></iframe>
-  <iframe id="usmarket-frame" src="" data-src="./view/index.html?src=us" style="width:100%;height:calc(100vh - 92px);border:none;display:none;" loading="lazy" title="US Market Briefing"></iframe>
+  <iframe id="krmarket-frame" data-src="./view/index.html?src=kr" style="width:100%;height:calc(100vh - 92px);border:none;display:block;" loading="lazy" title="KR Market Briefing"></iframe>
+  <iframe id="usmarket-frame" data-src="./view/index.html?src=us" style="width:100%;height:calc(100vh - 92px);border:none;display:none;" loading="lazy" title="US Market Briefing"></iframe>
 </div><!-- /page-market -->
 <script>
 // Market 탭 하위(한국/미국) 전환 — iframe 은 처음 볼 때만 로드
@@ -1489,7 +1489,7 @@ td input, td textarea{border-radius:8px}
   const KEY = 'sv_market_sub';
   function show(m, save) {
     document.querySelectorAll('#page-market .dtab').forEach(b => b.classList.toggle('active', b.dataset.mkt === m));
-    ['kr', 'us'].forEach(k => { const f = document.getElementById(k + 'market-frame'); f.style.display = k === m ? 'block' : 'none'; if (k === m && !f.src) f.src = f.dataset.src + '&v=' + Math.floor(Date.now() / 600000); });
+    ['kr', 'us'].forEach(k => { const f = document.getElementById(k + 'market-frame'); f.style.display = k === m ? 'block' : 'none'; if (k === m && !f.getAttribute('src')) f.src = f.dataset.src + '&v=' + Math.floor(Date.now() / 600000); });
     if (save) { try { localStorage.setItem(KEY, m); } catch (_) {} }
   }
   document.querySelectorAll('#page-market .dtab').forEach(b => b.addEventListener('click', () => show(b.dataset.mkt, true)));
