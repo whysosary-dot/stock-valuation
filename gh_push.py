@@ -20,6 +20,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 TOKEN = open(os.path.join(HERE, ".github_token")).read().strip()
 
 def api(method, path, body=None, raw=False):
+    # 네트워크 일시 오류(Connection refused 등)는 5회까지 재시도
+    for attempt in range(5):
+        try: return _api(method, path, body, raw)
+        except urllib.error.URLError as e:
+            if attempt == 4: raise
+            time.sleep(3 * (attempt + 1))
+
+def _api(method, path, body=None, raw=False):
     req = urllib.request.Request("https://api.github.com/" + path, method=method,
         data=json.dumps(body).encode() if body is not None else None,
         headers={"Authorization": "token " + TOKEN, "Accept": "application/vnd.github+json",

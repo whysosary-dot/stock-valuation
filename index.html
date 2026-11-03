@@ -1404,7 +1404,6 @@ td input, td textarea{border-radius:8px}
   <button class="page-tab-btn" data-page="interest">👀 Interest</button>
   <button class="page-tab-btn" data-page="report">📑 Report</button>
   <button class="page-tab-btn" data-page="telegram">📨 Telegram</button>
-  <button class="page-tab-btn" data-page="research">🔬 Research</button>
   <button class="page-tab-btn" data-page="sheet">📁 Folder</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
   <div class="tabs-spacer"></div>
@@ -1532,15 +1531,7 @@ td input, td textarea{border-radius:8px}
 
 
 
-<div id="page-research" class="page">
-  <iframe
-    id="research-frame"
-    src="https://whysosary-dot.github.io/investment-notes/"
-    style="width:100%;height:calc(100vh - 48px);border:none;display:block;"
-    loading="lazy"
-    title="Research Notes"
-  ></iframe>
-</div><!-- /page-research -->
+<!-- Research 탭은 2026-11 폴더탭(리서치 노트)으로 통합 — research_note.py -->
 
 <div id="page-sheet" class="page">
   <!-- 자체 스프레드시트 (Luckysheet) — same-origin sheet.html, localStorage/PAT 공유 -->
@@ -2905,7 +2896,6 @@ const IFRAME_TAB_SRC = {
   krmarket:  './view/index.html?src=kr&v=' + Math.floor(Date.now()/600000),
   awake:     './view/index.html?src=awake&v=' + Math.floor(Date.now()/600000),
   interest:  './view/index.html?src=interest&v=' + Math.floor(Date.now()/600000),
-  research:  'https://whysosary-dot.github.io/investment-notes/',
   report:    './report/index.html?v=' + Date.now(),  // 증권사 리포트 정리 (same-origin)
   telegram:  './telegram/index.html?v=' + Date.now(),  // 텔레그램 채널 언급 종목 (same-origin)
   chart:     './chart/index.html?v=' + Math.floor(Date.now()/60000),  // Chart 탭 (same-origin, 1분 단위 캐시 무효화 — Pages CDN·사파리 iframe 캐시 대응)
@@ -2913,7 +2903,7 @@ const IFRAME_TAB_SRC = {
 };
 
 function activatePage(page, opts = {}) {
-  if (page === 'etfmonitor' || page === 'index' || page === 'rules') page = page === 'rules' ? 'diary' : 'chart';  // Chart·Diary 하위 탭으로 이동한 옛 탭
+  if (page === 'etfmonitor' || page === 'index' || page === 'rules' || page === 'research') page = page === 'rules' ? 'diary' : page === 'research' ? 'sheet' : 'chart';  // Chart·Diary·Folder 로 이동한 옛 탭
   const btn = document.querySelector(`.page-tab-btn[data-page="${page}"]`);
   if (!btn) return;
   document.querySelectorAll('.page-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
@@ -2952,7 +2942,7 @@ document.querySelectorAll('.page-tab-btn').forEach(btn => {
 // ── 같은 출처(whysosary-dot.github.io) 탭 페이지에 공통 테마·스킨 주입 (Telegram·Report 톤으로 통일) ──
 // 끄려면 localStorage sv_skin_off=1. 뷰어(view/)로 여는 탭(US/KR Market·Awake·Interest)은 뷰어가 직접 주입한다.
 const SKIN_KEY = { 'etfmonitor-frame': 'etf', 'dart-frame': 'dart', 'index-frame': 'index', 'calendar-frame': 'calendar',
-                   'research-frame': 'research', 'screener-frame': 'screener' };
+                   'screener-frame': 'screener' };
 function svInjectSkin(fr) {
   try {
     if (localStorage.getItem('sv_skin_off') === '1') { fr.classList.remove('skin-wait'); return true; }
@@ -3127,7 +3117,6 @@ const TAB_REPOS = {
   krmarket:  { repo: 'whysosary-dot/kr-market-briefing' },
   awake:     { repo: 'whysosary-dot/awake-disclosure' },
   interest:  { repo: 'whysosary-dot/watchlist-briefing' },
-  research:  { repo: 'whysosary-dot/investment-notes' },
   diary:     { repo: 'whysosary-dot/invest-private', path: 'sv/diary.json' },
 };
 const TAB_VISIT_KEY    = 'sv_tab_lastvisit_v1';

@@ -53,6 +53,15 @@
 - 카드 읽기: `python3 add_folder_card.py --get <id>` (sheet.html?open=<id> 링크의 id) / 폴더 안 카드 목록: `--cards <폴더명>`
   (폴더탭 페이지는 브라우저 localStorage 의 토큰으로 비공개 리포를 읽으므로, 다른 세션의 브라우저로 링크를 열면 빈 화면이 정상. 이 스크립트로 읽을 것)
 
+## 리서치 노트 — 옛 🔬 Research 탭(investment-notes) 대체, 폴더탭에서 구동 (2026-11-03)
+- Research 탭은 대시보드에서 제거됨. 리서치 카드(요약 불릿 + Chart.js 차트 + 태그)는 📁 폴더탭의 **주식/관심종목/<기업>** 또는 **주식/산업/<산업>** 폴더 안 「🔬 리서치 노트 (N건)」 웹문서에 쌓인다.
+- 스크립트: `stock-valuation/research_note.py` (docstring 참고). 사용자가 자료(이미지·리포트·공시)를 주며 "정리해줘/리서치 노트에 추가"라고 하면:
+  1. 기업인지 산업인지 판단 → 카드 JSON 작성 (investment-notes 의 CLAUDE.md 규칙 그대로: title·date(원본 날짜)·summary 3~5불릿·tags 풍성하게·수치는 반드시 chart/charts, 주제가 여럿이면 카드 분할)
+  2. `python3 research_note.py add --name <기업명> --card card.json [--ticker 005930 --sector 반도체]` / 산업은 `--industry`. 폴더 없으면 자동 생성.
+  3. 읽기: `python3 research_note.py show --name <기업명>` · 목록: `list`
+- 원본 데이터는 invest-private `sv/research/<folder_id>.json`, 렌더본은 `sv/sheets/data/<sheet_id>.json`(webdoc). 둘 다 스크립트가 갱신하므로 손으로 고치지 말 것.
+- 옛 저장소 whysosary-dot/investment-notes 는 보관용(이관 완료, 더 이상 추가하지 않음).
+
 ---
 ## 세션 소스에 없는 레포에 push 하기 (403 해결) — gh_push.py
 클라우드 세션의 git 프록시에 레포가 등록돼 있지 않으면 `git push` 가 403 이다. 이 경우 Mac 에 연결된 상태에서
