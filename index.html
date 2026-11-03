@@ -220,6 +220,9 @@
   .svc-bd span { font-size: 10px; font-weight: 700; border: 1px solid var(--border-strong); border-radius: 4px; padding: 0 4px; line-height: 15px; color: var(--text-dim); }
   .svc-bd span.up { color: #b91c1c; border-color: #f3c3c9; background: #fdeef0; }
   .svc-bd span.dn { color: #2563eb; border-color: #c7d2fb; background: #edf1fe; }
+  .svc-bd span.stg { border-color: transparent; }
+  .svc-bd span.stg.s1 { background: #e5e7eb; color: #374151; } .svc-bd span.stg.s2 { background: #fde2e2; color: #b91c1c; }
+  .svc-bd span.stg.s3 { background: #f6dfae; color: #92400e; } .svc-bd span.stg.s4 { background: #d9e2f5; color: #1e40af; }
   .svc-modal { position: fixed; inset: 0; background: rgba(15,23,42,.5); z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 20px; }
   .svc-modal .box { background: var(--panel); border-radius: 14px; padding: 14px 16px; width: min(960px, 96vw); box-shadow: 0 20px 60px rgba(0,0,0,.3); }
   .svc-modal .hd { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
@@ -1752,13 +1755,21 @@ function svcWeeklyCell(td, s) {
   const vals = xs.concat(ma.filter(x => x != null)); let lo = Math.min(...vals), hi = Math.max(...vals); if (hi === lo) hi = lo + 1;
   const padT = 4, padB = 4, padR = 36, padL = 2; const n = xs.length;
   const X = i => padL + (W - padL - padR) * i / (n - 1), Y = v => padT + (H - padT - padB) * (1 - (v - lo) / (hi - lo));
+  // 스탠 와인스타인 4단계: 30주선 기울기(4주 전 대비) × 종가 위치 → 상승·위 2 / 상승·아래 3 / 하락·아래 4 / 하락·위 1
+  const stg = xs.map((v, i) => { const m = ma[i], m4 = i >= 4 ? ma[i - 4] : null; if (m == null || m4 == null) return null; const up = m > m4, ab = v > m; return up ? (ab ? 2 : 3) : (ab ? 1 : 4); });
+  const SBG = { 1: '#ebedf0', 2: '#fde6e6', 3: '#fbe9c6', 4: '#dfe6f5' };
+  for (let i0 = 0, i = 1; i <= n; i++) { if (i === n || stg[i] !== stg[i0]) { if (stg[i0]) { g.fillStyle = SBG[stg[i0]]; const x0 = i0 === 0 ? padL : (X(i0 - 1) + X(i0)) / 2, x1 = i === n ? X(n - 1) : (X(i - 1) + X(i)) / 2; g.fillRect(x0, padT, x1 - x0, H - padT - padB); } i0 = i; } }
+  let sw = 0; for (let i = n - 1; i >= 0 && stg[i] && stg[i] === stg[n - 1]; i--) sw++;
+  s._stage = stg[n - 1]; s._stage_w = sw;
   g.strokeStyle = '#e8792e'; g.lineWidth = 1.1; g.beginPath(); let st = false; ma.forEach((v, i) => { if (v == null) return; st ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)); st = true; }); g.stroke();
   g.strokeStyle = '#1d2b4f'; g.lineWidth = 1.3; g.beginPath(); xs.forEach((v, i) => i ? g.lineTo(X(i), Y(v)) : g.moveTo(X(0), Y(v))); g.stroke();
   g.fillStyle = '#1d2b4f'; g.beginPath(); g.arc(X(n - 1), Y(xs[n - 1]), 2, 0, 7); g.fill();
   const r2 = (xs[n - 1] / xs[0] - 1) * 100; g.fillStyle = r2 >= 0 ? '#b91c1c' : '#2563eb'; g.font = 'bold 10px ' + svcFont(); g.textAlign = 'left';
   g.fillText((r2 > 0 ? '+' : '') + r2.toFixed(0) + '%', X(n - 1) + 4, Math.max(9, Math.min(H - 3, Y(xs[n - 1]) + 3)));
   td.appendChild(cv);
-  td.appendChild(svcBadges(s)); td.title = '최근 3년 주봉 종가 · 주황 30주선 · 3년 수익률 · 일/주/월 = 50일·30주·10개월선 위▲/아래▼';
+  const bd = svcBadges(s);
+  if (s._stage) { const e = document.createElement('span'); e.className = 'stg s' + s._stage; e.textContent = s._stage + '단계 ' + s._stage_w + '주째'; e.title = '스탠 와인스타인 4단계 (30주선 기울기×종가 위치)'; bd.prepend(e); }
+  td.appendChild(bd); td.title = '최근 3년 주봉 종가 · 주황 30주선 · 배경 띠 = 주별 와인스타인 단계(회색1·빨강2·주황3·파랑4) · 3년 수익률 · 일/주/월 = 50일·30주·10개월선 위▲/아래▼';
 }
 async function svcLoadOhlc() {
   if (SVC.ohlc || SVC.loading || SVC.failed) return;
