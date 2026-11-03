@@ -333,12 +333,13 @@
       <a class="sb-title" href="https://docs.google.com/spreadsheets/u/0/?pli=1" target="_blank" rel="noopener" title="구글 스프레드시트 홈 새 창으로 열기">📊 Sheets</a>
       <button class="sb-btn" id="new-folder-btn" title="선택한 폴더 아래 새 폴더 (선택 없으면 최상위)">📁+</button>
       <button class="sb-btn" id="new-note-btn" title="새 글 (텍스트+사진 노트)">📝+</button>
-      <button class="sb-btn" id="new-research-btn" title="리서치 탭 기업 카드 가져오기">🔬+</button>
+      <button class="sb-btn" id="new-research-btn" title="리서치 탭 기업 카드 가져오기" style="display:none">🔬+</button>
       <button class="sb-btn" id="new-web-btn" title="웹사이트 연결 (블로그·유튜브 등)">🔗+</button>
       <button class="sb-btn" id="new-gsheet-btn" title="구글 스프레드시트 연결">📄+</button>
     </div>
-    <div class="sb-search">
-      <input id="tree-search" type="search" placeholder="🔍 폴더·카드 검색" autocomplete="off" />
+    <div class="sb-search" style="display:flex;gap:6px;align-items:center">
+      <input id="tree-search" type="search" placeholder="🔍 폴더·카드 검색" autocomplete="off" style="flex:1;min-width:0" />
+      <button class="sb-btn" id="tree-collapse-all" title="모든 폴더 접기 / 펼치기 (한 번에)" style="flex:none">⊟</button>
     </div>
     <div class="tree" id="tree"></div>
   </div>
@@ -788,6 +789,16 @@ function renderSearchResults(tree, q) {
   });
 }
 
+// ── 모든 폴더 한 번에 접기/펼치기 ──
+function setAllFolders(collapse) {
+  collapsed = new Set(collapse ? meta.folders.map(f => f.id) : []);
+  saveCollapsed(); renderTree();
+}
+document.getElementById('tree-collapse-all').addEventListener('click', () => {
+  const total = meta.folders.length; const anyOpen = meta.folders.some(f => !collapsed.has(f.id));
+  setAllFolders(anyOpen);   // 하나라도 펼쳐져 있으면 전부 접기, 전부 접혀 있으면 전부 펼치기
+  document.getElementById('tree-collapse-all').textContent = anyOpen ? '⊞' : '⊟';
+});
 function renderTree() {
   const tree = document.getElementById('tree');
   tree.innerHTML = '';
