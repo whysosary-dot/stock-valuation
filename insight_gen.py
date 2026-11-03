@@ -20,7 +20,7 @@ JSON 형식 (Claude 가 작성):
 }
 규칙: 매수·매도 권유 금지. 등락률 나열 금지(패널 아래에 이미 있음) — '왜'와 '다음에 볼 것'을 쓴다.
 """
-import sys, json, base64, urllib.request, datetime, statistics, re
+import sys, json, base64, urllib.request, urllib.error, datetime, statistics, re
 from pathlib import Path
 BASE = Path(__file__).resolve().parent
 TOK = (BASE / ".github_token").read_text().strip()
@@ -128,8 +128,17 @@ def write(tab, path):
 
 # ───────────── Chart 탭 (chart/data/*.json, 공개 리포) ─────────────
 def raw_pub(path):
-    rq = urllib.request.Request(f"https://raw.githubusercontent.com/{PUB}/main/{path}?t={datetime.datetime.now().timestamp()}", headers={"User-Agent": "sv-insight"})
-    return json.loads(urllib.request.urlopen(rq, timeout=60).read())
+    # chart/data/* 는 2026-11-03 부터 이력 없는 orphan 브랜치 `data` 에 (루트 = 옛 chart/data). 없으면 main 폴백
+    cands = [f"data/{path[len('chart/data/'):]}", f"main/{path}"] if path.startswith("chart/data/") else [f"main/{path}"]
+    last = None
+    for c in cands:
+        try:
+            rq = urllib.request.Request(f"https://raw.githubusercontent.com/{PUB}/{c}?t={datetime.datetime.now().timestamp()}", headers={"User-Agent": "sv-insight"})
+            return json.loads(urllib.request.urlopen(rq, timeout=60).read())
+        except urllib.error.HTTPError as e:
+            last = e
+            if e.code != 404: raise
+    raise last
 
 def data_chart():
     """Chart 탭 5개 섹션 요약 — Claude 가 읽고 sections 별 인사이트를 쓴다"""

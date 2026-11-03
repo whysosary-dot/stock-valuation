@@ -33,6 +33,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      # 데이터는 main 이 아니라 이력 없는 orphan 브랜치 `data` 에 (매일 단일 커밋으로 강제 덮어쓰기 → 저장소 크기 고정).
+      # 페이지·스크립트는 raw.githubusercontent.com/whysosary-dot/stock-valuation/data/chart/data/… 에서 읽는다.
+      - name: data branch → chart/data
+        run: |
+          if git fetch --depth=1 origin data 2>/dev/null; then
+            rm -rf chart/data && mkdir -p chart/data
+            git archive FETCH_HEAD | tar -x -C chart/data
+            echo "data 브랜치에서 복원: $(ls chart/data | wc -l)개"
+          else
+            echo "data 브랜치 없음 — main 의 chart/data 로 시작(최초 1회)"
+          fi
       - name: decide market
         id: m
         run: |
@@ -72,17 +83,17 @@ jobs:
           M="${{ steps.m.outputs.mkt }}"
           case "$M" in both|kr|kr+us) python3 chart/build_chart.py kr 2>&1 | grep -v "Failed download\|possibly delisted\|Invalid Crumb" | tail -12 ;; esac
           case "$M" in both|us|kr+us) python3 chart/build_chart.py us 2>&1 | grep -v "Failed download\|possibly delisted\|Invalid Crumb" | tail -12 ;; esac
-      - name: commit
+      - name: push data branch (orphan, 단일 커밋)
         if: steps.m.outputs.mkt != 'none'
         run: |
+          cd chart/data
+          rm -rf .git && git init -q && git checkout -q --orphan data
           git config user.email "whysosary@naver.com"
           git config user.name "리송"
-          git add -A chart/data
-          if git diff --cached --quiet; then echo "변동 없음"; exit 0; fi
-          git commit -q -m "chart: $(date -u -d '+9 hours' +%F) ${{ steps.m.outputs.mkt }} (actions)"
-          # 빌드 중(4~5분) 다른 커밋(인사이트·대시보드 편집)이 들어오면 push 거절 → rebase 후 재시도
-          for i in 1 2 3 4 5; do
-            git pull --rebase -q origin main && git push -q && { git log --oneline -1; exit 0; }
+          git add -A
+          git commit -q -m "chart data $(date -u -d '+9 hours' +%F) ${{ steps.m.outputs.mkt }} (actions, orphan)"
+          for i in 1 2 3; do
+            git push -f -q "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" data:data && { echo "pushed data ($(git rev-parse --short HEAD))"; exit 0; }
             echo "push 재시도 $i"; sleep $((i*7))
           done
           exit 1

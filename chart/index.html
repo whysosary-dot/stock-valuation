@@ -184,7 +184,8 @@ body{padding:12px 14px 40px}
 </div>
 
 <script>
-const BASE = './data/';
+const BASE = 'https://raw.githubusercontent.com/whysosary-dot/stock-valuation/data/';  // 데이터 전용 orphan 브랜치(data). 없으면 ./data/ 로 폴백
+const BASE_FALLBACK = './data/';
 const TAGS = {
   gap_up:      { l: '거래량 터진 갭 상승', c: 'k', d: '시가 갭 +3%↑ · 종가 +5%↑ · 거래량 50일 평균 3배↑ · 고가권(상위 40%) 마감' },
   new_high:    { l: '52주 신고가', c: 'k', d: '종가가 직전 52주 고가 돌파 · 거래량 1.2배↑' },
@@ -199,7 +200,7 @@ const fmtPct = (v, d = 1) => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(
 const cls = v => v == null ? 'flat' : v > 0.0001 ? 'up' : v < -0.0001 ? 'dn' : 'flat';
 const fmtN = (v, mkt) => v == null ? '—' : mkt === 'US' ? ('$' + Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 })) : Number(v).toLocaleString('ko-KR') + '원';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-async function jget(p) { const r = await fetch(BASE + p + '?t=' + Math.floor(Date.now() / 300000), { cache: 'no-store' }); if (!r.ok) throw new Error(p + ' ' + r.status); return r.json(); }
+async function jget(p) { let r = await fetch(BASE + p + '?t=' + Math.floor(Date.now() / 300000), { cache: 'no-store' }).catch(() => null); if (!r || !r.ok) r = await fetch(BASE_FALLBACK + p + '?t=' + Math.floor(Date.now() / 300000), { cache: 'no-store' }); if (!r.ok) throw new Error(p + ' ' + r.status); return r.json(); }
 const dpr = () => Math.min(2, window.devicePixelRatio || 1);
 function setupCanvas(cv) { const w = cv.clientWidth || 300, h = cv.clientHeight || 100; cv.width = Math.round(w * dpr()); cv.height = Math.round(h * dpr()); const g = cv.getContext('2d'); g.setTransform(dpr(), 0, 0, dpr(), 0, 0); return [g, w, h]; }
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
