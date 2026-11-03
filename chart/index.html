@@ -54,6 +54,10 @@ body{padding:12px 14px 40px}
 .scard .h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .scard .tk{font-weight:800;font-size:16px}
 .scard .tk a{color:inherit;text-decoration:none}
+.scard .fav{margin-left:auto;background:none;border:none;cursor:pointer;font-size:17px;line-height:1;color:#c4c9d4;padding:0 2px}
+.scard .fav.on{color:#f59e0b}.scard .fav:hover{color:#f59e0b}
+.scard .favmeta{font-size:11px;color:var(--text-dim);margin:2px 0 0}
+.chip.favchip.on{background:#fff7e6;border-color:#f59e0b;color:#b45309}
 .scard .nm{font-size:12.5px;color:var(--text-dim)}
 .scard .px{margin-left:auto;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums}
 .scard .desc{font-size:12px;color:var(--text-dim);margin:2px 0 6px}
@@ -172,6 +176,7 @@ body{padding:12px 14px 40px}
     <button class="chip" data-m="us">🇺🇸 미국</button>
     <span style="width:10px"></span>
     <span id="tagchips"></span>
+    <button class="chip favchip" id="favchip" title="별표한 종목만 모아 보기 (한국·미국 전체)">★ 즐겨찾기 <span class="n" id="favn">0</span></button>
     <span class="hist">이력 <select id="hist"></select></span>
   </div>
   <p class="tip" id="scan-tip"></p>
@@ -188,7 +193,7 @@ const TAGS = {
   w_ma30_break:{ l: '주봉 · 30주선 돌파', c: 'w', d: '이번 주 종가가 30주선 상향 돌파 · 주간 거래량 10주 평균 1.5배↑' },
   w_vol_surge: { l: '주봉 · 거래량 급증 상승', c: 'w', d: '주간 +8%↑ · 주간 거래량 2.5배↑ · 주간 고가권 마감 · RS 60↑' },
 };
-const state = { view: 'board', board: 'kr', mkt: 'kr', tag: null, hist: '', data: {}, tf: {} };
+const state = { view: 'board', board: 'kr', mkt: 'kr', tag: null, hist: '', data: {}, tf: {}, favOnly: false };
 const $ = s => document.querySelector(s);
 const fmtPct = (v, d = 1) => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(d) + '%';
 const cls = v => v == null ? 'flat' : v > 0.0001 ? 'up' : v < -0.0001 ? 'dn' : 'flat';
@@ -428,14 +433,62 @@ function drawScan(cv, hit, tf) {
   g.fillStyle = css('--text'); g.beginPath(); g.moveTo(X(n - 1), padT - 6); g.lineTo(X(n - 1) - 4, padT - 1); g.lineTo(X(n - 1) + 4, padT - 1); g.fill();
 }
 function link(h) { return h.mkt === 'KR' ? `https://m.stock.naver.com/domestic/stock/${h.tk}/total` : `https://finance.yahoo.com/quote/${h.tk}`; }
-function scanCard(h) {
+/* ── 스캔 즐겨찾기: localStorage + (토큰 있으면) invest-private sv/chart_favs.json 동기화 ── */
+const FAV = { key: 'chart_scan_fav_v1', map: {}, sha: null, loaded: false };
+const favKey = h => h.mkt + ':' + h.tk;
+function favLoadLocal() { try { FAV.map = JSON.parse(localStorage.getItem(FAV.key) || '{}'); } catch (_) { FAV.map = {}; } }
+function favSaveLocal() { try { localStorage.setItem(FAV.key, JSON.stringify(FAV.map)); } catch (_) {} favBadge(); }
+function favPat() { return (localStorage.getItem('sv_github_pat') || '').trim(); }
+async function favSyncLoad() {
+  const pat = favPat(); if (!pat) return;
+  try {
+    const r = await fetch(`https://api.github.com/repos/whysosary-dot/invest-private/contents/sv/chart_favs.json?ref=main&t=${Date.now()}`, { cache: 'no-store', headers: { Accept: 'application/vnd.github+json', Authorization: `token ${pat}` } });
+    if (r.status === 404) { FAV.loaded = true; return; }
+    if (!r.ok) return;
+    const j = await r.json(); FAV.sha = j.sha;
+    const remote = JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g, '')))));
+    // 병합: 더 최근 added 가 이김, 로컬에서 지운 건 removed 표시로 전파
+    Object.entries(remote).forEach(([k, v]) => { const l = FAV.map[k]; if (!l || (v.updated || 0) > (l.updated || 0)) FAV.map[k] = v; });
+    Object.keys(FAV.map).forEach(k => { if (FAV.map[k].removed && (Date.now() - FAV.map[k].updated) > 30 * 864e5) delete FAV.map[k]; });
+    FAV.loaded = true; favSaveLocal();
+  } catch (e) { console.warn('[fav] load', e.message); }
+}
+let favSaveTimer = null;
+function favSyncSave() {
+  const pat = favPat(); if (!pat) return;
+  clearTimeout(favSaveTimer);
+  favSaveTimer = setTimeout(async () => {
+    try {
+      const body = { message: `chart favs ${new Date().toISOString().slice(0, 16)}`, content: btoa(unescape(encodeURIComponent(JSON.stringify(FAV.map)))), branch: 'main' };
+      if (FAV.sha) body.sha = FAV.sha;
+      const r = await fetch('https://api.github.com/repos/whysosary-dot/invest-private/contents/sv/chart_favs.json', { method: 'PUT', headers: { Accept: 'application/vnd.github+json', Authorization: `token ${pat}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (r.ok) { const j = await r.json(); FAV.sha = j.content.sha; }
+      else if (r.status === 409 || r.status === 422) { FAV.sha = null; await favSyncLoad(); favSyncSave(); }
+    } catch (e) { console.warn('[fav] save', e.message); }
+  }, 1500);
+}
+function favActive() { return Object.values(FAV.map).filter(v => !v.removed); }
+function favBadge() { const n = favActive().length; const el = $('#favn'); if (el) el.textContent = n; }
+function favToggle(h, scanDate) {
+  const k = favKey(h); const cur = FAV.map[k];
+  if (cur && !cur.removed) { FAV.map[k] = { ...cur, removed: true, updated: Date.now() }; }
+  else {
+    const snap = { ...h, d: h.d.slice(-160), o: h.o.slice(-160), h: h.h.slice(-160), l: h.l.slice(-160), c: h.c.slice(-160), v: h.v.slice(-160), bench: (h.bench || []).slice(-160) };
+    FAV.map[k] = { tk: h.tk, mkt: h.mkt, name: h.name, scan_date: scanDate, added: new Date().toISOString().slice(0, 10), updated: Date.now(), hit: snap };
+  }
+  favSaveLocal(); favSyncSave();
+  if (state.favOnly) renderScan(); else document.querySelectorAll(`.scard .fav[data-k="${k}"]`).forEach(b => { const on = !(FAV.map[k].removed); b.classList.toggle('on', on); b.textContent = on ? '★' : '☆'; });
+}
+function scanCard(h, opts = {}) {
   const el = document.createElement('div'); el.className = 'scard';
   const mcap = h.mcap == null ? '' : h.mkt === 'KR' ? `시총 ${h.mcap >= 10000 ? (h.mcap / 10000).toFixed(1) + '조' : Math.round(h.mcap).toLocaleString() + '억'}` : `시총 $${h.mcap >= 1000 ? (h.mcap / 1000).toFixed(1) + 'B' : h.mcap + 'M'}`;
   const tags = h.tags.map(t => `<span class="tg ${TAGS[t].c}" title="${esc(TAGS[t].d)}">일봉 · ${TAGS[t].l}</span>`).concat(h.wtags.map(t => `<span class="tg ${TAGS[t].c}" title="${esc(TAGS[t].d)}">${TAGS[t].l}</span>`));
   if (h.rs != null) tags.push(`<span class="tg rs">RS ${h.rs}</span>`);
   if (h.above_ma200) tags.push(`<span class="tg i">200일선 위</span>`);
   if (h.earnings) tags.push(`<span class="tg e">실적 ${h.earnings}</span>`);
-  el.innerHTML = `<div class="h"><span class="tk"><a href="${link(h)}" target="_blank" rel="noopener">${esc(h.mkt === 'KR' ? h.name : h.tk)}</a></span><span class="nm">${esc(h.mkt === 'KR' ? h.tk + ' · ' + (h.mkt_sub || '') : h.name)}</span><span class="px ${cls(h.chg)}">${fmtN(h.price, h.mkt)} ${fmtPct(h.chg)}</span></div>
+  const fk = favKey(h); const isFav = !!(FAV.map[fk] && !FAV.map[fk].removed);
+  el.innerHTML = `<div class="h"><span class="tk"><a href="${link(h)}" target="_blank" rel="noopener">${esc(h.mkt === 'KR' ? h.name : h.tk)}</a></span><span class="nm">${esc(h.mkt === 'KR' ? h.tk + ' · ' + (h.mkt_sub || '') : h.name)}</span><span class="px ${cls(h.chg)}">${fmtN(h.price, h.mkt)} ${fmtPct(h.chg)}</span><button class="fav${isFav ? ' on' : ''}" data-k="${esc(fk)}" title="즐겨찾기 (★ 눌러 모아 보기)">${isFav ? '★' : '☆'}</button></div>
+    ${opts.favmeta ? `<div class="favmeta">★ ${esc(opts.favmeta)}</div>` : ''}
     <div class="desc">${esc([h.sector, h.industry].filter(Boolean).join(' · '))}${mcap ? ' · ' + mcap : ''}</div>
     <div class="tags">${tags.join('')}</div>
     ${h.news && h.news.title ? `<div class="news">최근 뉴스 · <a href="${esc(h.news.url || '#')}" target="_blank" rel="noopener">${esc(h.news.title)}</a> <span class="legend">${esc(h.news.date || '')}</span></div>` : ''}
@@ -443,12 +496,26 @@ function scanCard(h) {
     <canvas></canvas>
     <div class="f">시가 갭 <b>${fmtPct(h.gap)}</b> · 종가 <b>${fmtPct(h.chg)}</b> · 거래량 <b>${h.vol_ratio}배</b>(50일 평균 대비) · ${h.close_pos >= 0.6 ? '<b>고가권 마감</b>' : h.close_pos <= 0.3 ? '저가권 마감' : '중간 마감'} · 전일 종가 ${fmtN(h.prev_close, h.mkt)} · 52주 고점 대비 <b>${fmtPct(h.off_hi52)}</b><br><span class="legend">일봉 ${Math.round(h.d.length / 21)}개월 · 회색 50일선 · 주황 200일선 · 보라 RS(지수 대비 상대강도) · 주봉은 10주·30주선</span></div>`;
   const cv = el.querySelector('canvas');
+  el.querySelector('.fav').addEventListener('click', () => favToggle(h, opts.scanDate || ''));
   el.querySelectorAll('.tf button').forEach(b => b.addEventListener('click', () => { el.querySelectorAll('.tf button').forEach(x => x.classList.remove('on')); b.classList.add('on'); drawScan(cv, h, b.dataset.tf); }));
   requestAnimationFrame(() => drawScan(cv, h, 'd'));
   return el;
 }
 function renderScan() {
   const d = state.data['scan_' + state.mkt]; const el = $('#scan'); el.innerHTML = '';
+  favBadge(); $('#favchip').classList.toggle('on', !!state.favOnly);
+  if (state.favOnly) {
+    const favs = favActive().sort((a, b) => (b.updated || 0) - (a.updated || 0));
+    $('#tagchips').innerHTML = '';
+    $('#scan-tip').innerHTML = `<b>★ 즐겨찾기</b> · ${favs.length}종목 (한국·미국 전체). 오늘 스캔에 다시 걸린 종목은 최신 데이터로, 아니면 별표할 때의 차트로 보여줍니다. ${favPat() ? '다른 기기와 동기화됨(invest-private)' : '이 기기에만 저장 — 메인 ⚙️ 토큰을 넣으면 기기 간 동기화'}. 별을 다시 누르면 해제.`;
+    if (!favs.length) { el.innerHTML = '<div class="empty">아직 별표한 종목이 없습니다. 스캔 카드 오른쪽 위 ☆ 를 누르세요.</div>'; return; }
+    const sec = (title, arr) => { if (!arr.length) return; const hd = document.createElement('div'); hd.className = 'sec-h'; hd.innerHTML = `${title} <span class="s">${arr.length}개</span>`; el.appendChild(hd); const gr = document.createElement('div'); gr.className = 'sgrid'; arr.forEach(f => {
+      const live = (state.data['scan_' + f.mkt.toLowerCase()] || { hits: [] }).hits.find(x => x.tk === f.tk);
+      const h = live || f.hit; const meta = `${f.added} 저장 · 스캔 ${f.scan_date || '-'}${live ? ' · 오늘 스캔 재등장' : ''}`;
+      gr.appendChild(scanCard(h, { favmeta: meta, scanDate: f.scan_date })); }); el.appendChild(gr); };
+    sec('🇰🇷 한국', favs.filter(f => f.mkt === 'KR')); sec('🇺🇸 미국', favs.filter(f => f.mkt === 'US'));
+    return;
+  }
   if (!d) { $('#scan-tip').textContent = '아직 데이터가 없습니다.'; return; }
   const counts = {}; d.hits.forEach(h => h.tags.concat(h.wtags).forEach(t => counts[t] = (counts[t] || 0) + 1));
   $('#tagchips').innerHTML = Object.keys(TAGS).map(t => `<button class="chip ${state.tag === t ? 'on' : ''}" data-t="${t}" title="${esc(TAGS[t].d)}">${TAGS[t].l}<span class="n">${counts[t] || 0}</span></button>`).join('');
@@ -456,7 +523,7 @@ function renderScan() {
   $('#scan-tip').innerHTML = `<b>${d.market === 'KR' ? '한국' : '미국'} 스캔</b> · ${d.date} 종가 기준 · 유니버스 ${d.universe.toLocaleString()}종목(${d.market === 'KR' ? '시총 1,000억↑ · 거래대금 10억↑' : 'S&P 500/400/600 · 거래대금 $5M↑'}) · 히트 ${d.hits.length}개. 드러켄밀러식 — 차트는 <b>걸러내는 용도</b>: 펀더멘털이 좋은데 차트가 나쁘면 사지 않고, 여기 걸린 종목은 펀더멘털을 따로 확인한다. RS = 3·6·9·12개월 수익률 가중 백분위(시장 내). 매수·매도 권유 아님.`;
   const hits = state.tag ? d.hits.filter(h => h.tags.includes(state.tag) || h.wtags.includes(state.tag)) : d.hits;
   const daily = hits.filter(h => h.tags.length), weeklyOnly = hits.filter(h => !h.tags.length && h.wtags.length);
-  const sec = (title, sub, arr) => { const hd = document.createElement('div'); hd.className = 'sec-h'; hd.innerHTML = `${title} <span class="s">${sub} · ${arr.length}개</span>`; el.appendChild(hd); const gr = document.createElement('div'); gr.className = 'sgrid'; if (!arr.length) gr.innerHTML = '<div class="empty">해당 없음</div>'; arr.forEach(h => gr.appendChild(scanCard(h))); el.appendChild(gr); };
+  const sec = (title, sub, arr) => { const hd = document.createElement('div'); hd.className = 'sec-h'; hd.innerHTML = `${title} <span class="s">${sub} · ${arr.length}개</span>`; el.appendChild(hd); const gr = document.createElement('div'); gr.className = 'sgrid'; if (!arr.length) gr.innerHTML = '<div class="empty">해당 없음</div>'; arr.forEach(h => gr.appendChild(scanCard(h, { scanDate: d.date }))); el.appendChild(gr); };
   sec('일봉', '8~20일을 내다보는 차트', daily);
   sec('주봉', '8~20주를 내다보는 차트 (일봉 조건에 안 걸리고 주봉 조건만 걸린 종목)', weeklyOnly);
 }
@@ -558,6 +625,7 @@ async function init() {
   await Promise.all(names.map(async n => { try { state.data[n] = await jget(n + '.json'); } catch (e) { console.warn(n, e.message); } }));
   try { const m = await jget('meta.json'); $('#meta').textContent = `한국 ${m.kr_date || '—'} · 미국 ${m.us_date || '—'}${m.etf_date ? ' · ETF ' + m.etf_date : ''} 종가 기준 · 갱신 ${(m.updated_at || '').replace('T', ' ').slice(0, 16)} KST · 매일 자동(한국 16:40 · 미국 06:40)`; } catch (_) { $('#meta').textContent = ''; }
   ['groups_kr', 'groups_us'].forEach(k => state.data[k] && flipBadges(state.data[k]));
+  favLoadLocal(); favBadge(); $('#favchip').onclick = () => { state.favOnly = !state.favOnly; renderScan(); }; favSyncLoad().then(() => { favBadge(); if (state.favOnly) renderScan(); });
   await loadInsights();
   if (INS.ai) $('#ins-btn').classList.add('has');
   $('#ins-btn').onclick = () => openInsight(state.view === 'scan' ? 'scan_' + state.mkt : (state.view === 'index' || state.view === 'etf') ? state.view : state.board);
@@ -567,7 +635,7 @@ async function init() {
   document.querySelectorAll('#etf-sub [data-c]').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('#etf-sub [data-c]').forEach(x => x.classList.remove('on')); b.classList.add('on'); ETF.cat = b.dataset.c; renderEtf(); }));
   $('#etf-sort').addEventListener('change', e => { ETF.sort = e.target.value; renderEtf(); });
   let qt; $('#etf-q').addEventListener('input', e => { clearTimeout(qt); qt = setTimeout(() => { ETF.q = e.target.value.trim(); renderEtf(); }, 200); });
-  document.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('[data-m]').forEach(x => x.classList.remove('on')); b.classList.add('on'); state.mkt = b.dataset.m; state.tag = null; renderScan(); loadHist(); }));
+  document.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('[data-m]').forEach(x => x.classList.remove('on')); b.classList.add('on'); state.mkt = b.dataset.m; state.favOnly = false; state.tag = null; renderScan(); loadHist(); }));
   let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => state.view === 'index' ? null : state.view === 'etf' ? renderEtf() : EXT[state.view] ? showExt(state.view) : state.view === 'board' ? renderBoard() : renderScan(), 150); });
 }
 init();
