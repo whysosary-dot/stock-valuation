@@ -158,7 +158,7 @@ body{padding:12px 14px 40px}
     <button class="chip" data-c="크로스에셋">크로스에셋</button>
     <button class="chip" data-c="심리 지표">심리 지표</button>
     <span style="width:10px"></span>
-    <select id="etf-sort" class="chip" style="padding:4px 8px"><option value="rel_3m">3개월 상대 순</option><option value="ret_1m">1개월 순</option><option value="chg">당일 순</option><option value="ret_2y">2년 순</option><option value="name">이름 순</option></select>
+    <select id="etf-sort" class="chip" style="padding:4px 8px"><option value="rel_3m">3개월 상대 순</option><option value="ret_1m">1개월 순</option><option value="chg">당일 순</option><option value="ret_2y">2년 순</option><option value="stage">단계 순 (1→4)</option><option value="name">이름 순</option></select>
     <input id="etf-q" class="chip" type="search" placeholder="🔍 이름·티커·섹터" style="min-width:160px">
     <a class="legend" href="https://whysosary-dot.github.io/etf-monitor/" target="_blank" rel="noopener" style="margin-left:auto">표 형식(ETF Monitor) ↗</a>
   </div>
@@ -340,7 +340,11 @@ function etfCard(e, bench) {
   const w = (e.price_history_3y || []).filter(Number.isFinite); const d3 = (e.price_history_3m || []).filter(Number.isFinite);
   if (w.length < 60) return null;
   const last = Number(e.price_native) || w[w.length - 1];
-  const wk = w.slice(-105); const ma = wk.map((_, i) => { const k = w.length - wk.length + i; return k >= 29 ? w.slice(k - 29, k + 1).reduce((s, x) => s + x, 0) / 30 : null; });
+  const wk = w.slice(-105); const off = w.length - wk.length; const maF = sma(w, 30); const ma = wk.map((_, i) => maF[off + i]);
+  // 와인스타인 4단계 (30주선 기울기 4주 전 대비 × 종가 위치)
+  const stgF = w.map((v, i) => { const m = maF[i], m4 = i >= 4 ? maF[i - 4] : null; if (m == null || m4 == null) return null; const up = m > m4, ab = v > m; return up ? (ab ? 2 : 3) : (ab ? 1 : 4); });
+  const w_stage = stgF.slice(-wk.length); let stage_w = 0; for (let i = stgF.length - 1; i >= 0 && stgF[i] && stgF[i] === stgF[stgF.length - 1]; i--) stage_w++;
+  const stage = stgF[stgF.length - 1], stage_prev = stgF.length > 1 ? stgF[stgF.length - 2] : null;
   const end = new Date((e.priced_at || new Date().toISOString().slice(0, 10)) + 'T00:00:00'); const start = new Date(end); start.setDate(start.getDate() - 7 * (wk.length - 1));
   const r = (a, b) => (a && b) ? (a / b - 1) * 100 : null;
   const ret_1m = d3.length > 22 ? r(last, d3[d3.length - 23]) : (w.length > 4 ? r(last, w[w.length - 5]) : null);
@@ -350,6 +354,7 @@ function etfCard(e, bench) {
     chg: Number.isFinite(+e.price_change_pct) ? +e.price_change_pct : null, ret_1m, ret_3m, rel_3m: (ret_3m != null && b3 != null) ? ret_3m - b3 : null, benchName: bench ? bench.ticker : null,
     ret_2y: r(last, wk[0]), off_hi52: r(last, Math.max(...w.slice(-52))),
     d_above: d3.length >= 50 ? last > smaLast(d3, 50) : null, w_above: w.length >= 30 ? last > smaLast(w, 30) : null, m_above: w.length >= 43 ? last > smaLast(w, 43) : null,
+    stage, stage_w, stage_prev, stage_flip: !!(stage && stage_prev && stage !== stage_prev), w_stage, off_ma30: maF[maF.length - 1] ? r(last, maF[maF.length - 1]) : null,
     w_dates: [start.toISOString().slice(0, 10), end.toISOString().slice(0, 10)], w_close: wk, w_ma30: ma };
 }
 async function renderEtf() {
@@ -364,13 +369,15 @@ async function renderEtf() {
   let cards = all.map(e => etfCard(e, e.category === '한국 ETF' ? (k200 || spy) : spy)).filter(Boolean);
   if (ETF.cat) cards = cards.filter(c => c.cat === ETF.cat);
   if (ETF.q) { const q = ETF.q.toLowerCase(); cards = cards.filter(c => (c.name + ' ' + c.note + ' ' + (c.sub || '')).toLowerCase().includes(q)); }
-  const k = ETF.sort; cards.sort((a, b) => k === 'name' ? String(a.name).localeCompare(b.name, 'ko') : ((b[k] ?? -1e9) - (a[k] ?? -1e9)));
+  const k = ETF.sort; cards.sort((a, b) => k === 'name' ? String(a.name).localeCompare(b.name, 'ko') : k === 'stage' ? (((a.stage ?? 9) - (b.stage ?? 9)) || ((b.stage_w ?? 0) - (a.stage_w ?? 0))) : ((b[k] ?? -1e9) - (a[k] ?? -1e9)));
   const _pa = all.map(x => x.priced_at || '').filter(Boolean).sort(); const pricedAt = _pa[Math.floor(_pa.length / 2)] || ''; $('#etf-tip').innerHTML = `<b>ETF</b> — ETF Monitor 종목 ${all.length}개를 시장 그룹판과 같은 카드로. 가격 ${esc(pricedAt)} 종가 기준${ETF.daily ? ' (매일 자동 갱신 · 한국 16:40 · 미국 06:40)' : ' (주간본 · 매주 토 06:00)'}. 2년 주봉 종가 + 주황 30주선. 뱃지: 일=50일선 · 주=30주선 · 월=10개월선(43주) 위(▲)/아래(▼). 3개월 상대는 한국 ETF는 KODEX 200, 그 외는 SPY 대비. ${cards.length}개 표시.`;
   el.innerHTML = '';
   cards.forEach(c => {
     const card = document.createElement('div'); card.className = 'gcard';
-    const foot = c.rel_3m != null ? `1개월 ${fmtPct(c.ret_1m, 0)} · 3개월 상대 ${c.rel_3m > 0 ? '+' : ''}${Math.round(c.rel_3m)}%p` : `1개월 ${fmtPct(c.ret_1m, 0)} · 3개월 ${fmtPct(c.ret_3m, 0)}`;
+    const ma = c.off_ma30 != null ? `30주선 대비 ${fmtPct(c.off_ma30, 0)} · ` : '';
+    const foot = c.rel_3m != null ? `${ma}1개월 ${fmtPct(c.ret_1m, 0)} · 3개월 상대 ${c.rel_3m > 0 ? '+' : ''}${Math.round(c.rel_3m)}%p` : `${ma}1개월 ${fmtPct(c.ret_1m, 0)} · 3개월 ${fmtPct(c.ret_3m, 0)}`;
     card.innerHTML = `<div class="h"><span class="nm${c.link ? ' lk' : ''}" title="${esc(c.name)} · ${esc(c.note)}${c.link ? ' — 네이버 ETF 페이지' : ''}">${esc(c.name)}</span><span class="sb">${esc(c.sub || c.note)}</span><span class="chg ${cls(c.chg)}">${fmtPct(c.chg)}</span></div>
+      ${c.stage ? `<div class="h2">${stageTag(c)}</div>` : ''}
       <canvas></canvas>
       <div class="f">${badge('일', c.d_above)}${badge('주', c.w_above)}${badge('월', c.m_above)}<span style="margin-left:auto">${foot}</span></div>`;
     if (c.link) card.querySelector('.nm').addEventListener('click', () => window.open(c.link, '_blank'));
