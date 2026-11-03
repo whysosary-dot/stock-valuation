@@ -36,6 +36,16 @@ body{padding:12px 14px 40px}
 .bd.up{color:var(--up);border-color:#f3c3c9;background:#fdeef0}
 .bd.dn{color:var(--down);border-color:#c7d2fb;background:#edf1fe}
 .bd.flip{outline:2px solid #c2410c;outline-offset:-1px}
+/* 와인스타인 4단계 */
+.stg{display:inline-flex;align-items:center;border-radius:5px;padding:0 7px;font-size:11px;font-weight:700;line-height:19px;white-space:nowrap}
+.stg.s1{background:#e5e7eb;color:#374151}.stg.s2{background:#fde2e2;color:#b91c1c}.stg.s3{background:#f6dfae;color:#92400e}.stg.s4{background:#d9e2f5;color:#1e40af}
+.stg.flip{outline:2px solid #c2410c;outline-offset:-1px}
+.gcard .h2{display:flex;align-items:center;gap:6px;margin-top:4px;min-height:19px}
+.ssum{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;font-size:13px;line-height:1.7;margin:0 0 10px;box-shadow:var(--shadow)}
+.sdist{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 14px 8px;margin:0 0 10px;box-shadow:var(--shadow)}
+.sdist h3{font-size:13.5px;font-weight:800;margin:0 0 3px}.sdist .s{font-size:11.5px;color:var(--text-dim);margin:0 0 6px;line-height:1.5}
+.sdist canvas{width:100%;height:190px;display:block}
+.mt td .stg{line-height:17px;font-size:10.5px}
 .up{color:var(--up)} .dn{color:var(--down)} .flat{color:var(--text-dim)}
 /* 스캔 카드 */
 .sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:12px}
@@ -131,6 +141,8 @@ body{padding:12px 14px 40px}
     <button class="chip" data-b="macro">🌐 상품·통화·금리</button>
   </div>
   <p class="tip" id="board-tip"></p>
+  <div id="stage-sum" class="ssum" style="display:none"></div>
+  <div id="stage-dist" class="sdist" style="display:none"><h3 id="sd-title"></h3><p class="s" id="sd-sub"></p><canvas id="sd-cv"></canvas></div>
   <div class="grid" id="board"></div>
 </div>
 
@@ -194,6 +206,16 @@ function drawGroup(cv, c) {
   const padT = 6, padB = 16, padR = 44, padL = 2;
   const vals = xs.concat(ma.filter(x => x != null)); let lo = Math.min(...vals), hi = Math.max(...vals); if (hi === lo) hi = lo + 1;
   const X = i => padL + (w - padL - padR) * i / (n - 1), Y = v => padT + (h - padT - padB) * (1 - (v - lo) / (hi - lo));
+  if (c.w_stage && c.w_stage.length === n) {
+    let i0 = 0;
+    for (let i = 1; i <= n; i++) {
+      if (i === n || c.w_stage[i] !== c.w_stage[i0]) {
+        const st = c.w_stage[i0];
+        if (st) { g.fillStyle = STG[st].bg; const x0 = i0 === 0 ? padL : (X(i0 - 1) + X(i0)) / 2, x1 = i === n ? X(n - 1) : (X(i - 1) + X(i)) / 2; g.fillRect(x0, padT, x1 - x0, h - padT - padB); }
+        i0 = i;
+      }
+    }
+  }
   g.strokeStyle = css('--border'); g.lineWidth = 1; g.beginPath(); g.moveTo(padL, h - padB + .5); g.lineTo(w - padR, h - padB + .5); g.stroke();
   // 연·반기 눈금 라벨
   const d0 = new Date(c.w_dates[0]), d1 = new Date(c.w_dates[1]); const span = d1 - d0;
@@ -205,25 +227,63 @@ function drawGroup(cv, c) {
   g.fillStyle = '#1d2b4f'; g.beginPath(); g.arc(X(n - 1), Y(xs[n - 1]), 2.2, 0, 7); g.fill();
   g.fillStyle = css('--text'); g.font = 'bold 10.5px ' + css('--font'); g.textAlign = 'left'; g.fillText(fmtPct(c.ret_2y, 0), X(n - 1) + 5, Math.max(10, Math.min(h - padB - 2, Y(xs[n - 1]) + 4)));
 }
+const STG = { 1: { bg: '#ebedf0', fill: '#cfd3da', nm: '1단계', tx: '#4b5563' }, 2: { bg: '#fde6e6', fill: '#ee8f8f', nm: '2단계', tx: '#b91c1c' }, 3: { bg: '#fbe9c6', fill: '#f2c26a', nm: '3단계', tx: '#92400e' }, 4: { bg: '#dfe6f5', fill: '#8fa7da', nm: '4단계', tx: '#1e40af' } };
+function stageTag(c) { return c.stage ? `<span class="stg s${c.stage}${c.stage_flip ? ' flip' : ''}" title="와인스타인 4단계 — 30주선 기울기(4주 전 대비)×종가 위치: 상승·위=2 상승·아래=3 하락·아래=4 하락·위=1${c.stage_flip ? ` · 이번 주 ${c.stage_prev}→${c.stage}단계` : ''}">${c.stage}단계 ${c.stage_w}주째</span>` : ''; }
+/* 종목 단계 분포 누적 영역 (아래부터 2·1·3·4) */
+function drawStageDist(cv, sd) {
+  const [g, w, h] = setupCanvas(cv); const rows = sd.dist, n = rows.length; if (n < 2) return;
+  const padL = 2, padR = 58, padT = 6, padB = 18; const W = w - padL - padR, H = h - padT - padB;
+  const X = i => padL + W * i / (n - 1), Y = v => padT + H * (1 - v / 100);
+  const order = [2, 1, 3, 4]; const acc = new Array(n).fill(0);
+  const ends = {};
+  order.forEach(st => {
+    g.fillStyle = STG[st].fill; g.beginPath();
+    const base = acc.slice();
+    rows.forEach((r, i) => { const v = r[st - 1] || 0; acc[i] = base[i] + v; });
+    rows.forEach((r, i) => { const y = Y(acc[i]); i ? g.lineTo(X(i), y) : g.moveTo(X(0), y); });
+    for (let i = n - 1; i >= 0; i--) g.lineTo(X(i), Y(base[i]));
+    g.closePath(); g.fill();
+    ends[st] = [Y(acc[n - 1]), Y(base[n - 1])];
+  });
+  g.setLineDash([4, 3]); g.strokeStyle = '#6b7280'; g.lineWidth = 1; g.beginPath(); g.moveTo(padL, Y(50) + .5); g.lineTo(padL + W, Y(50) + .5); g.stroke(); g.setLineDash([]);
+  g.fillStyle = css('--text-dim'); g.font = '10.5px ' + css('--font'); g.textAlign = 'center';
+  const d0 = new Date(sd.weeks[0]), d1 = new Date(sd.weeks[n - 1]); const span = d1 - d0;
+  for (let y = d0.getFullYear(); y <= d1.getFullYear(); y++) for (const m of [0, 6]) { const t = new Date(y, m, 1); if (t < d0 || t > d1) continue; const x = padL + W * (t - d0) / span; g.fillText(String(y).slice(2) + '.' + (m === 0 ? '01' : '07'), x, h - 4); g.strokeStyle = css('--border'); g.beginPath(); g.moveTo(x, padT); g.lineTo(x, padT + H); g.stroke(); }
+  g.textAlign = 'left'; g.font = 'bold 11px ' + css('--font'); const last = rows[n - 1];
+  const labels = order.map(st => ({ st, y: (ends[st][0] + ends[st][1]) / 2, t: `${st}단계 ${Math.round(last[st - 1] || 0)}%` }));
+  labels.sort((a, b) => a.y - b.y); for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < 13) labels[i].y = labels[i - 1].y + 13;
+  labels.forEach(l => { g.fillStyle = STG[l.st].tx; g.fillText(l.t, padL + W + 6, Math.min(h - padB - 2, Math.max(10, l.y + 4))); });
+}
 function badge(lbl, v, flip) { return `<span class="bd ${v == null ? '' : v ? 'up' : 'dn'}${flip ? ' flip' : ''}">${lbl}${v == null ? '' : v ? '▲' : '▼'}</span>`; }
 function renderBoard() {
   const key = state.board; const d = state.data['groups_' + key]; const el = $('#board'); el.innerHTML = '';
   const tip = {
-    kr: '<b>한국 업종</b> — 네이버 업종 분류(79개)를 21개 그룹으로 묶고 구성종목(시총 300억↑)의 <b>시총가중 가격지수</b>로 합성. 2년 주봉 종가 + 주황 30주선. 뱃지: 일=50일선 · 주=30주선 · 월=10개월선 위(▲)/아래(▼). 업종은 <b>3개월 상대수익률(코스피 대비)</b> 순. <b>업종명을 클릭</b>하면 구성종목·비중·네이버 세부업종 목록이 열립니다.',
+    kr: '<b>한국 업종</b> — 네이버 업종 분류(79개)를 21개 그룹으로 묶고 구성종목(시총 300억↑)의 <b>시총가중 가격지수</b>로 합성. 2년 주봉 종가 + 주황 30주선. 뱃지: 일=50일선 · 주=30주선 · 월=10개월선 위(▲)/아래(▼). 카드의 <b>n단계</b>는 스탠 와인스타인 4단계(30주선 기울기×종가 위치), 배경 띠는 주별 단계. 업종은 <b>3개월 상대수익률(코스피 대비)</b> 순. <b>업종명을 클릭</b>하면 구성종목·비중·네이버 세부업종 목록이 열립니다.',
     us: '<b>미국 지수·섹터 ETF</b> — 야후 파이낸스 일봉. 섹터는 3개월 상대수익률(SPY 대비) 순. 주황 테두리 = 오늘 일·주·월 뱃지 중 하나가 바뀐 카드.',
     macro: '<b>상품·통화·금리</b> — 선물·환율·금리는 상대수익률 없음. 원/달러·엔/달러는 달러 기준(오르면 원화·엔화 약세). 금리는 수익률(%) 자체의 등락.',
   }[key];
   $('#board-tip').innerHTML = tip + (d ? ` <span class="legend">· 데이터 ${d.date} 기준</span>` : '');
   if (!d) { el.innerHTML = '<div class="empty">아직 데이터가 없습니다.</div>'; return; }
+  const sum = $('#stage-sum'), sdv = $('#stage-dist');
+  if (d.stage_summary) { sum.style.display = ''; sum.textContent = d.stage_summary; } else sum.style.display = 'none';
+  if (d.stage_dist && d.stage_dist.dist && d.stage_dist.dist.length > 2) {
+    sdv.style.display = ''; const sd = d.stage_dist; const last = sd.dist[sd.dist.length - 1], ago = sd.dist[Math.max(0, sd.dist.length - 5)];
+    $('#sd-title').textContent = `${key === 'kr' ? '한국' : '미국'} 종목 단계 분포 · 2년 주봉`;
+    $('#sd-sub').innerHTML = `판정 대상 ${sd.n}종목 · 2단계 ${Math.round(last[1])}%(4주 전 ${Math.round(ago[1])}%) · 4단계 ${Math.round(last[3])}%(4주 전 ${Math.round(ago[3])}%). 가운데 점선이 50%. 빨강(2단계)이 두꺼울수록 사기 좋은 시장, 파랑(4단계)이 두꺼울수록 피할 시장이다.`;
+    drawStageDist($('#sd-cv'), sd);
+  } else sdv.style.display = 'none';
   d.cards.forEach(c => {
     const card = document.createElement('div'); card.className = 'gcard';
     const hot = (c.d_flip || c.w_flip || c.m_flip);
     if (hot) card.classList.add('hot');
-    const foot = c.rel_3m != null ? `1개월 ${fmtPct(c.ret_1m, 0)} · 3개월 상대 ${c.rel_3m > 0 ? '+' : ''}${Math.round(c.rel_3m)}%p` : `1개월 ${fmtPct(c.ret_1m, 0)} · 52주 고점 대비 ${fmtPct(c.off_hi52, 0)}`;
+    const ma = c.off_ma30 != null ? `30주선 대비 ${fmtPct(c.off_ma30, 0)} · ` : '';
+    const ms = c.mem_stage ? ` · 종목 2단계 ${c.mem_stage.s2}%·4단계 ${c.mem_stage.s4}%` : '';
+    const foot = (c.rel_3m != null ? `${ma}1개월 ${fmtPct(c.ret_1m, 0)} · 3개월 상대 ${c.rel_3m > 0 ? '+' : ''}${Math.round(c.rel_3m)}%p` : `${ma}1개월 ${fmtPct(c.ret_1m, 0)} · 52주 고점 대비 ${fmtPct(c.off_hi52, 0)}`) + ms;
     const link = groupLink(c, key);
     card.innerHTML = `<div class="h"><span class="nm${link ? ' lk' : ''}" title="${esc(link ? link.tip : c.name)}">${esc(c.name)}</span><span class="sb">${esc(c.n ? c.n + '종목' : (c.note || ''))}</span><span class="chg ${cls(c.chg)}">${fmtPct(c.chg)}</span></div>
+      ${c.stage ? `<div class="h2">${stageTag(c)}</div>` : ''}
       <canvas></canvas>
-      <div class="f">${badge('일', c.d_above)}${badge('주', c.w_above)}${badge('월', c.m_above)}<span style="margin-left:auto">${foot}</span></div>`;
+      <div class="f">${badge('일', c.d_above)}${badge('주', c.w_above)}${badge('월', c.m_above)}<span style="margin-left:auto;text-align:right">${foot}</span></div>`;
     if (link) card.querySelector('.nm').addEventListener('click', link.go);
     el.appendChild(card); drawGroup(card.querySelector('canvas'), c);
   });
@@ -239,7 +299,7 @@ function groupLink(c, key) {
 }
 const MCOLS = [
   { k: 'name', l: '종목', num: false }, { k: 'ind', l: '네이버 업종', num: false }, { k: 'mcap', l: '시총(억)' }, { k: 'w', l: '비중' },
-  { k: 'chg', l: '당일' }, { k: 'r1m', l: '1개월' }, { k: 'r3m', l: '3개월' },
+  { k: 'chg', l: '당일' }, { k: 'r1m', l: '1개월' }, { k: 'r3m', l: '3개월' }, { k: 'stage', l: '단계' },
 ];
 function openMembers(c) {
   let sort = { k: 'mcap', desc: true };
@@ -258,7 +318,7 @@ function openMembers(c) {
       <td style="color:var(--text-dim)">${esc(m.ind || '')}</td>
       <td>${m.mcap == null ? '—' : Number(m.mcap).toLocaleString('ko-KR')}</td>
       <td><span class="wbar" style="width:${Math.max(2, Math.round(m.w / wmax * 60))}px"></span>${m.w == null ? '—' : m.w.toFixed(1) + '%'}</td>
-      <td class="${cls(m.chg)}">${fmtPct(m.chg)}</td><td class="${cls(m.r1m)}">${fmtPct(m.r1m)}</td><td class="${cls(m.r3m)}">${fmtPct(m.r3m)}</td></tr>`).join('');
+      <td class="${cls(m.chg)}">${fmtPct(m.chg)}</td><td class="${cls(m.r1m)}">${fmtPct(m.r1m)}</td><td class="${cls(m.r3m)}">${fmtPct(m.r3m)}</td><td>${m.stage ? `<span class="stg s${m.stage}">${m.stage}단계</span>` : '—'}</td></tr>`).join('');
     bg.innerHTML = `<div class="md" role="dialog">
       <div class="hd"><h2>${esc(c.name)}</h2><span class="s">${c.members.length}종목 · 시총가중 (시총 300억↑) · 지수 ${fmtPct(c.chg)} · 1개월 ${fmtPct(c.ret_1m, 0)} · 3개월 ${fmtPct(c.ret_3m, 0)}</span><button class="x" title="닫기">×</button></div>
       ${inds ? `<div class="inds">포함 네이버 업종 — ${inds}</div>` : ''}

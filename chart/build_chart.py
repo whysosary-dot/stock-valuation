@@ -74,6 +74,73 @@ def rank_pct(values):
 def r(x, n=2):
     return None if x is None or (isinstance(x, float) and (math.isnan(x) or math.isinf(x))) else round(x, n)
 
+# ───────────────────────── 와인스타인 4단계 ─────────────────────────
+# 30주선 기울기(4주 전 대비)와 종가 위치의 2×2: 상승·위=2(상승) · 상승·아래=3(천장) · 하락·아래=4(하락) · 하락·위=1(바닥)
+STAGE_NAME = {1: "1단계", 2: "2단계", 3: "3단계", 4: "4단계"}
+def stage_series(wc, slope_w=4):
+    ma = sma(wc, 30); st = [None] * len(wc)
+    for i in range(len(wc)):
+        if ma[i] is None or i < slope_w or ma[i - slope_w] is None: continue
+        up = ma[i] > ma[i - slope_w]; above = wc[i] > ma[i]
+        st[i] = 2 if (up and above) else 3 if (up and not above) else 4 if (not up and not above) else 1
+    return st, ma
+
+def stage_weeks(st):
+    if not st or st[-1] is None: return 0
+    k = 0
+    for x in reversed(st):
+        if x != st[-1]: break
+        k += 1
+    return k
+
+def stock_stages(series):
+    """{tk: (dates,o,h,l,c,v)} → {tk: {week_key: stage}} + 각 종목 현재 단계"""
+    out = {}; cur = {}
+    for tk, s_ in series.items():
+        wk = weekly_bars(s_[0], s_[1], s_[2], s_[3], s_[4], s_[5])
+        if len(wk) < 36: continue
+        st, _ = stage_series([b["c"] for b in wk])
+        out[tk] = {b["k"]: x for b, x in zip(wk, st) if x is not None}
+        cur[tk] = st[-1]
+    return out, cur
+
+def stage_dist(stmap, axis_dates, weeks=105):
+    """종목별 주간 단계 → 최근 weeks 주의 분포(%) 시계열"""
+    wk = weekly_bars(axis_dates, [0] * len(axis_dates), [0] * len(axis_dates), [0] * len(axis_dates), [0] * len(axis_dates), [0] * len(axis_dates))[-weeks:]
+    rows = []
+    for b in wk:
+        cnt = [0, 0, 0, 0]; n = 0
+        for m in stmap.values():
+            x = m.get(b["k"])
+            if x: cnt[x - 1] += 1; n += 1
+        rows.append([round(c / n * 100, 1) if n else None for c in cnt] + [n])
+    return {"weeks": [b["d"] for b in wk], "dist": rows}
+
+def stage_summary(idx_cards, grp_cards, dist, kind="업종", stock_label="종목"):
+    """토큰 0 요약문 — 지수 단계·업종 분포·이번 주 전환·종목 2/4단계 비중 변화"""
+    L = []
+    if idx_cards:
+        def eun(w):  # 받침 유무에 따른 은/는
+            ch = w[-1]; return "은" if "가" <= ch <= "힣" and (ord(ch) - 0xAC00) % 28 else "는"
+        L.append(", ".join(f"{c['name']}{eun(c['name'])} {STAGE_NAME.get(c.get('stage'), '판정 불가')} {c.get('stage_w', 0)}주째(30주선 {c.get('off_ma30', 0):+.0f}%)" for c in idx_cards if c.get("stage")) + "입니다.")
+    if grp_cards:
+        by = {k: [c["name"] for c in grp_cards if c.get("stage") == k] for k in (1, 2, 3, 4)}
+        parts = []
+        for k in (1, 2, 3, 4):
+            names = by[k]
+            if not names: parts.append(f"{k}단계는 없고"); continue
+            parts.append(f"{k}단계 {len(names)}개" + (f"({'·'.join(names)})" if len(names) <= 8 else ""))
+        flips = [c for c in grp_cards if c.get("stage_flip")]
+        s = f"{kind} {len(grp_cards)}개 가운데 " + ", ".join(parts[:-1]) + f", {parts[-1]}이며"
+        if flips: s += ", 이번 주 " + " · ".join(f"{c['name']} {c['stage_prev']}→{c['stage']}단계" for c in flips) + "로 바뀌었습니다."
+        else: s += ", 이번 주 단계가 바뀐 " + kind + "은 없습니다."
+        L.append(s)
+    if dist and dist.get("dist") and len(dist["dist"]) >= 5 and dist["dist"][-1][0] is not None and dist["dist"][-5][0] is not None:
+        now, ago = dist["dist"][-1], dist["dist"][-5]
+        def trend(a, b): return "늘었" if b > a + 0.5 else "줄었" if b < a - 0.5 else "비슷했"
+        L.append(f"{stock_label} 중 2단계 비중은 4주 전 {ago[1]:.0f}%에서 {now[1]:.0f}%로 {trend(ago[1], now[1])}고 4단계는 {ago[3]:.0f}%에서 {now[3]:.0f}%로 {trend(ago[3], now[3])}습니다.")
+    return " ".join(L)
+
 # ───────────────────────── 그룹 카드 ─────────────────────────
 def group_card(name, sub, dates, closes, bench_closes=None, n_members=None, note=None):
     """2년 일봉 종가 → 카드 데이터. 뱃지: 일=50일선, 주=30주선, 월=10개월선 위/아래"""
@@ -97,10 +164,12 @@ def group_card(name, sub, dates, closes, bench_closes=None, n_members=None, note
     hi52 = max(closes[idx_ago(365):])
     chg = pct(last, closes[-2])
     tail = wc[-105:]; tail_ma = ma30w[-105:]; tail_d = wd[-105:]
+    st, _ = stage_series(wc); tail_st = st[-105:]
     return {
+        "stage": st[-1], "stage_w": stage_weeks(st), "w_stage": tail_st, "off_ma30": r(pct(last, ma30w[-1]), 1) if ma30w[-1] else None,
         "name": name, "sub": sub, "n": n_members, "note": note,
         "last": r(last, 4), "chg": r(chg), "ret_1m": r(ret_1m), "ret_3m": r(ret_3m), "rel_3m": r(rel_3m, 1),
-        "ret_2y": r(pct(last, closes[0])),
+        "ret_2y": r(pct(last, closes[idx_ago(730)])),
         "off_hi52": r(pct(last, hi52)),
         "d_above": None if ma50 is None else last > ma50,
         "w_above": None if ma30w[-1] is None else last > ma30w[-1],
@@ -240,7 +309,7 @@ def kr_universe():
     for tk, u in univ.items(): u["sector"] = g2sec.get(u["industry"])
     return univ
 
-def naver_daily(code, count=520):
+def naver_daily(code, count=760):
     for a in range(3):
         try:
             rq = requests.get(f"https://fchart.stock.naver.com/sise.nhn?symbol={code}&timeframe=day&count={count}&requestType=0", headers=H, timeout=20)
@@ -265,12 +334,16 @@ def build_kr():
     with ThreadPoolExecutor(12) as ex:
         for tk, s in zip(dl, ex.map(naver_daily, dl)):
             if s and len(s[0]) >= 60: series[tk] = s
-    kospi = naver_daily("KOSPI", 520); kosdaq = naver_daily("KOSDAQ", 520)
+    kospi = naver_daily("KOSPI", 760); kosdaq = naver_daily("KOSDAQ", 760)
     print(f"  got {len(series)} series; KOSPI last {kospi[0][-1]}")
     # 마지막 거래일 기준 정렬: 지수 날짜축에 맞춤
     axis = kospi[0]; aset = set(axis)
     if series and TODAY not in axis and max(s[0][-1] for s in series.values()) != axis[-1]:
         print("  ⚠ 지수와 종목 마지막 날짜 불일치")
+    # 종목별 와인스타인 단계 (시총 300억↑ 전체) → 분포 시계열
+    stk_map, stk_cur = stock_stages(series)
+    kr_dist = stage_dist(stk_map, kospi[0]); kr_dist["n"] = kr_dist["dist"][-1][4] if kr_dist["dist"] else 0
+    print(f"  stages: {len(stk_cur)} stocks judged")
     # 업종 지수 (시총가중, 지수 날짜축 위에서 가격상대 합성)
     cards = []
     bench_c = kospi[4]
@@ -299,13 +372,15 @@ def build_kr():
             mem = []
             for tk in members:
                 c = series[tk][4]; u = univ[tk]
-                mem.append({"code": tk, "name": u["name"], "ind": u.get("industry"), "mkt": u.get("mkt"),
+                mem.append({"code": tk, "name": u["name"], "ind": u.get("industry"), "mkt": u.get("mkt"), "stage": stk_cur.get(tk),
                             "mcap": round(u["mcap"]), "w": round(u["mcap"] / tot * 100, 2),
                             "chg": round(pct(c[-1], c[-2]), 2) if len(c) > 1 else None,
                             "r1m": round(pct(c[-1], c[-22]), 1) if len(c) > 22 else None,
                             "r3m": round(pct(c[-1], c[-64]), 1) if len(c) > 64 else None})
             mem.sort(key=lambda x: -x["mcap"])
             card["members"] = mem
+            js = [m["stage"] for m in mem if m.get("stage")]
+            card["mem_stage"] = {f"s{k}": round(sum(1 for x in js if x == k) / len(js) * 100) for k in (1, 2, 3, 4)} if js else None
             inds = {}
             for m in mem: inds[m["ind"]] = inds.get(m["ind"], 0) + 1
             card["industries"] = sorted(inds.items(), key=lambda x: -x[1])
@@ -318,7 +393,9 @@ def build_kr():
     for c in cards: c["_date"] = kospi[0][-1]
     mark_flips(os.path.join(DATA, "groups_kr.json"), cards)
     for c in cards: c.pop("_date", None)
-    json.dump({"date": kospi[0][-1], "generated_at": datetime.datetime.now(KST).isoformat(timespec="seconds"), "bench": "코스피", "cards": cards},
+    kr_sum = stage_summary([c for c in cards if c["name"] in ("코스피", "코스닥")], [c for c in cards if c["name"] not in ("코스피", "코스닥")], kr_dist, "업종", "종목(시총 300억↑)")
+    json.dump({"date": kospi[0][-1], "generated_at": datetime.datetime.now(KST).isoformat(timespec="seconds"), "bench": "코스피", "cards": cards,
+               "stage_dist": kr_dist, "stage_summary": kr_sum},
               open(os.path.join(DATA, "groups_kr.json"), "w"), ensure_ascii=False)
     print(f"  groups_kr: {len(cards)} cards")
     # 스캔: 시총 1,000억 이상 & 당일 거래대금 10억 이상
@@ -370,7 +447,7 @@ def us_universe():
             print(f"  ⚠ {src} 목록 실패: {e}")
     return univ
 
-def yf_download(tickers, period="2y"):
+def yf_download(tickers, period="3y"):
     import yfinance as yf
     out = {}
     for i in range(0, len(tickers), 150):
@@ -433,7 +510,13 @@ def build_us():
     for c in cards: c["_date"] = spy[0][-1] if spy else TODAY
     mark_flips(os.path.join(DATA, "groups_us.json"), idx_cards + rest)
     for c in cards: c.pop("_date", None)
-    json.dump({"date": spy[0][-1] if spy else TODAY, "generated_at": datetime.datetime.now(KST).isoformat(timespec="seconds"), "bench": "SPY", "cards": idx_cards + rest},
+    stk_map, stk_cur = stock_stages({tk: s_ for tk, s_ in series.items() if tk in univ})
+    us_dist = stage_dist(stk_map, spy[0]) if spy else None
+    if us_dist: us_dist["n"] = us_dist["dist"][-1][4] if us_dist["dist"] else 0
+    print(f"  stages: {len(stk_cur)} stocks judged")
+    us_sum = stage_summary(idx_cards, rest, us_dist, "섹터 ETF", "종목(S&P 1500)")
+    json.dump({"date": spy[0][-1] if spy else TODAY, "generated_at": datetime.datetime.now(KST).isoformat(timespec="seconds"), "bench": "SPY", "cards": idx_cards + rest,
+               "stage_dist": us_dist, "stage_summary": us_sum},
               open(os.path.join(DATA, "groups_us.json"), "w"), ensure_ascii=False)
     mcards = []
     for nm, sym, unit in MACRO:
@@ -483,6 +566,9 @@ def mark_flips(path, cards):
     pm = {c["name"]: c for c in prev.get("cards", [])}
     same_day = prev.get("date") == (cards and cards[0].get("_date"))
     for c in cards:
+        ws = c.get("w_stage") or []
+        c["stage_prev"] = ws[-2] if len(ws) >= 2 else None
+        c["stage_flip"] = bool(c.get("stage") and c["stage_prev"] and c["stage_prev"] != c["stage"])
         p = pm.get(c["name"])
         for k in ("d", "w", "m"):
             if same_day: c[k + "_flip"] = bool(p and p.get(k + "_flip"))
@@ -513,6 +599,7 @@ def _group_lines(d, bench_name, kind):
     for c in idx:
         L.append(f"{c['name']} {c['chg']:+.1f}% · 1개월 {c['ret_1m']:+.0f}% · 52주 고점 대비 {c['off_hi52']:+.0f}% · "
                  f"{'50일선 위' if c.get('d_above') else '50일선 아래'}/{'30주선 위' if c.get('w_above') else '30주선 아래'}/{'10개월선 위' if c.get('m_above') else '10개월선 아래'}")
+    if d.get("stage_summary"): L.append("와인스타인 4단계: " + d["stage_summary"])
     n = len(cards)
     if n:
         w = sum(1 for c in cards if c.get("w_above")); dd = sum(1 for c in cards if c.get("d_above")); m = sum(1 for c in cards if c.get("m_above"))
