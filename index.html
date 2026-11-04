@@ -4292,9 +4292,16 @@ function makeScenarioCard(item) {
     return sub;
   };
 
-  body.appendChild(mkRow('매수', 'buy',  'buy',  '어떤 조건이면 사는가? (가격대 · 실적 · 이벤트)'));
+  const isCash = scIsCash(item);
+  if (isCash) {
+    // 현금: 매수·매도·가격 칸 없이 코멘트만. 예전에 매도 칸에 적어 둔 글은 코멘트로 옮김
+    const txt = x => { const d = document.createElement('div'); d.innerHTML = x || ''; return (d.innerText || '').trim(); };
+    if (!txt(item.cmt) && txt(item.sell)) { item.cmt = item.sell; item.sell = ''; saveDiaryData(diary.data); }
+    body.appendChild(mkRow('코멘트', 'cmt', 'cmt', '자유 메모 (현금 비중 · 쓸 곳 · 대기 이유)'));
+  }
+  if (!isCash) body.appendChild(mkRow('매수', 'buy',  'buy',  '어떤 조건이면 사는가? (가격대 · 실적 · 이벤트)'));
   // 안전마진 (하방 기준가)
-  {
+  if (!isCash) {
     const safeSub = document.createElement('div'); safeSub.className = 'sc-sub';
     const safeLab = document.createElement('label'); safeLab.textContent = '안전마진';
     const safeInp = document.createElement('input');
@@ -4318,9 +4325,11 @@ function makeScenarioCard(item) {
     safeSub.append(safeLab, safeInp, safeUpDn);
     body.appendChild(safeSub);
   }
-  body.appendChild(mkRow('매도', 'sell', 'sell', '언제 파는가? (목표가 · 손절 기준 · 논리 훼손 조건)'));
-  body.appendChild(mkSub('매도 주가', 'sellPx', 'sellWhen', '목표가', '예: 2Q 실적 발표 후 · 2026년 말'));
-  body.appendChild(mkRow('코멘트', 'cmt', 'cmt', '자유 메모 (근황 · 고민 · 체크할 것)'));
+  if (!isCash) {
+    body.appendChild(mkRow('매도', 'sell', 'sell', '언제 파는가? (목표가 · 손절 기준 · 논리 훼손 조건)'));
+    body.appendChild(mkSub('매도 주가', 'sellPx', 'sellWhen', '목표가', '예: 2Q 실적 발표 후 · 2026년 말'));
+    body.appendChild(mkRow('코멘트', 'cmt', 'cmt', '자유 메모 (근황 · 고민 · 체크할 것)'));
+  }
 
   (item.hist || []).forEach(h => {
     const div = document.createElement('div'); div.className = 'sc-hist-item';
@@ -5578,6 +5587,7 @@ function makePfReturnCard() {
   return card;
 }
 
+function scIsCash(item) { return /^\s*현금/.test(item && item.name || ''); }
 function renderFeedScenario() {
   if (scnUiMode() === 'v2') return renderFeedScenarioV2();
   try { let ch = false; scList().forEach(it => { if (scDedupeHist(it)) ch = true; }); if (ch) saveDiaryData(diary.data); } catch (_) {}
@@ -5791,11 +5801,12 @@ function renderFeedScenarioV2() {
       const pos = Math.max(0, Math.min(100, (p.px - p.safe) / (p.sell - p.safe) * 100));
       barHtml = `<div class="lab"><span>안전 ${fmtPx(p.safe, p.cur)}</span><span><b>${p.src} ${fmtPx(p.px, p.cur)}</b>${p.ret != null ? ` <span class="${p.ret >= 0 ? 'up' : 'dn'}" style="color:${p.ret >= 0 ? '#d3273e' : '#2f56e8'}">${p.ret >= 0 ? '+' : ''}${p.ret.toFixed(1)}%</span>` : ''}</span><span>매도 ${fmtPx(p.sell, p.cur)}</span></div>
         <div class="tr"><i class="${pos <= 0 ? 'lo' : pos >= 100 ? 'hi' : ''}" style="left:${pos}%"></i></div>`;
-    } else barHtml = `<div class="none">${p.px > 0 ? `${p.src} ${fmtPx(p.px, p.cur)}${p.ret != null ? ` · 수익률 ${p.ret >= 0 ? '+' : ''}${p.ret.toFixed(1)}%` : ''} · ` : ''}안전마진가·매도주가를 넣으면 위치와 손익비가 표시됩니다</div>`;
+    } else if (scIsCash(item)) barHtml = '';
+    else barHtml = `<div class="none">${p.px > 0 ? `${p.src} ${fmtPx(p.px, p.cur)}${p.ret != null ? ` · 수익률 ${p.ret >= 0 ? '+' : ''}${p.ret.toFixed(1)}%` : ''} · ` : ''}안전마진가·매도주가를 넣으면 위치와 손익비가 표시됩니다</div>`;
     const sub = (item.sellWhen ? esc0(item.sellWhen) : '') || '';
     row.innerHTML = `<div class="scn2-nm"><span class="n">${esc0(item.name || '(이름 없음)')}</span>${item.held ? '<span class="hb">보유</span>' : ''}${sub ? `<span class="sub">${sub}</span>` : ''}</div>
       <div class="scn2-bar">${barHtml}</div>
-      <div class="scn2-rr"><div class="v ${p.state}">${rrTxt}</div><div class="k">손익비 · ${rrLab}</div></div>
+      <div class="scn2-rr">${scIsCash(item) ? '' : `<div class="v ${p.state}">${rrTxt}</div><div class="k">손익비 · ${rrLab}</div>`}</div>
       <div class="scn2-meta">${item.updated ? '수정 ' + esc0(item.updated) : ''}${(item.hist || []).length ? ' · 🕘 ' + item.hist.length : ''}<span class="chev">▾</span></div>`;
     const bodyEl = document.createElement('div'); bodyEl.className = 'scn2-body';
     const mount = () => { if (!bodyEl.childElementCount) bodyEl.appendChild(makeScenarioCard(item)); };
