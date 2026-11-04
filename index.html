@@ -2893,7 +2893,7 @@ init();
 const IFRAME_TAB_SRC = {
   calendar:  'https://whysosary-dot.github.io/investment-calendar/',
   index:     'https://whysosary-dot.github.io/invest-index/',
-  screener:  'https://whysosary-dot.github.io/stock-screener/daily.html',   // 최신 일자 바로 (날짜는 페이지 안 드롭다운)
+  screener:  'https://whysosary-dot.github.io/stock-screener/daily.html?v=' + Math.floor(Date.now()/60000),  // 캐시 우회(1분)   // 최신 일자 바로 (날짜는 페이지 안 드롭다운)
   dart:      'https://whysosary-dot.github.io/dart-monitoring/',
   awake:     './view/index.html?src=awake&v=' + Math.floor(Date.now()/600000),
   interest:  './view/index.html?src=interest&v=' + Math.floor(Date.now()/600000),
