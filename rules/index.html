@@ -155,6 +155,15 @@ function analyze(d) {
     }
     return r;
   });
+  // Stock Valuation 커버리지 종목 (시나리오에 없는 것) — 목표시총·안전시총으로 같은 손익비. 종목 선정용 참고, 점수에는 미반영
+  const scNames = new Set((d.scenario || []).filter(x => x && !x.archived).map(x => { const k = findStock(x.name); return k ? k.name : null; }).filter(Boolean));
+  out.rrSv = (STOCKS || []).filter(k => !scNames.has(k.name) && +k.target_cap_oku > 0 && +k.safety_cap_oku > 0 && +k.market_cap_oku > 0).map(k => {
+    const mc = +k.market_cap_oku, tg = +k.target_cap_oku, sf = +k.safety_cap_oku;
+    const r = { name: k.name, sv: true, held: false, px: +k.price_native || 0, pxSrc: '시총', sellPx: tg, safePx: sf, up: (tg / mc - 1) * 100, dn: Math.max(0, (1 - sf / mc) * 100), rr: null, state: 'miss' };
+    if (mc <= sf) { r.rr = Infinity; r.state = r.up > 0 ? 'best' : 'none'; }
+    else { r.rr = r.up / r.dn; r.state = r.up <= 0 ? 'none' : r.rr >= LIMITS.rr ? 'go' : 'no'; }
+    return r;
+  });
   // 시나리오(보유)
   const sc = (d.scenario || []).filter(s => !s.archived && s.held && s.name !== '현금');
   out.held = sc.map(s => { const buy = strip(s.buy).trim(), sell = strip(s.sell).trim(); // 비어 있거나, 짧은 자리표시 문구("모르겠음." "수익일 때." 등)뿐이면 미작성. 20자 이상 쓴 근거는 어떤 말로 시작하든 작성으로 인정
@@ -253,11 +262,14 @@ function render(d, srcLabel) {
     const ST = { nopx: ['◌', 'var(--text-dim)', '가격 없음 (Stock Valuation 에 없는 종목)'], best: ['⭐', '#16a34a', '안전마진 이하 — 최적 접근'], go: ['🟢', '#16a34a', '접근 가능'], no: ['🔴', '#dc2626', '접근 금지'], none: ['⚪', 'var(--text-dim)', '매도주가 이상 — 상방 없음'], miss: ['◌', '#d97706', '미설정'] };
     const order = { best: 0, go: 1, no: 2, none: 3, miss: 4, nopx: 5 };
     const fmt = r => { const [ic, col, lb] = ST[r.state]; const num = r.rr == null ? '' : r.rr === Infinity ? '∞' : r.rr.toFixed(1);
-      const detail = r.state === 'nopx' ? '' : r.state === 'miss' ? `(${[!r.sellPx && '매도주가', !r.safePx && '안전마진가', !r.px && '가격'].filter(Boolean).join('·')} 없음)` : `(상방 ${r.up >= 0 ? '+' : ''}${r.up.toFixed(0)}% / 하방 −${r.dn.toFixed(0)}%, ${r.pxSrc})`;
-      return `${ic} <b>${esc(r.name)}</b>${r.held ? '' : ' <small style="color:var(--text-dim)">관심</small>'} <span style="color:${col};font-weight:700">${num}</span> ${lb} <span style="color:var(--text-dim)">${detail}</span>`; };
+      const detail = r.state === 'nopx' ? '' : r.state === 'miss' ? `(${[!r.sellPx && '매도주가', !r.safePx && '안전마진가', !r.px && '가격'].filter(Boolean).join('·')} 없음)` : `(상방 ${r.up >= 0 ? '+' : ''}${r.up.toFixed(0)}% / 하방 −${r.dn.toFixed(0)}%, ${r.sv ? '목표 ' + Math.round(r.sellPx).toLocaleString('ko-KR') + '억 · 안전 ' + Math.round(r.safePx).toLocaleString('ko-KR') + '억' : r.pxSrc})`;
+      return `${ic} <b>${esc(r.name)}</b>${r.sv ? '' : r.held ? '' : ' <small style="color:var(--text-dim)">관심</small>'} <span style="color:${col};font-weight:700">${num}</span> ${lb} <span style="color:var(--text-dim)">${detail}</span>`; };
     const goN = rows.filter(r => r.state === 'best' || r.state === 'go').length;
+    const srt = arr => arr.slice().sort((x, y) => order[x.state] - order[y.state] || ((y.rr === Infinity ? 1e9 : y.rr || 0) - (x.rr === Infinity ? 1e9 : x.rr || 0)));
+    const sv = a.rrSv || [], svGo = sv.filter(r => r.state === 'best' || r.state === 'go').length;
+    const svHtml = sv.length ? `<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border)"><b>📊 Stock Valuation 목록</b> <small style="color:var(--text-dim)">시나리오에 없는 종목 · 목표시총·안전시총 기준 · ${svGo}/${sv.length} 접근 가능 · 점수 미반영</small><br>${srt(sv).map(fmt).join('<br>')}</div>` : (STOCKS ? '' : '<div style="margin-top:8px;color:var(--text-dim)">Stock Valuation 목록을 읽지 못했습니다 (메인 ⚙️ 토큰 확인)</div>');
     C.push(card(c, '규칙 7 · 손익비 (상방÷하방) — 접근 신호', rows.length ? `${goN} <small>/ ${rows.length}종목 접근 가능 (기준 ${LIMITS.rr})</small>` : '—',
-      rows.length ? rows.slice().sort((x, y) => order[x.state] - order[y.state] || ((y.rr === Infinity ? 1e9 : y.rr || 0) - (x.rr === Infinity ? 1e9 : x.rr || 0))).map(fmt).join('<br>') : '시나리오에 종목이 없습니다',
+      (rows.length ? srt(rows).map(fmt).join('<br>') : '시나리오에 종목이 없습니다') + svHtml,
       !rows.length ? '보류' : miss.length ? (miss.length >= 2 ? '미설정' : '미설정') : '설정 완료')); }
   $('#checks').innerHTML = C.join('');
   const pct = tot ? Math.round(ok / tot * 100) : 0; const g = pct >= 80 ? 'g' : pct >= 50 ? 'y' : 'r';
