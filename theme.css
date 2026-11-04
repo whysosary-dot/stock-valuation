@@ -101,3 +101,7 @@ button,input,select,textarea{font-family:inherit}
   body:has(.kr-card) .summ-n { font-size: 18px !important; }
   body:has(.kr-card) .ftr p { font-size: 14.25px !important; }
 }
+
+/* 날짜 선택 ◀ [select] ▶ 높이 통일 — 모든 탭 공통 (2026-11-04) */
+.sv-dates select,.sv-dates button,.dates>select,.dates>button,.nav>select,.nav>button,.date-nav-btn{height:36px!important;box-sizing:border-box!important;padding-top:0!important;padding-bottom:0!important;font-size:13px!important;line-height:normal!important;vertical-align:middle;border-radius:8px!important}
+.sv-dates button,.dates>button,.nav>button,button.date-nav-btn{min-width:36px;display:inline-flex!important;align-items:center;justify-content:center}
