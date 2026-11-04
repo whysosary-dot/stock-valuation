@@ -72,11 +72,14 @@ th:first-child,td:first-child{text-align:left}
 <div class="sec-h">규칙 <span class="s">— 각 규칙 아래에 왜 이 규칙이 생겼는지(다이어리 근거)를 적어 두었습니다</span></div>
 <div class="rgrid" id="rules"></div>
 
-<div class="sec-h">추이 <span class="s">— 월별 매매 횟수 · 포트 집중도 이력</span></div>
+<details id="trend-fold" class="secfold">
+<summary class="sec-h" style="cursor:pointer">추이 <span class="s">— 월별 매매 횟수 · 포트 집중도 이력 (눌러서 펼치기/접기)</span></summary>
 <div class="two">
   <div class="tbl" id="t-month"></div>
   <div class="tbl" id="t-pf"></div>
 </div>
+</details>
+<script>(function(){ var d = document.getElementById('trend-fold'); try { if (localStorage.getItem('rules_trend_open') === '1') d.open = true; } catch (_) {} d.addEventListener('toggle', function(){ try { localStorage.setItem('rules_trend_open', d.open ? '1' : '0'); } catch (_) {} }); })();</script>
 <p class="note" id="note"></p>
 
 <script>
