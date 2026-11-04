@@ -105,3 +105,5 @@ button,input,select,textarea{font-family:inherit}
 /* 날짜 선택 ◀ [select] ▶ 높이 통일 — 모든 탭 공통 (2026-11-04) */
 .sv-dates select,.sv-dates button,.dates>select,.dates>button,.nav>select,.nav>button,.date-nav-btn{height:36px!important;box-sizing:border-box!important;padding-top:0!important;padding-bottom:0!important;font-size:13px!important;line-height:normal!important;vertical-align:middle;border-radius:8px!important}
 .sv-dates button,.dates>button,.nav>button,button.date-nav-btn{min-width:36px;display:inline-flex!important;align-items:center;justify-content:center}
+/* 뷰어(view/index.html)는 배율 1.08 이 없어 같은 겉보기 높이(36×1.08≈39px)로 맞춤 */
+.nav>select,.nav>button{height:39px!important;font-size:14px!important}
