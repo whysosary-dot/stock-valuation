@@ -267,11 +267,15 @@ function render(d, srcLabel) {
     const goN = rows.filter(r => r.state === 'best' || r.state === 'go').length;
     const srt = arr => arr.slice().sort((x, y) => order[x.state] - order[y.state] || ((y.rr === Infinity ? 1e9 : y.rr || 0) - (x.rr === Infinity ? 1e9 : x.rr || 0)));
     const sv = a.rrSv || [], svGo = sv.filter(r => r.state === 'best' || r.state === 'go').length;
-    const svHtml = sv.length ? `<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border)"><b>📊 Stock Valuation 목록</b> <small style="color:var(--text-dim)">시나리오에 없는 종목 · 목표시총·안전시총 기준 · ${svGo}/${sv.length} 접근 가능 · 점수 미반영</small><br>${srt(sv).map(fmt).join('<br>')}</div>` : (STOCKS ? '' : '<div style="margin-top:8px;color:var(--text-dim)">Stock Valuation 목록을 읽지 못했습니다 (메인 ⚙️ 토큰 확인)</div>');
+    const lsGet = k => { try { return localStorage.getItem(k); } catch (_) { return null; } };
+    const fold = (key, title, sub, body, defOpen) => { const o = lsGet(key); const open = o == null ? defOpen : o === '1';
+      return `<details class="rrfold" data-k="${key}"${open ? ' open' : ''} style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border)"><summary style="cursor:pointer;list-style:revert"><b>${title}</b> <small style="color:var(--text-dim)">${sub}</small></summary><div style="margin-top:6px">${body}</div></details>`; };
+    const svHtml = sv.length ? fold('rules_rr_sv', '📊 Stock Valuation 목록', `시나리오에 없는 종목 · 목표시총·안전시총 기준 · ${svGo}/${sv.length} 접근 가능 · 점수 미반영`, srt(sv).map(fmt).join('<br>'), false) : (STOCKS ? '' : '<div style="margin-top:8px;color:var(--text-dim)">Stock Valuation 목록을 읽지 못했습니다 (메인 ⚙️ 토큰 확인)</div>');
     C.push(card(c, '규칙 7 · 손익비 (상방÷하방) — 접근 신호', rows.length ? `${goN} <small>/ ${rows.length}종목 접근 가능 (기준 ${LIMITS.rr})</small>` : '—',
-      (rows.length ? srt(rows).map(fmt).join('<br>') : '시나리오에 종목이 없습니다') + svHtml,
+      (rows.length ? fold('rules_rr_sc', '📝 시나리오 종목', `보유·관심 ${rows.length}종목 · ${goN} 접근 가능`, srt(rows).map(fmt).join('<br>'), true) : '시나리오에 종목이 없습니다') + svHtml,
       !rows.length ? '보류' : miss.length ? (miss.length >= 2 ? '미설정' : '미설정') : '설정 완료')); }
   $('#checks').innerHTML = C.join('');
+  document.querySelectorAll('details.rrfold').forEach(el => el.addEventListener('toggle', () => { try { localStorage.setItem(el.dataset.k, el.open ? '1' : '0'); } catch (_) {} }));
   const pct = tot ? Math.round(ok / tot * 100) : 0; const g = pct >= 80 ? 'g' : pct >= 50 ? 'y' : 'r';
   $('#score').innerHTML = `<div class="big ${g}">${ok}/${tot}</div><div class="txt"><b>자동 점검 ${tot}항목 중 ${ok}개 준수</b> (${pct}%)<br>데이터: ${srcLabel} · 포트 이력 ${a.last ? a.last.d : '—'} · 일기 ${a.diaryDays}일 · 매매 ${Object.values(a.byMo).reduce((s, x) => s + x, 0)}건</div>`;
   $('#chk-s').textContent = `${ymd(KST())} 기준`;
