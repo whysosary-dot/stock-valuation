@@ -1,13 +1,15 @@
 name: price-update
 # 장중 10분 간격 주가·시총·등락률 갱신 (Claude 없이 GitHub 서버에서 실행 — 토큰 0)
-# GitHub 의 cron 은 수십 분~수 시간씩 밀리거나 건너뛰는 일이 잦아서(2026-10-21 확인: */10 이 75분간 0회),
-# cron 은 '장 시작 깨우기' 용도로만 쓰고, 한 번 깨면 장 마감까지 job 안에서 10분마다 반복한다.
-#   KR 장: 00:00~06:45 UTC (09:00~15:45 KST)
-#   US 장: 13:30~22:15 UTC (서머타임·표준시 모두 포함)
+# GitHub cron 은 수십 분~수 시간씩 밀리거나 건너뛴다(2026-11-02·03 한국장 첫 갱신 12:00·13:19, 미국장은 마감 40분 전에야 시작).
+# 그래서 2026-11-05부터 '릴레이' 방식: 한 run 이 약 5시간 35분 동안 깨어 있으면서
+#   장중(KR 09:00~15:45 KST · US 22:30~07:15 KST, 평일)이면 10분마다 갱신, 장 밖이면 대기하고,
+#   끝날 때 다음 run 을 직접 발동(workflow_dispatch)한다 → cron 지연과 무관하게 항상 하나가 깨어 있음.
+# cron 은 릴레이가 끊겼을 때 다시 잇는 보험. concurrency 로 실행 중 1개 + 대기 1개만 유지(중복 증식 없음).
+# 릴레이를 멈추려면 Actions 에서 실행 중인 run 을 Cancel (취소되면 다음 run 을 발동하지 않음).
 on:
   schedule:
-    - cron: '0 0-6 * * 1-5'      # KR 장중 매시 깨우기 (이미 돌고 있으면 대기열에서 곧 종료)
-    - cron: '30 13-21 * * 1-5'   # US 장중 매시 깨우기
+    - cron: '0 0-6 * * 1-5'      # KR 장중 매시 (보험)
+    - cron: '30 13-21 * * 1-5'   # US 장중 매시 (보험)
   workflow_dispatch:
 concurrency:
   group: price-update
@@ -22,17 +24,27 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install -q yfinance flask flask-cors
-      - name: loop until market close (10 min)
+      - name: relay loop (장중 10분마다 갱신, 약 335분)
         env:
           GITHUB_TOKEN: ${{ secrets.SV_PAT }}
         run: |
-          H=$(date -u +%-H); M=$(date -u +%-M); NOW=$((H*60+M))
-          if   [ $NOW -lt 405 ]; then END=405                       # 06:45 UTC
-          elif [ $NOW -ge 810 ] && [ $NOW -lt 1335 ]; then END=1335  # 13:30~22:15 UTC
-          else echo "장 시간 아님 — 1회만 실행"; END=$((NOW+1)); fi
-          while : ; do
-            python3 hourly_price_update.py 2>&1 | tail -4
-            H=$(date -u +%-H); M=$(date -u +%-M); NOW=$((H*60+M))
-            [ $NOW -ge $END ] && break
+          DEADLINE=$(( $(date +%s) + 335*60 ))
+          inwin() {   # 평일(UTC 월~금) KR 00:00~06:45 UTC, US 13:30~22:15 UTC
+            [ "$(date -u +%u)" -ge 6 ] && return 1
+            local m=$(( 10#$(date -u +%H)*60 + 10#$(date -u +%M) ))
+            [ $m -lt 405 ] || { [ $m -ge 810 ] && [ $m -lt 1335 ]; }
+          }
+          n=0
+          while [ $(date +%s) -lt $DEADLINE ]; do
+            if inwin; then python3 hourly_price_update.py 2>&1 | tail -4 || true; n=$((n+1)); fi
             sleep $(( 600 - $(date -u +%s) % 600 ))
           done
+          echo "갱신 ${n}회 — 다음 run 으로 넘김"
+      - name: next relay run
+        if: success() || failure()
+        env:
+          GH_PAT: ${{ secrets.SV_PAT }}
+        run: |
+          curl -fsS -X POST -H "Authorization: token $GH_PAT" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/price-update.yml/dispatches" \
+            -d '{"ref":"main"}' && echo "다음 run 발동"
