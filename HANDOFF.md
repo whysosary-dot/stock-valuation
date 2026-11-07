@@ -121,3 +121,7 @@ python3 -I advice_gen.py write weekly /tmp/x.json  # 검증 후 push (같은 기
 
 ## 관세청 품목별 수출입실적(GW) API 키 (2026-11-03)
 - `stock-valuation/.customs_key` 에 저장(data.go.kr 서비스 키). 스크립트는 이 파일에서 읽고, 값은 절대 출력·공개 저장소 커밋 금지. 관세청 수출입 통계 요청 시 사용.
+
+## Interest ← Diary 시나리오 자동 동기화 (2026-11-07)
+- `interest_sync.py`(stock-valuation 루트, 맥에서 실행): Diary 「종목 시나리오」(보관·현금 제외) 종목을 invest-private `interest/watchlist.json` 에 넣고 뺀다. 자동 추가분은 `"auto":"diary"` 표시, 손으로 넣은 종목은 건드리지 않음. 섹터는 SV `sector` → SECTOR_MAP, 없으면 `scenario`(📝 시나리오 종목) 섹터.
+- 매일 06:00 「Daily watchlist news brief」 Step 0 에서 실행 → 그날 브리핑부터 반영. 수동: `python3 -I interest_sync.py [--dry-run]`.
