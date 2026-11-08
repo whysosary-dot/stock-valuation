@@ -125,3 +125,9 @@ python3 -I advice_gen.py write weekly /tmp/x.json  # 검증 후 push (같은 기
 ## Interest ← Diary 시나리오 자동 동기화 (2026-11-07)
 - `interest_sync.py`(stock-valuation 루트, 맥에서 실행): Diary 「종목 시나리오」(보관·현금 제외) 종목을 invest-private `interest/watchlist.json` 에 넣고 뺀다. 자동 추가분은 `"auto":"diary"` 표시, 손으로 넣은 종목은 건드리지 않음. 섹터는 SV `sector` → SECTOR_MAP, 없으면 `scenario`(📝 시나리오 종목) 섹터.
 - 매일 06:00 「Daily watchlist news brief」 Step 0 에서 실행 → 그날 브리핑부터 반영. 수동: `python3 -I interest_sync.py [--dry-run]`.
+
+## 🗓 Schedule 탭 (2026-11-08)
+- `schedule/index.html`(same-origin iframe). 오늘(타임라인+체크)·주간·월간 달력·루틴 관리. 데이터 로컬 `sv_schedule_v1`, 변경 시 `sv_schedule_dirty=1`.
+- 저장: 대시보드 「☁️ 커밋 & 푸시」 5단계가 invest-private `sv/schedule.json` 에 PUT. 페이지 로드 시 GitHub 쪽 updatedAt 이 더 새것이고 로컬 dirty 가 아니면 받아온다.
+- 항목: {id,title,icon,kind:daily|weekly|monthly|once,days[0=일..6],doms[1..31|'last'],date,start,end,color,note}. 완료 기록 done[YYYY-MM-DD][id]. 처음엔 예시 루틴 8개가 들어 있음(수정·삭제 자유).
+- KR 스크리너 즐겨찾기·메모·읽음(`screener_*` localStorage) 도 같은 버튼 4단계에서 `screener/screener_favs.json` 으로 올린다 (자동 저장 없음, 2026-11-08).
