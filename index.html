@@ -751,6 +751,7 @@
   .pf-card { border-color: #ddd6fe !important; margin-bottom: 16px; }
   .pf-body { display: flex; gap: 18px; padding: 14px 16px; align-items: center; flex-wrap: wrap; }
   .pf-chart { flex: 0 0 170px; }
+  .pf-chart svg { width: 170px; height: 170px; }
   .pf-chart path, .pf-chart circle, .pf-chart rect { transition: opacity .12s; }
   .pf-chart svg:has(.on) :is(path, rect):not(.on) { opacity: .45; }
   .pf-chart svg:has(.on) g:not(:has(.on)) text { opacity: .45; }
@@ -797,14 +798,16 @@
     .pf-rows { flex: 0 1 auto; }
     .pf-body > :not(.pf-chart):not(.pf-rows) { order: 3; }   /* 메모·보관 기록은 파이 뒤(다음 줄)로 */
     .pf-chart { order: 2; flex: 1 1 260px; display: flex; justify-content: center; position: sticky; top: 12px; align-self: flex-start; padding-top: 8px; }
-    .pf-chart svg { width: min(100%, 320px); height: auto; }
+    .pf-chart svg { width: min(100%, 320px); height: auto; aspect-ratio: 1 / 1; }
     .pf-chart .pf-empty { padding-top: 40px !important; }
   }
   /* 태블릿(아이패드): 행이 카드 폭을 넘쳐 오른쪽 라벨이 잘림 → 파이를 위로 올리고 행은 전체 폭 사용, 입력칸 축소 */
   @media (min-width: 641px) and (max-width: 1100px) {
     .pf-target-card .pf-body { flex-wrap: wrap; }
-    .pf-target-card .pf-chart { flex: 1 1 100%; display: flex; justify-content: center; }
+    .pf-chart { flex: 1 1 100%; display: block; }
+    .pf-chart svg { width: 100%; height: auto; }
     .pf-target-card .pf-rows { flex: 1 1 100%; min-width: 0; overflow-x: auto; }
+    .pf-rows { flex: 1 1 100%; min-width: 0; }
     .pf-target-card .pf-vals > input[placeholder="종목명"] { width: 104px !important; }
     .pf-target-card .pf-vals > input[placeholder="금액(원)"] { width: 108px !important; flex: 0 0 108px !important; }
     .pf-target-card .pf-row > .pf-pct { flex: 0 0 66px; }
@@ -813,7 +816,8 @@
   /* ── 모바일(아이폰) 포트 비중 레이아웃 ── */
   @media (max-width: 640px) {
     .pf-body { gap: 12px; padding: 12px; }
-    .pf-chart { flex: 1 1 100%; display: flex; justify-content: center; }
+    .pf-chart { flex: 1 1 100%; display: block; }
+    .pf-chart svg { width: 100%; height: auto; }
     .pf-rows { flex: 1 1 100%; min-width: 0; }
     /* 1행: ● 종목명 … 비중 / 2행: 수량 @단가 … 금액 */
     .pf-row {
@@ -4421,7 +4425,8 @@ function pfPieTip(chartWrap) {
 }
 
 /* 트리맵(Finviz 스타일 네모 차트): slices=[{v,color,name,tip}] → <svg> 문자열. 면적 ∝ v (squarified) */
-function pfTreemap(slices, W = 160, H = 160) {
+function pfTreemap(slices, W, H) {
+  if (W == null) { const wide = window.innerWidth <= 1100; W = wide ? 360 : 160; H = wide ? 130 : 160; }   // 2026-11-08: 태블릿·모바일은 가로 꽉 차게
   const tot = slices.reduce((a, b) => a + b.v, 0); if (!tot) return '';
   const items = slices.slice().sort((a, b) => b.v - a.v).map(d => ({ ...d, a: d.v / tot * W * H }));
   const out = [];
@@ -4439,14 +4444,14 @@ function pfTreemap(slices, W = 160, H = 160) {
   }
   if (row.length) layoutRow(row, x, y, w, h);
   const g = 1.2;   // 타일 간격
-  return `<svg viewBox="0 0 ${W} ${H}" width="170" height="170" style="border-radius:8px;overflow:hidden">` + out.map(r => {
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block;width:100%;height:auto;aspect-ratio:${W}/${H};border-radius:8px;overflow:hidden">` + out.map(r => {
     const rx = r.x + g / 2, ry = r.y + g / 2, rw = Math.max(0, r.w - g), rh = Math.max(0, r.h - g);
     const pct = (r.v / tot * 100).toFixed(1) + '%';
     const name = r.label || r.name || '';
     // 글자 폭 추정(한글·전각 1em, 영문·숫자 ≈0.62em) → 타일 폭에 맞춰 글자 크기를 줄여서라도 이름을 넣는다
     const units = [...name].reduce((u, ch) => u + (/[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af\u3000-\u9fff]/.test(ch) ? 1 : .62), 0) || 1;
-    const fs = Math.min(11, (rw - 4) / units, rh / 3.2);
-    const fsP = Math.max(5.5, Math.min(9.5, Math.max(fs, 6.5) * .85));
+    const fs = Math.min(W > 200 ? 13 : 11, (rw - 4) / units, rh / 3.2);
+    const fsP = Math.max(5.5, Math.min(W > 200 ? 11 : 9.5, Math.max(fs, 6.5) * .85));
     let label = '';
     if (rw > 14 && rh > 10) {
       if (fs >= 5 && rh > fs + fsP + 4) label = `<text x="${(rx + rw / 2).toFixed(1)}" y="${(ry + rh / 2 - 1).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}" font-weight="700" fill="#fff" pointer-events="none">${pfEsc(name)}</text><text x="${(rx + rw / 2).toFixed(1)}" y="${(ry + rh / 2 + fsP + 1).toFixed(1)}" text-anchor="middle" font-size="${fsP.toFixed(1)}" font-weight="600" fill="#fff" fill-opacity=".9" pointer-events="none">${pct}</text>`;
@@ -4456,6 +4461,7 @@ function pfTreemap(slices, W = 160, H = 160) {
   }).join('') + '</svg>';
 }
 
+(function () { let wide = window.innerWidth <= 1100, t = null; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { const w2 = window.innerWidth <= 1100; if (w2 !== wide) { wide = w2; try { if (typeof renderFeedScenario === 'function' && document.querySelector('.pf-chart svg')) renderFeedScenario(); } catch (_) {} } }, 250); }); })();
 function fmtWon(n) { return n ? Number(n).toLocaleString('ko-KR') : ''; }
 
 /* 시나리오 종목명 → Stock Valuation 종목 매칭 (주가 자동 연동용) */
