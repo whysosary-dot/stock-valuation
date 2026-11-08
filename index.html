@@ -1569,7 +1569,7 @@ td input, td textarea{border-radius:8px}
   <div class="diary-topbar">
     <div class="diary-tabs">
       <button class="dtab active" data-tab="daily">📔 일기<span class="dtab-cnt" id="cnt-daily">0</span></button>
-      <button class="dtab" data-tab="scenario">🎯 시나리오<span class="dtab-cnt" id="cnt-scenario">0</span></button>
+      <button class="dtab" data-tab="scenario">💼 포트폴리오<span class="dtab-cnt" id="cnt-scenario">0</span></button>
       <button class="dtab" data-tab="highlights">🔴 강조<span class="dtab-cnt" id="cnt-highlights">0</span></button>
       <button class="dtab" data-tab="rules">📏 규칙</button>
       <button class="dtab" data-tab="advice">🧭 조언</button>
@@ -5775,10 +5775,9 @@ function renderFeedScenarioV2() {
     body.appendChild(pv === 'target' ? makeTargetPortfolioCard(held) : pv === 'pf' ? makePortfolioCard(held) : makePfReturnCard());
   };
   views.forEach(([v, lab]) => { const b = document.createElement('button'); b.dataset.v = v; b.textContent = lab; b.addEventListener('click', () => { pv = v; folded = false; localStorage.setItem('sv_scn_panel', v); localStorage.setItem('sv_scn_panel_fold', '0'); drawPanel(); }); seg.appendChild(b); });
-  const t = document.createElement('span'); t.className = 't'; t.textContent = '포트폴리오';
   const fold = document.createElement('button'); fold.className = 'fold'; fold.textContent = folded ? '펼치기 ▾' : '접기 ▴';
   fold.addEventListener('click', () => { folded = !folded; localStorage.setItem('sv_scn_panel_fold', folded ? '1' : '0'); fold.textContent = folded ? '펼치기 ▾' : '접기 ▴'; drawPanel(); });
-  ph.appendChild(t); ph.appendChild(seg); ph.appendChild(fold); panel.appendChild(ph); panel.appendChild(body); feed.appendChild(panel);
+  ph.appendChild(seg); ph.appendChild(fold); panel.appendChild(ph); panel.appendChild(body); feed.appendChild(panel);
   drawPanel();
 
   /* ③ 종목 시나리오 — 접힌 행 + 펼치면 기존 카드 */
