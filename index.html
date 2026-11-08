@@ -4444,7 +4444,7 @@ function pfTreemap(slices, W, H) {
   }
   if (row.length) layoutRow(row, x, y, w, h);
   const g = 1.2;   // 타일 간격
-  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block;width:100%;height:auto;aspect-ratio:${W}/${H};border-radius:8px;overflow:hidden">` + out.map(r => {
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block;aspect-ratio:${W}/${H};border-radius:8px;overflow:hidden">` + out.map(r => {
     const rx = r.x + g / 2, ry = r.y + g / 2, rw = Math.max(0, r.w - g), rh = Math.max(0, r.h - g);
     const pct = (r.v / tot * 100).toFixed(1) + '%';
     const name = r.label || r.name || '';
