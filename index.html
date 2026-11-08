@@ -798,7 +798,7 @@
     .pf-rows { flex: 0 1 auto; }
     .pf-body > :not(.pf-chart):not(.pf-rows) { order: 3; }   /* 메모·보관 기록은 파이 뒤(다음 줄)로 */
     .pf-chart { order: 2; flex: 1 1 260px; display: flex; justify-content: center; position: sticky; top: 12px; align-self: flex-start; padding-top: 8px; }
-    .pf-chart svg { width: min(100%, 480px); height: auto; aspect-ratio: 1 / 1; }   /* 2026-11-08 사용자 요청: PC 1.5배(320→480) */
+    .pf-chart svg { width: min(100%, 390px, calc(100vh - 420px)); height: auto; aspect-ratio: 1 / 1; }   /* 2026-11-08: 320→480 은 노트북에서 아래가 잘려 390(≈80%)으로, 화면이 낮으면 더 줄어듦 */
     .pf-chart .pf-empty { padding-top: 40px !important; }
   }
   /* 태블릿(아이패드): 행이 카드 폭을 넘쳐 오른쪽 라벨이 잘림 → 파이를 위로 올리고 행은 전체 폭 사용, 입력칸 축소 */
