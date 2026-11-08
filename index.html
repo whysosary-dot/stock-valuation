@@ -4454,7 +4454,10 @@ function pfTreemap(slices, W, H) {
     const fsP = Math.max(5.5, Math.min(W > 200 ? 11 : 9.5, Math.max(fs, 6.5) * .85));
     let label = '';
     if (rw > 14 && rh > 10) {
-      if (fs >= 5 && rh > fs + fsP + 4) label = `<text x="${(rx + rw / 2).toFixed(1)}" y="${(ry + rh / 2 - 1).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}" font-weight="700" fill="#fff" pointer-events="none">${pfEsc(name)}</text><text x="${(rx + rw / 2).toFixed(1)}" y="${(ry + rh / 2 + fsP + 1).toFixed(1)}" text-anchor="middle" font-size="${fsP.toFixed(1)}" font-weight="600" fill="#fff" fill-opacity=".9" pointer-events="none">${pct}</text>`;
+      // sub = 세 번째 줄(포트 비중 카드: 현재 수익률). 세 줄이 들어갈 높이일 때만, 아니면 두 줄
+      const hasSub = !!r.sub && rh > fs + fsP * 2 + 8;
+      const cy = ry + rh / 2 - (hasSub ? fsP * .55 : 0);
+      if (fs >= 5 && rh > fs + fsP + 4) label = `<text x="${(rx + rw / 2).toFixed(1)}" y="${(cy - 1).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}" font-weight="700" fill="#fff" pointer-events="none">${pfEsc(name)}</text><text x="${(rx + rw / 2).toFixed(1)}" y="${(cy + fsP + 1).toFixed(1)}" text-anchor="middle" font-size="${fsP.toFixed(1)}" font-weight="600" fill="#fff" fill-opacity=".9" pointer-events="none">${pct}</text>` + (hasSub ? `<text x="${(rx + rw / 2).toFixed(1)}" y="${(cy + fsP * 2 + 3).toFixed(1)}" text-anchor="middle" font-size="${(fsP * .92).toFixed(1)}" font-weight="700" fill="${r.subColor || '#fff'}" pointer-events="none">${pfEsc(r.sub)}</text>` : '');
       else label = `<text x="${(rx + rw / 2).toFixed(1)}" y="${(ry + rh / 2 + fsP * .35).toFixed(1)}" text-anchor="middle" font-size="${fsP.toFixed(1)}" font-weight="700" fill="#fff" pointer-events="none">${pct}</text>`;
     }
     return `<g><rect x="${rx.toFixed(2)}" y="${ry.toFixed(2)}" width="${rw.toFixed(2)}" height="${rh.toFixed(2)}" rx="2.5" fill="${r.color}" stroke="#fff" stroke-width=".6" data-tip="${(r.tip || '').replace(/"/g, '&quot;')}"/>${label}</g>`;
@@ -4651,7 +4654,9 @@ function makePortfolioCard(activeItemsRaw) {
       return;
     }
     chartWrap.style.height = '';
-    const slices = data.filter(d => d.v > 0).map(d => ({ ...d, tip: `<b>${pfEsc(d.name || '')}</b> · ${(d.v / sum * 100).toFixed(1)}% · ${fmtWon(d.v)}원` }));
+    // 타일 3번째 줄: 종목별 현재 수익률 (매수가·매수금액이 있는 종목만). 연빨강=수익, 하늘=손실 (국내 관례)
+    data.forEach((d, i) => { const f = retFns[i], r = f ? f() : null; if (r && r.cost > 0) { const rt = (r.val - r.cost) / r.cost * 100; d.sub = pfSgn(rt, 1) + '%'; d.subColor = rt > 0 ? '#ffd1d1' : rt < 0 ? '#bfe0ff' : '#fff'; d.ret = rt; } });
+    const slices = data.filter(d => d.v > 0).map(d => ({ ...d, tip: `<b>${pfEsc(d.name || '')}</b> · ${(d.v / sum * 100).toFixed(1)}% · ${fmtWon(d.v)}원` + (d.ret != null ? ` · 수익률 ${pfSgn(d.ret, 1)}%` : '') }));
     chartWrap.innerHTML = pfTreemap(slices);
     pfPieTip(chartWrap);
   };
