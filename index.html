@@ -6549,8 +6549,23 @@ async function ghCommitAllRun(pat) {
       }
     } catch (e) { console.warn('[commit] sheets 커밋 스킵:', e); errs.push('폴더: ' + e.message); }
 
+    // ── 4. KR 스크리너 즐겨찾기·메모·실적 읽음 표시 (2026-11-08: 자동 저장 대신 이 버튼으로만 동기화) ──
+    //    스크리너 페이지와 같은 출처라 localStorage 를 공유한다. 스크리너가 변경 시 screener_fav_dirty=1 만 남기고, 여기서 올린다.
+    let scrSynced = false;
+    try {
+      if (localStorage.getItem('screener_fav_dirty') === '1') {
+        const lsJ = (k) => { try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch (_) { return {}; } };
+        const now = Date.now();
+        const payload = JSON.stringify({ schema: 2, favs_v2: lsJ('screener_favs_v2'), meta_v2: lsJ('screener_meta_v2'), memos_v2: lsJ('screener_memos_v2'),
+          earn_favs: lsJ('screener_earn_favs'), earn_read: lsJ('screener_earn_read'), favs: {}, meta: {}, memos: {}, updatedAt: now }, null, 2);
+        const put = async () => { const f = await ghApiGet(pat, 'screener/screener_favs.json'); return ghApiPut(pat, 'screener/screener_favs.json', payload, f ? f.sha : null, `⭐ 스크리너 즐겨찾기·읽음 동기화 ${today}`); };
+        try { await put(); } catch (e) { if (!/\b(409|422)\b|does not match/.test(e.message)) throw e; await new Promise(r => setTimeout(r, 800)); await put(); }
+        localStorage.setItem('screener_fav_ts', String(now)); localStorage.removeItem('screener_fav_dirty'); scrSynced = true;
+      }
+    } catch (e) { errs.push('스크리너 즐겨찾기: ' + e.message); }
+
     if (!errs.length) {
-      toast('✅ GitHub 커밋 완료! (밸류·일기·폴더)', 'ok', 3500);
+      toast('✅ GitHub 커밋 완료! (밸류·일기·폴더' + (scrSynced ? '·스크리너 즐겨찾기' : '') + ')', 'ok', 3500);
     } else if (errs.some(m => m.includes('401') || m.includes('403'))) {
       toast('❌ 토큰 오류 — ⚙️ 버튼에서 토큰을 확인하세요', 'err', 5000);
     } else {
