@@ -1408,6 +1408,7 @@ td input, td textarea{border-radius:8px}
   <button class="page-tab-btn" data-page="report">📑 Report</button>
   <button class="page-tab-btn" data-page="telegram">📨 Telegram</button>
   <button class="page-tab-btn" data-page="sheet">📁 Folder</button>
+  <button class="page-tab-btn" data-page="schedule">🗓 Schedule</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
   <div class="tabs-spacer"></div>
   <button id="gh-settings-btn" class="gh-settings-btn" title="GitHub 토큰 설정">⚙️</button>
@@ -1560,6 +1561,10 @@ td input, td textarea{border-radius:8px}
   ></iframe>
 </div><!-- /page-chart -->
 
+<div id="page-schedule" class="page">
+  <!-- 🗓 Schedule — 일간·주간·월간 루틴 (same-origin schedule/index.html, 데이터 invest-private sv/schedule.json, 저장은 ☁️ 커밋 & 푸시) -->
+  <iframe id="schedule-frame" style="width:100%;height:calc(100vh - 48px);border:none;display:block;" loading="lazy" title="Schedule"></iframe>
+</div>
 <div id="page-diary" class="page">
   <div class="diary-topbar">
     <div class="diary-tabs">
@@ -2903,7 +2908,8 @@ const IFRAME_TAB_SRC = {
   interest:  './view/index.html?src=interest&v=' + Math.floor(Date.now()/600000),
   report:    './report/index.html?v=' + Date.now(),  // 증권사 리포트 정리 (same-origin)
   telegram:  './telegram/index.html?v=' + Date.now(),  // 텔레그램 채널 언급 종목 (same-origin)
-  chart:     './chart/index.html?v=' + Math.floor(Date.now()/60000),  // Chart 탭 (same-origin, 1분 단위 캐시 무효화 — Pages CDN·사파리 iframe 캐시 대응)
+  chart:     './chart/index.html?v=' + Math.floor(Date.now()/60000),
+  schedule:  './schedule/index.html?v=' + Math.floor(Date.now()/60000),  // 🗓 Schedule 탭 (same-origin)  // Chart 탭 (same-origin, 1분 단위 캐시 무효화 — Pages CDN·사파리 iframe 캐시 대응)
   // sheet 은 X-Frame-Options 로 iframe 차단되어 안내 페이지로 대체 (IFRAME_TAB_SRC 등록 X)
 };
 
@@ -6564,8 +6570,24 @@ async function ghCommitAllRun(pat) {
       }
     } catch (e) { errs.push('스크리너 즐겨찾기: ' + e.message); }
 
+    // ── 5. 🗓 Schedule (schedule/index.html, same-origin localStorage sv_schedule_v1) — 변경(sv_schedule_dirty)이 있을 때만 ──
+    let schSynced = false;
+    try {
+      if (localStorage.getItem('sv_schedule_dirty') === '1') {
+        const raw = localStorage.getItem('sv_schedule_v1');
+        if (raw) {
+          const j = JSON.parse(raw); j.updatedAt = Date.now(); delete j._seed;
+          const body = JSON.stringify(j, null, 2);
+          const put = async () => { const f = await ghApiGet(pat, 'sv/schedule.json'); return ghApiPut(pat, 'sv/schedule.json', body, f ? f.sha : null, `🗓 일정 업데이트 ${today}`); };
+          try { await put(); } catch (e) { if (!/\b(409|422)\b|does not match/.test(e.message)) throw e; await new Promise(r => setTimeout(r, 800)); await put(); }
+          localStorage.setItem('sv_schedule_v1', body); localStorage.removeItem('sv_schedule_dirty'); schSynced = true;
+          try { const f = document.getElementById('schedule-frame'); if (f && f.contentWindow) f.contentWindow.postMessage({ type: 'sv-schedule-synced' }, location.origin); } catch (_) {}
+        }
+      }
+    } catch (e) { errs.push('일정: ' + e.message); }
+
     if (!errs.length) {
-      toast('✅ GitHub 커밋 완료! (밸류·일기·폴더' + (scrSynced ? '·스크리너 즐겨찾기' : '') + ')', 'ok', 3500);
+      toast('✅ GitHub 커밋 완료! (밸류·일기·폴더' + (scrSynced ? '·스크리너 즐겨찾기' : '') + (schSynced ? '·일정' : '') + ')', 'ok', 3500);
     } else if (errs.some(m => m.includes('401') || m.includes('403'))) {
       toast('❌ 토큰 오류 — ⚙️ 버튼에서 토큰을 확인하세요', 'err', 5000);
     } else {
