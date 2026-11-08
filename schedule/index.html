@@ -287,7 +287,7 @@ function today(){ const d=new Date(); d.setHours(0,0,0,0); return d; }
 function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function parse(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
 function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
-function mondayOf(d){ const x=new Date(d); x.setDate(x.getDate()-((x.getDay()+6)%7)); return x; }
+function weekStart(d){ const x=new Date(d); x.setDate(x.getDate()-x.getDay()); return x; }   // 일요일 시작 (월간·미니 달력과 통일)
 function lastDom(d){ return new Date(d.getFullYear(),d.getMonth()+1,0).getDate(); }
 function mins(t){ if(!t) return null; const [h,m]=t.split(':').map(Number); return h*60+m; }
 function hhmm(m){ return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
@@ -308,14 +308,14 @@ function render(){
   document.querySelectorAll('#views button').forEach(b=>b.classList.toggle('on',b.dataset.v===view));
   dirty(); renderMini(); renderProg(); renderRoutines();
   const m=$('#main'); m.innerHTML='';
-  if(view==='week') renderGrid(m, mondayOf(cur), 7);
+  if(view==='week') renderGrid(m, weekStart(cur), 7);
   else if(view==='day') renderDay(m);
   else if(view==='month') renderMonth(m);
   else renderAgenda(m);
 }
 function rangeLabel(){
   const t=today();
-  if(view==='week'){ const a=mondayOf(cur), b=addDays(a,6); return `${a.getFullYear()}년 ${a.getMonth()+1}월 <small>${a.getMonth()+1}.${a.getDate()} – ${b.getMonth()+1}.${b.getDate()}</small>`; }
+  if(view==='week'){ const a=weekStart(cur), b=addDays(a,6); return `${a.getFullYear()}년 ${a.getMonth()+1}월 <small>${a.getMonth()+1}.${a.getDate()} – ${b.getMonth()+1}.${b.getDate()}</small>`; }
   if(view==='day'){ const diff=Math.round((cur-t)/864e5); return `${cur.getMonth()+1}월 ${cur.getDate()}일 ${DAYS[cur.getDay()]}요일 <small>${diff===0?'오늘':diff===1?'내일':diff===-1?'어제':(diff>0?'+':'')+diff+'일'}</small>`; }
   if(view==='month') return `${cur.getFullYear()}년 ${cur.getMonth()+1}월`;
   return `다가오는 일정 <small>${t.getMonth()+1}.${t.getDate()}부터 14일</small>`;
