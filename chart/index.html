@@ -61,6 +61,7 @@ body{padding:12px 14px 40px}
 .scard .nm{font-size:12.5px;color:var(--text-dim)}
 .scard .px{margin-left:auto;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums}
 .scard .desc{font-size:12px;color:var(--text-dim);margin:2px 0 6px}
+.scard .biz{font-size:12.5px;color:var(--text);margin:4px 0 6px;line-height:1.5;word-break:keep-all}
 .tags{display:flex;gap:5px;flex-wrap:wrap;margin:4px 0 6px}
 .tg{font-size:11px;font-weight:700;border-radius:6px;padding:2px 7px;border:1px solid transparent}
 .tg.k{background:#fdeef0;color:#b91c1c;border-color:#f3c3c9}
@@ -200,6 +201,13 @@ const fmtPct = (v, d = 1) => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(
 const cls = v => v == null ? 'flat' : v > 0.0001 ? 'up' : v < -0.0001 ? 'dn' : 'flat';
 const fmtN = (v, mkt) => v == null ? '—' : mkt === 'US' ? ('$' + Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 })) : Number(v).toLocaleString('ko-KR') + '원';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+/* 기업 한 줄 설명 (2026-11-09): data/desc.json(빌드가 US 는 네이버 기업개요로 자동 채움) + chart/desc_kr.json(한국, Claude 가 유지) */
+const DESC = {};
+(async () => {
+  try { const j = await fetch(BASE + 'desc.json?t=' + Math.floor(Date.now() / 300000), { cache: 'no-store' }).then(r => r.ok ? r.json() : {}); Object.assign(DESC, j || {}); } catch (_) {}
+  try { const k = await fetch('./desc_kr.json?t=' + Math.floor(Date.now() / 300000), { cache: 'no-store' }).then(r => r.ok ? r.json() : {}); for (const [c, v] of Object.entries(k || {})) if (v && !c.startsWith('_')) DESC['KR:' + c] = v; } catch (_) {}
+  try { if (typeof renderScan === 'function' && document.querySelector('.scard')) renderScan(); } catch (_) {}
+})();
 async function jget(p) { let r = await fetch(BASE + p + '?t=' + Math.floor(Date.now() / 300000), { cache: 'no-store' }).catch(() => null); if (!r || !r.ok) r = await fetch(BASE_FALLBACK + p + '?t=' + Math.floor(Date.now() / 300000), { cache: 'no-store' }); if (!r.ok) throw new Error(p + ' ' + r.status); return r.json(); }
 const dpr = () => Math.min(2, window.devicePixelRatio || 1);
 function setupCanvas(cv) { const w = cv.clientWidth || 300, h = cv.clientHeight || 100; cv.width = Math.round(w * dpr()); cv.height = Math.round(h * dpr()); const g = cv.getContext('2d'); g.setTransform(dpr(), 0, 0, dpr(), 0, 0); return [g, w, h]; }
@@ -491,6 +499,7 @@ function scanCard(h, opts = {}) {
   el.innerHTML = `<div class="h"><span class="tk"><a href="${link(h)}" target="_blank" rel="noopener">${esc(h.mkt === 'KR' ? h.name : h.tk)}</a></span><span class="nm">${esc(h.mkt === 'KR' ? h.tk + ' · ' + (h.mkt_sub || '') : h.name)}</span><span class="px ${cls(h.chg)}">${fmtN(h.price, h.mkt)} ${fmtPct(h.chg)}</span><button class="fav${isFav ? ' on' : ''}" data-k="${esc(fk)}" title="즐겨찾기 (★ 눌러 모아 보기)">${isFav ? '★' : '☆'}</button></div>
     ${opts.favmeta ? `<div class="favmeta">★ ${esc(opts.favmeta)}</div>` : ''}
     <div class="desc">${esc([h.sector, h.industry].filter(Boolean).join(' · '))}${mcap ? ' · ' + mcap : ''}</div>
+    ${(h.desc || DESC[h.mkt + ':' + h.tk]) ? `<div class="biz">${esc(h.desc || DESC[h.mkt + ':' + h.tk])}</div>` : ''}
     <div class="tags">${tags.join('')}</div>
     ${h.news && h.news.title ? `<div class="news">최근 뉴스 · <a href="${esc(h.news.url || '#')}" target="_blank" rel="noopener">${esc(h.news.title)}</a> <span class="legend">${esc(h.news.date || '')}</span></div>` : ''}
     <div class="tf"><button class="on" data-tf="d">일봉 ${Math.round(h.d.length / 21)}개월</button><button data-tf="w">주봉</button></div>

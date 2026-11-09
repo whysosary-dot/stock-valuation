@@ -178,6 +178,51 @@ def group_card(name, sub, dates, closes, bench_closes=None, n_members=None, note
     }
 
 # ───────────────────────── 스캔 ─────────────────────────
+
+# ── 기업 한 줄 설명 (2026-11-09) ─────────────────────────────────────────────────
+# 캐시: chart/data/desc.json {"US:NVDA": "...", "KR:005930": "..."} — data 브랜치에 같이 올라감.
+# US: 네이버 세계주식 integration API 의 corporateOverview(한국어 기업개요) 첫 문장(≤90자).
+# KR: 공개 API 가 없어 Claude 가 평일 Chart 인사이트 작업에서 chart/desc_kr.json(main) 에 채운다. 여기서는 그 파일도 합쳐 캐시에 반영.
+def _desc_trim(t, n=90):
+    t = re.sub(r"\s+", " ", str(t or "")).strip()
+    if not t: return ""
+    m = re.match(r"(.+?다)[\.\s]", t)   # 첫 문장(…다.)
+    first = (m.group(1) if m else t).rstrip(". ").strip()
+    first = re.sub(r"^(이 회사는|동사는|당사는|회사는)\s*", "", first)
+    return first if len(first) <= n else first[:n - 1].rstrip() + "…"
+
+def desc_fill(hits, market):
+    path = os.path.join(DATA, "desc.json")
+    try: cache = json.load(open(path))
+    except Exception: cache = {}
+    if market == "KR":
+        try:
+            kr = requests.get("https://raw.githubusercontent.com/whysosary-dot/stock-valuation/main/chart/desc_kr.json", timeout=30).json()
+            for k, v in (kr or {}).items():
+                if v: cache["KR:" + str(k).split(":")[-1]] = v
+        except Exception as e: print("  desc_kr 읽기 실패:", e)
+    new = 0
+    for h in hits:
+        key = f"{market}:{h['tk']}"
+        if not cache.get(key) and market == "US":
+            for suf in (".O", "", ".K", ".N"):   # 나스닥 .O · NYSE 는 접미사 없음
+                try:
+                    j = requests.get(f"https://api.stock.naver.com/stock/{h['tk']}{suf}/integration", headers=H, timeout=15).json()
+                    ov = j.get("corporateOverview") or (j.get("summaries") or {}).get("summary") or ""
+                    if not ov: continue
+                    kn = ""
+                    try: kn = (requests.get(f"https://api.stock.naver.com/stock/{h['tk']}{suf}/basic", headers=H, timeout=15).json() or {}).get("stockName") or ""
+                    except Exception: pass
+                    d = _desc_trim(ov)
+                    cache[key] = (kn + " · " + d) if kn and kn.upper() != h["tk"].upper() else d
+                    new += 1; break
+                except Exception: pass
+                time.sleep(0.15)
+        if cache.get(key): h["desc"] = cache[key]
+    try: json.dump(cache, open(path, "w"), ensure_ascii=False, indent=0)
+    except Exception as e: print("  desc.json 저장 실패:", e)
+    print(f"  desc {market}: 히트 {len(hits)} 중 설명 {sum(1 for h in hits if h.get('desc'))} (신규 {new})")
+
 def scan_market(univ, series, bench, mkt):
     """univ: {tk: {name, sector, mcap(억 or $M), ...}}, series: {tk: (dates,o,h,l,c,v)} (동일 길이 아님)
        bench: (dates, closes) 지수. 반환 {hits:[...], rs:{tk:rs}}"""
@@ -401,6 +446,7 @@ def build_kr():
     # 스캔: 시총 1,000억 이상 & 당일 거래대금 10억 이상
     scan_univ = {tk: u for tk, u in univ.items() if u["mcap"] >= 1000 and tk in series and series[tk][4][-1] * series[tk][5][-1] >= 1e9}
     hits, rs = scan_market(scan_univ, series, (kospi[0], kospi[4]), "KR")
+    desc_fill(hits, "KR")
     out = {"date": kospi[0][-1], "generated_at": datetime.datetime.now(KST).isoformat(timespec="seconds"), "market": "KR",
            "universe": len(scan_univ), "bench": "코스피", "hits": hits}
     json.dump(out, open(os.path.join(DATA, "scan_kr.json"), "w"), ensure_ascii=False)
@@ -552,6 +598,7 @@ def build_us():
             except Exception: pass
     except Exception as e:
         print("  ⚠ 보강 실패:", e)
+    desc_fill(hits, "US")
     out = {"date": spy[0][-1] if spy else TODAY, "generated_at": datetime.datetime.now(KST).isoformat(timespec="seconds"), "market": "US",
            "universe": len(scan_univ), "bench": "SPY", "hits": hits}
     json.dump(out, open(os.path.join(DATA, "scan_us.json"), "w"), ensure_ascii=False)
