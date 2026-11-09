@@ -3547,7 +3547,8 @@ function autoSnapshotDiary() {
   }).filter(x => x.amt > 0);
   if (pItems.length) {
     if (!Array.isArray(d.pfHist)) d.pfHist = [];
-    const key = it => (it || []).map(x => `${x.name}:${x.amt}:${x.qty || 0}`).join('|');
+    // 보관 기준: 수량(수량 없는 항목은 금액) 또는 메모가 바뀔 때만. 주가 등락으로 금액만 변하는 날은 보관하지 않음
+    const key = it => (it || []).map(x => `${x.name}:${x.qty > 0 ? 'q' + x.qty : 'a' + x.amt}`).join('|');
     const last = d.pfHist[0];
     if (!(last && key(last.items) === key(pItems) && (last.memo || '') === (d.pfMemo || ''))) {
       const h = d.pfHist.filter(x => x.d !== today); h.unshift({ d: today, items: pItems, memo: d.pfMemo || '' });
