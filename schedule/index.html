@@ -124,6 +124,31 @@ button{ cursor:pointer }
 .mg .row .sw{ width:12px; height:12px; border-radius:4px }
 .mg .row .ti{ font-size:14px }
 .hint{ font-size:12px; color:var(--fg-3); padding:10px 14px 12px; line-height:1.6 }
+/* 만다라트 (오타니 식 9×9) */
+.mdl{ padding:12px }
+.mdl .tools{ display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap }
+.mdl .tools .ib.on{ background:var(--accent-soft); border-color:var(--accent); color:var(--accent-ink) }
+.m9{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px }
+.m3{ display:grid; grid-template-columns:repeat(3,1fr); gap:3px; padding:4px; border-radius:10px; background:var(--surface-2) }
+.m3.hub{ background:var(--accent-soft) }
+.mc{ aspect-ratio:1/1; border-radius:7px; background:var(--surface); border:1px solid var(--line-2); padding:4px 3px; font-size:10.5px; line-height:1.25; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; cursor:pointer; word-break:keep-all; overflow:hidden; position:relative; user-select:none; -webkit-tap-highlight-color:transparent; transition:transform .08s }
+.mc:hover{ border-color:var(--fg-3) }
+.mc:active{ transform:scale(.96) }
+.mc .t{ font-weight:600; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; color:var(--fg) }
+.mc.empty .t{ color:var(--fg-3); font-weight:500 }
+.mc.goal{ background:var(--accent); border-color:var(--accent); color:#fff; font-size:11px } .mc.goal .t{ color:#fff; font-weight:700; -webkit-line-clamp:4 }
+.mc.sub{ background:var(--accent-soft); border-color:transparent } .m3.hub .mc.sub{ background:var(--surface); border-color:var(--line) } .mc.sub .t{ color:var(--accent-ink); font-weight:700 }
+.mc.ref{ border-left:3px solid var(--c,var(--accent)) }
+.mc.ref.on{ background:var(--ok-soft); border-color:var(--ok) } .mc.ref.on .t{ color:var(--ok); text-decoration:line-through; text-decoration-thickness:1px }
+.mc .k{ font-size:9px; color:var(--fg-3); font-family:var(--mono); line-height:1 }
+.mc.ref.on .k{ color:var(--ok) }
+.mc .chk{ position:absolute; top:2px; right:3px; font-size:9px; color:var(--ok); font-weight:700 }
+.mdl .foot{ margin-top:10px; font-size:12px; color:var(--fg-2); display:flex; gap:14px; flex-wrap:wrap } .mdl .foot b{ font-family:var(--mono); color:var(--fg) }
+.mdl .back{ margin-bottom:8px }
+@media (max-width:640px){ .mdl .m9{ gap:4px } .mdl .m3{ gap:2px; padding:3px } .mc{ font-size:9px; padding:2px } .mc .k,.mc .chk{ display:none } .mdl.zoom .mc{ font-size:13px; padding:6px } .mdl.zoom .mc .k,.mdl.zoom .mc .chk{ display:block } .mdl.zoom .mc .chk{ display:inline } .mdl.zoom .mc.goal{ font-size:14px } }
+.mdl.zoom .m3{ gap:6px; padding:6px } .mdl.zoom .mc{ font-size:13px; padding:8px 6px } .mdl.zoom .mc .t{ -webkit-line-clamp:4 }
+/* 셀 편집 */
+.mv .sel{ width:100%; font-size:14px; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--surface) }
 /* 플로팅 추가 */
 .fab{ position:fixed; right:18px; bottom:22px; height:44px; padding:0 18px 0 14px; border-radius:999px; border:none; background:var(--accent); color:#fff; font-weight:700; font-size:14px; box-shadow:0 8px 24px rgba(46,91,255,.35); display:inline-flex; align-items:center; gap:6px; z-index:15 }
 .fab:hover{ background:var(--accent-ink) }
@@ -173,7 +198,7 @@ button{ cursor:pointer }
 <div class="app">
   <header class="top">
     <div class="brand"><i>S</i><span>Schedule</span></div>
-    <div class="seg" id="views"><button data-v="today">오늘</button><button data-v="week">주</button><button data-v="month">월</button><button data-v="manage">관리</button></div>
+    <div class="seg" id="views"><button data-v="today">오늘</button><button data-v="week">주</button><button data-v="month">월</button><button data-v="mandala">만다라트</button><button data-v="manage">관리</button></div>
     <div class="sp"></div>
     <span class="badge" id="dirty">변경됨 · 커밋 & 푸시로 저장</span>
     <button class="ib" id="todayBtn">오늘로</button>
@@ -196,6 +221,14 @@ button{ cursor:pointer }
     <div class="f"><label>메모</label><textarea id="fNote" placeholder="목적 · 체크 포인트 · 링크"></textarea></div>
   </div>
   <div class="ft"><button class="ib del" id="fDel" style="display:none">삭제</button><button class="ib" id="fCancel">취소</button><button class="ib pri" id="fSave">저장</button></div>
+</div></div>
+<div class="ov" id="mov"><div class="md mv">
+  <div class="hd"><span id="mvKind" style="font-size:11px;font-weight:700;color:var(--fg-3);letter-spacing:.05em"></span><input type="text" id="mvText" placeholder="내용"></div>
+  <div class="bd">
+    <div class="f" id="mvRefWrap"><label>루틴 연결 — 연결하면 칸을 눌러 오늘 체크, 진행이 색으로 보입니다</label><select class="sel" id="mvRef"></select></div>
+    <div class="f" id="mvNewWrap" style="display:none"><label>새 루틴 종류</label><div class="pills" id="mvNewKind"><button data-k="daily" class="on">매일</button><button data-k="w3">주 3회</button><button data-k="w5">주 5회</button><button data-k="m1">월 1회</button></div></div>
+  </div>
+  <div class="ft"><button class="ib del" id="mvClear">비우기</button><button class="ib" id="mvCancel">취소</button><button class="ib pri" id="mvSave">저장</button></div>
 </div></div>
 <div class="toast" id="toast"></div>
 
@@ -273,7 +306,7 @@ function kindLabel(it){
 function render(){
   document.querySelectorAll('#views button').forEach(b=>b.classList.toggle('on',b.dataset.v===view));
   dirty(); const m=$('#main'); m.innerHTML='';
-  if(view==='today') renderToday(m); else if(view==='week') renderWeek(m); else if(view==='month') renderMonth(m); else renderManage(m);
+  if(view==='today') renderToday(m); else if(view==='week') renderWeek(m); else if(view==='month') renderMonth(m); else if(view==='mandala') renderMandala(m); else renderManage(m);
 }
 function dateHead(root,title,sub,nav){
   const h=document.createElement('div'); h.className='dateh';
@@ -356,6 +389,73 @@ function renderManage(root){
   const tip=document.createElement('div'); tip.className='hint'; tip.innerHTML='<b>틈틈이 루틴 팁</b> — 매주/매월에서 요일·날짜를 비우고 횟수만 정하면 "주 3회"처럼 아무 때나 채우는 루틴이 됩니다. 시간대는 참고 표시일 뿐 체크는 언제든 가능합니다.'; root.appendChild(tip);
 }
 
+/* ───────── 만다라트 (오타니 쇼헤이 식 9×9: 가운데 핵심 목표 · 8개 세부 목표 · 각 8개 실천) ─────────
+   S.mandala = { goal, subs:[{title, cells:[{text, ref}×8]}×8] }  ref = 연결된 루틴 id (칸을 누르면 오늘 체크) */
+const POS=[0,1,2,3,5,6,7,8]; // 3×3 에서 가운데(4)를 뺀 8칸, 세부목표 i 의 블록 위치 = POS[i]
+let mFocus=null, mEdit=false;
+function mandala(){ if(!S.mandala||!Array.isArray(S.mandala.subs)||S.mandala.subs.length!==8) S.mandala={goal:'',subs:[...Array(8)].map(()=>({title:'',cells:[...Array(8)].map(()=>({text:'',ref:null}))}))}; S.mandala.subs.forEach(b=>{ if(!Array.isArray(b.cells)||b.cells.length!==8) b.cells=[...Array(8)].map(()=>({text:'',ref:null})); }); return S.mandala; }
+function refItem(id){ return id?S.items.find(i=>i.id===id):null; }
+function cellHtml(c,si,ci,d){
+  const it=refItem(c.ref), ds=ymd(d);
+  if(it){ const on=doneEff(it,d), chk=isDone(it.id,ds); let k='';
+    if(isFlex(it)) k=`${flexCount(it,d)}/${times(it)} ${it.kind==='weekly'?'주':'월'}`; else { const st=streak(it); k=st>1?`${st}일째`:kindLabel(it); }
+    return `<div class="mc ref ${on?'on':''}" data-s="${si}" data-c="${ci}" style="--c:${it.color}" title="${esc(it.title)} — 누르면 오늘 체크"><span class="t">${esc(c.text||it.title)}</span><span class="k">${k}</span>${chk?'<span class="chk">✓</span>':''}</div>`; }
+  return `<div class="mc ${c.text?'':'empty'}" data-s="${si}" data-c="${ci}"><span class="t">${esc(c.text||'＋')}</span></div>`; }
+function blockHtml(si,d){ const M=mandala(), b=M.subs[si]; let h='';
+  for(let p=0;p<9;p++){ if(p===4){ h+=`<div class="mc sub ${b.title?'':'empty'}" data-s="${si}" data-c="-1"><span class="t">${esc(b.title||`세부 목표 ${si+1}`)}</span></div>`; continue; } const ci=POS.indexOf(p); h+=cellHtml(b.cells[ci],si,ci,d); }
+  return `<div class="m3" data-b="${si}">${h}</div>`; }
+function hubHtml(){ const M=mandala(); let h='';
+  for(let p=0;p<9;p++){ if(p===4){ h+=`<div class="mc goal ${M.goal?'':'empty'}" data-s="-1" data-c="-1"><span class="t">${esc(M.goal||'핵심 목표')}</span></div>`; continue; } const si=POS.indexOf(p), b=M.subs[si];
+    const refs=b.cells.filter(c=>refItem(c.ref)), on=refs.filter(c=>doneEff(refItem(c.ref),cur)).length;
+    h+=`<div class="mc sub ${b.title?'':'empty'}" data-s="${si}" data-c="-1" data-hub="1"><span class="t">${esc(b.title||`세부 목표 ${si+1}`)}</span>${refs.length?`<span class="k">${on}/${refs.length}</span>`:''}</div>`; }
+  return `<div class="m3 hub">${h}</div>`; }
+function renderMandala(root){
+  const M=mandala(), d=cur, narrow=window.innerWidth<=640;
+  dateHead(root,'만다라트',`${d.getMonth()+1}.${d.getDate()} 기준`,dir=>{ cur=addDays(cur,dir); sel=ymd(cur); render(); });
+  const card=document.createElement('div'); card.className='card mdl'+((mFocus!==null||narrow)?' zoom':'');
+  const refs=M.subs.flatMap(b=>b.cells).filter(c=>refItem(c.ref)), on=refs.filter(c=>doneEff(refItem(c.ref),d)).length;
+  let h=`<div class="tools"><button class="ib ${mEdit?'on':''}" id="mEdit">✎ 편집 모드${mEdit?' 켜짐':''}</button>${mFocus!==null?'<button class="ib" id="mBack">← 전체</button>':''}<span class="sp"></span><button class="ib" id="mFill" title="루틴이 연결 안 된 세부 목표 블록의 빈 칸에 기존 루틴을 채웁니다">루틴으로 채우기</button></div>`;
+  if(mFocus!==null) h+=blockHtml(mFocus,d);
+  else if(narrow) h+=hubHtml();
+  else { h+='<div class="m9">'; for(let p=0;p<9;p++) h+=(p===4?hubHtml():blockHtml(POS.indexOf(p),d)); h+='</div>'; }
+  h+=`<div class="foot"><span>연결된 루틴 <b>${on}</b> / ${refs.length} 완료</span><span>${mEdit?'편집 모드: 칸을 누르면 내용·연결 수정':'칸을 누르면 오늘 체크 · 빈 칸은 바로 입력'}${narrow&&mFocus===null?' · 세부 목표를 누르면 그 블록으로':''}</span></div>`;
+  card.innerHTML=h; root.appendChild(card);
+  $('#mEdit').onclick=()=>{ mEdit=!mEdit; render(); };
+  if($('#mBack')) $('#mBack').onclick=()=>{ mFocus=null; render(); };
+  $('#mFill').onclick=()=>{ const used=new Set(M.subs.flatMap(b=>b.cells.map(c=>c.ref)).filter(Boolean)); const pool=S.items.filter(i=>i.kind!=='once'&&!used.has(i.id)); if(!pool.length){ toast('연결 안 된 루틴이 없습니다'); return; }
+    let n=0; M.subs.forEach(b=>{ b.cells.forEach(c=>{ if(!c.ref&&!c.text&&pool.length){ const it=pool.shift(); c.ref=it.id; n++; } }); }); save(); render(); toast(`루틴 ${n}개를 빈 칸에 넣었습니다 — 편집 모드에서 자리를 바꾸세요`); };
+  card.querySelectorAll('.mc').forEach(el=>el.onclick=()=>{ const si=+el.dataset.s, ci=+el.dataset.c;
+    if(si===-1){ openCell(-1,-1); return; }
+    if(ci===-1){ if(el.dataset.hub&&narrow&&mFocus===null&&!mEdit){ mFocus=si; render(); } else openCell(si,-1); return; }
+    const c=M.subs[si].cells[ci], it=refItem(c.ref);
+    if(!mEdit&&it){ toggle(it.id,ymd(d)); return; }
+    openCell(si,ci); });
+}
+let mc=null;
+function openCell(si,ci){
+  const M=mandala(); mc={si,ci};
+  const isGoal=si===-1, isSub=ci===-1&&!isGoal, c=isGoal?{text:M.goal}:isSub?{text:M.subs[si].title}:M.subs[si].cells[ci];
+  $('#mvKind').textContent=isGoal?'핵심 목표':isSub?`세부 목표 ${si+1}`:`실천 ${si+1}-${ci+1}`;
+  $('#mvText').value=c.text||''; $('#mvText').placeholder=isGoal?'예: 2027년까지 복리로 자산 ○○':isSub?'예: 독서 · 건강 · 투자 과정':'실천 내용 (루틴을 연결하면 비워도 됨)';
+  $('#mvRefWrap').style.display=(isGoal||isSub)?'none':''; $('#mvNewWrap').style.display='none';
+  if(!isGoal&&!isSub){ const rs=S.items.filter(i=>i.kind!=='once'); $('#mvRef').innerHTML=`<option value="">연결 안 함 (글만)</option><option value="__new">＋ 이 내용으로 새 루틴 만들기</option>`+rs.map(i=>`<option value="${i.id}" ${i.id===c.ref?'selected':''}>${esc(i.title)} · ${kindLabel(i)}</option>`).join(''); $('#mvRef').value=c.ref&&rs.some(i=>i.id===c.ref)?c.ref:''; }
+  $('#mvClear').style.display=(c.text||c.ref)?'':'none';
+  $('#mov').classList.add('on'); setTimeout(()=>$('#mvText').focus(),40);
+}
+$('#mvRef').onchange=()=>{ $('#mvNewWrap').style.display=$('#mvRef').value==='__new'?'':'none'; };
+$('#mvNewKind').onclick=e=>{ const b=e.target.closest('button'); if(b) document.querySelectorAll('#mvNewKind button').forEach(x=>x.classList.toggle('on',x===b)); };
+$('#mvCancel').onclick=()=>$('#mov').classList.remove('on');
+$('#mov').onclick=e=>{ if(e.target===$('#mov')) $('#mov').classList.remove('on'); };
+$('#mvClear').onclick=()=>{ const M=mandala(); if(mc.si===-1) M.goal=''; else if(mc.ci===-1) M.subs[mc.si].title=''; else M.subs[mc.si].cells[mc.ci]={text:'',ref:null}; save(); $('#mov').classList.remove('on'); render(); };
+$('#mvSave').onclick=()=>{ const M=mandala(), t=$('#mvText').value.trim();
+  if(mc.si===-1) M.goal=t; else if(mc.ci===-1) M.subs[mc.si].title=t;
+  else { let ref=$('#mvRef').value; if(ref==='__new'){ if(!t){ toast('새 루틴 제목이 될 내용을 입력하세요'); return; } const k=($('#mvNewKind .on')||{}).dataset?.k||'daily'; const it={id:'s'+Date.now().toString(36),title:t,color:COLORS[(S.items.length)%COLORS.length],note:''};
+      if(k==='daily'){ it.kind='daily'; it.days=[]; } else if(k==='w3'){ it.kind='weekly'; it.days=[]; it.times=3; } else if(k==='w5'){ it.kind='weekly'; it.days=[]; it.times=5; } else { it.kind='monthly'; it.doms=[]; it.times=1; }
+      S.items.push(it); ref=it.id; }
+    if(!t&&!ref){ toast('내용을 쓰거나 루틴을 연결하세요'); return; }
+    M.subs[mc.si].cells[mc.ci]={text:t,ref:ref||null}; }
+  save(); $('#mov').classList.remove('on'); render(); toast('저장됨 — 커밋 & 푸시로 동기화'); };
+
 /* ───────── 편집 ───────── */
 let ed=null;
 function openEdit(id,preset){
@@ -403,7 +503,7 @@ $('#fSave').onclick=()=>{
   const i=S.items.findIndex(x=>x.id===ed.id); if(i>=0) S.items[i]=ed; else S.items.push(ed);
   save(); $('#ov').classList.remove('on'); render(); toast('저장됨 — 커밋 & 푸시로 동기화');
 };
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') $('#ov').classList.remove('on'); if($('#ov').classList.contains('on')&&e.key==='Enter'&&e.target.tagName!=='TEXTAREA') $('#fSave').click(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ $('#ov').classList.remove('on'); $('#mov').classList.remove('on'); } if($('#mov').classList.contains('on')&&e.key==='Enter'&&e.target.tagName!=='TEXTAREA'&&e.target.tagName!=='SELECT'){ $('#mvSave').click(); return; } if($('#ov').classList.contains('on')&&e.key==='Enter'&&e.target.tagName!=='TEXTAREA') $('#fSave').click(); });
 
 /* ───────── 네비 ───────── */
 $('#views').onclick=e=>{ const b=e.target.closest('button'); if(!b) return; view=b.dataset.v; try{ localStorage.setItem('sv_schedule_view2',view); }catch(_){} render(); };
