@@ -264,7 +264,6 @@ button{ cursor:pointer }
   <div class="hd"><span id="mvKind" style="font-size:11px;font-weight:700;color:var(--fg-3);letter-spacing:.05em"></span><textarea id="mvText" rows="2" placeholder="내용 — 엔터로 줄바꿈, ⌘/Ctrl+엔터로 저장"></textarea></div>
   <div class="bd">
     <div class="f" id="mvRefWrap"><label>루틴 연결 — 연결하면 칸을 눌러 오늘 체크, 진행이 색으로 보입니다</label><select class="sel" id="mvRef"></select></div>
-    <div class="f" id="mvNewWrap" style="display:none"><label>새 루틴 종류</label><div class="pills" id="mvNewKind"><button data-k="daily" class="on">매일</button><button data-k="w3">주 3회</button><button data-k="w5">주 5회</button><button data-k="m1">월 1회</button></div></div>
   </div>
   <div class="ft"><button class="ib del" id="mvClear">비우기</button><button class="ib" id="mvCancel">취소</button><button class="ib pri" id="mvSave">저장</button></div>
 </div></div>
@@ -510,28 +509,27 @@ function bindDrag(card){
   card.addEventListener('pointerup',e=>end(e,false)); card.addEventListener('pointercancel',e=>end(e,true));
   document.addEventListener('pointerup',e=>{ if(DG&&!DG.on){ clearTimeout(DG.timer); DG=null; } },{once:false});
 }
-let mc=null;
+let mc=null, pendingLink=null;
 function openCell(si,ci){
   const M=mandala(); mc={si,ci};
   const isGoal=si===-1, isSub=ci===-1&&!isGoal, c=isGoal?{text:M.goal}:isSub?{text:M.subs[si].title}:M.subs[si].cells[ci];
   $('#mvKind').textContent=isGoal?'핵심 목표':isSub?`세부 목표 ${si+1}`:`실천 ${si+1}-${ci+1}`;
   $('#mvText').value=c.text||''; $('#mvText').placeholder=isGoal?'예: 2027년까지 복리로 자산 ○○':isSub?'예: 독서 · 건강 · 투자 과정':'실천 내용 (루틴을 연결하면 비워도 됨)';
-  $('#mvRefWrap').style.display=(isGoal||isSub)?'none':''; $('#mvNewWrap').style.display='none';
-  if(!isGoal&&!isSub){ const rs=S.items.filter(i=>i.kind!=='once'); $('#mvRef').innerHTML=`<option value="">연결 안 함 (글만)</option><option value="__new">＋ 이 내용으로 새 루틴 만들기</option>`+rs.map(i=>`<option value="${i.id}" ${i.id===c.ref?'selected':''}>${esc(i.title)} · ${kindLabel(i)}</option>`).join(''); $('#mvRef').value=c.ref&&rs.some(i=>i.id===c.ref)?c.ref:''; }
+  $('#mvRefWrap').style.display=(isGoal||isSub)?'none':'';
+  if(!isGoal&&!isSub){ const rs=S.items.filter(i=>i.kind!=='once'); $('#mvRef').innerHTML=`<option value="">연결 안 함 (글만)</option><option value="__new">＋ 새 루틴 만들기 (상세 설정 창으로)</option>`+rs.map(i=>`<option value="${i.id}" ${i.id===c.ref?'selected':''}>${esc(i.title)} · ${kindLabel(i)}</option>`).join(''); $('#mvRef').value=c.ref&&rs.some(i=>i.id===c.ref)?c.ref:''; }
   $('#mvClear').style.display=(c.text||c.ref)?'':'none';
   $('#mov').classList.add('on'); setTimeout(()=>{ const t=$('#mvText'); t.style.height='auto'; t.style.height=Math.min(160,t.scrollHeight)+'px'; t.focus(); },40);
 }
 $('#mvText').addEventListener('input',()=>{ const t=$('#mvText'); t.style.height='auto'; t.style.height=Math.min(160,t.scrollHeight)+'px'; });
-$('#mvRef').onchange=()=>{ $('#mvNewWrap').style.display=$('#mvRef').value==='__new'?'':'none'; };
-$('#mvNewKind').onclick=e=>{ const b=e.target.closest('button'); if(b) document.querySelectorAll('#mvNewKind button').forEach(x=>x.classList.toggle('on',x===b)); };
 $('#mvCancel').onclick=()=>$('#mov').classList.remove('on');
 $('#mov').onclick=e=>{ if(e.target===$('#mov')) $('#mov').classList.remove('on'); };
 $('#mvClear').onclick=()=>{ const M=mandala(); if(mc.si===-1) M.goal=''; else if(mc.ci===-1) M.subs[mc.si].title=''; else M.subs[mc.si].cells[mc.ci]={text:'',ref:null}; save(); $('#mov').classList.remove('on'); render(); };
 $('#mvSave').onclick=()=>{ const M=mandala(), t=$('#mvText').value.trim();
   if(mc.si===-1) M.goal=t; else if(mc.ci===-1) M.subs[mc.si].title=t;
-  else { let ref=$('#mvRef').value; if(ref==='__new'){ if(!t){ toast('새 루틴 제목이 될 내용을 입력하세요'); return; } const k=($('#mvNewKind .on')||{}).dataset?.k||'daily'; const it={id:'s'+Date.now().toString(36),title:t,color:COLORS[(S.items.length)%COLORS.length],note:''};
-      if(k==='daily'){ it.kind='daily'; it.days=[]; } else if(k==='w3'){ it.kind='weekly'; it.days=[]; it.times=3; } else if(k==='w5'){ it.kind='weekly'; it.days=[]; it.times=5; } else { it.kind='monthly'; it.doms=[]; it.times=1; }
-      S.items.push(it); ref=it.id; }
+  else { let ref=$('#mvRef').value;
+    if(ref==='__new'){ // 칸 내용을 먼저 저장하고, 루틴 상세 설정 창을 연다 — 저장되면 이 칸에 자동 연결
+      M.subs[mc.si].cells[mc.ci]={text:t,ref:M.subs[mc.si].cells[mc.ci].ref||null}; save(); $('#mov').classList.remove('on');
+      pendingLink={si:mc.si,ci:mc.ci}; openEdit(null,{kind:'daily',title:t}); return; }
     if(!t&&!ref){ toast('내용을 쓰거나 루틴을 연결하세요'); return; }
     M.subs[mc.si].cells[mc.ci]={text:t,ref:ref||null}; }
   save(); $('#mov').classList.remove('on'); render(); toast('저장됨 — 커밋 & 푸시로 동기화'); };
@@ -570,8 +568,8 @@ $('#fSlot').onclick=e=>{ const b=e.target.closest('button'); if(b){ ed.slot=b.da
 $('#fDur').onclick=e=>{ const b=e.target.closest('button'); if(b){ ed.dur=+b.dataset.m; syncForm(); } };
 $('#fColor').onclick=e=>{ const b=e.target.closest('button'); if(b){ ed.color=b.dataset.c; document.querySelectorAll('#fColor button').forEach(x=>x.classList.toggle('on',x===b)); syncForm(); } };
 $('#fDays').onclick=e=>{ const b=e.target.closest('button'); if(!b) return; const d=+b.dataset.d; ed.days=ed.days||[]; ed.days=ed.days.includes(d)?ed.days.filter(x=>x!==d):ed.days.concat(d).sort(); b.classList.toggle('on'); };
-$('#fCancel').onclick=()=>$('#ov').classList.remove('on');
-$('#ov').onclick=e=>{ if(e.target===$('#ov')) $('#ov').classList.remove('on'); };
+$('#fCancel').onclick=()=>{ pendingLink=null; $('#ov').classList.remove('on'); };
+$('#ov').onclick=e=>{ if(e.target===$('#ov')){ pendingLink=null; $('#ov').classList.remove('on'); } };
 $('#fDel').onclick=()=>{ S.items=S.items.filter(i=>i.id!==ed.id); Object.values(S.done).forEach(o=>delete o[ed.id]); save(); $('#ov').classList.remove('on'); render(); toast('삭제됨'); };
 $('#fSave').onclick=()=>{
   ed.title=$('#fTitle').value.trim(); if(!ed.title){ toast('제목을 입력하세요'); $('#fTitle').focus(); return; }
@@ -583,9 +581,11 @@ $('#fSave').onclick=()=>{
   if(ed.kind==='daily'||ed.kind==='once') delete ed.times;
   delete ed._flex;
   const i=S.items.findIndex(x=>x.id===ed.id); if(i>=0) S.items[i]=ed; else S.items.push(ed);
-  save(); $('#ov').classList.remove('on'); render(); toast('저장됨 — 커밋 & 푸시로 동기화');
+  let msg='저장됨 — 커밋 & 푸시로 동기화';
+  if(pendingLink){ const M=mandala(), c=M.subs[pendingLink.si].cells[pendingLink.ci]; c.ref=ed.id; pendingLink=null; msg='루틴을 만들어 만다라트 칸에 연결했습니다'; }
+  save(); $('#ov').classList.remove('on'); render(); toast(msg);
 };
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ $('#ov').classList.remove('on'); $('#mov').classList.remove('on'); } if($('#mov').classList.contains('on')&&e.key==='Enter'&&(e.metaKey||e.ctrlKey||(e.target.tagName!=='TEXTAREA'&&e.target.tagName!=='SELECT'))){ e.preventDefault(); $('#mvSave').click(); return; } if($('#ov').classList.contains('on')&&e.key==='Enter'&&e.target.tagName!=='TEXTAREA') $('#fSave').click(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ pendingLink=null; $('#ov').classList.remove('on'); $('#mov').classList.remove('on'); } if($('#mov').classList.contains('on')&&e.key==='Enter'&&(e.metaKey||e.ctrlKey||(e.target.tagName!=='TEXTAREA'&&e.target.tagName!=='SELECT'))){ e.preventDefault(); $('#mvSave').click(); return; } if($('#ov').classList.contains('on')&&e.key==='Enter'&&e.target.tagName!=='TEXTAREA') $('#fSave').click(); });
 
 /* ───────── 네비 ───────── */
 $('#views').onclick=e=>{ const b=e.target.closest('button'); if(!b) return; view=b.dataset.v; try{ localStorage.setItem('sv_schedule_view2',view); }catch(_){} render(); };
