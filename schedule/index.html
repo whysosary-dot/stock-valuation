@@ -152,7 +152,13 @@ button{ cursor:pointer }
 .m3[data-b] .mc{ background:color-mix(in srgb, var(--pb) 22%, var(--surface)); border-color:color-mix(in srgb, var(--pb) 70%, var(--line)) }
 .m3[data-b] .mc.ref{ background:var(--surface) }
 .mc.sub{ background:var(--pb,var(--accent-soft)); border-color:transparent } .mc.sub .t{ color:var(--pi,var(--accent-ink)); font-weight:700 }
-.m3.hub .mc.sub{ background:var(--pb); border-color:color-mix(in srgb, var(--pi) 25%, transparent) }
+.m3.hub .mc.sub{ background:linear-gradient(160deg, color-mix(in srgb, var(--pb) 70%, #fff) 0%, var(--pb) 55%, color-mix(in srgb, var(--pb) 80%, var(--pi)) 100%); border:none; position:relative; overflow:hidden;
+  box-shadow:0 0 0 1.5px color-mix(in srgb, var(--pi) 55%, transparent), 0 0 0 4px color-mix(in srgb, var(--pi) 10%, transparent), 0 6px 18px color-mix(in srgb, var(--pi) 32%, transparent), inset 0 1px 0 rgba(255,255,255,.75) }
+.m3.hub .mc.sub::after{ content:""; position:absolute; inset:3px; border-radius:5px; border:1px solid rgba(255,255,255,.6); pointer-events:none }
+.m3.hub .mc.sub .t{ text-shadow:0 1px 0 rgba(255,255,255,.7), 0 0 8px color-mix(in srgb, var(--pb) 90%, #fff) }
+.m3.hub .mc.sub:hover{ box-shadow:0 0 0 1.5px var(--pi), 0 0 0 4px color-mix(in srgb, var(--pi) 18%, transparent), 0 8px 24px color-mix(in srgb, var(--pi) 45%, transparent), inset 0 1px 0 rgba(255,255,255,.75) }
+.m3.hub{ background:color-mix(in srgb, var(--accent-soft) 60%, var(--surface)); gap:7px; padding:7px }
+.m3[data-b] .mc.sub{ background:var(--pb); border-color:transparent; box-shadow:0 0 0 1px color-mix(in srgb, var(--pi) 35%, transparent), 0 3px 10px color-mix(in srgb, var(--pi) 22%, transparent) }
 .m3.hub .mc.sub .k{ color:var(--pi); opacity:.8 }
 @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .m3[data-b]{ background:color-mix(in srgb, var(--pb) 18%, var(--surface-2)) } :root:not([data-theme="light"]) .m3[data-b] .mc{ background:color-mix(in srgb, var(--pb) 8%, var(--surface)) } :root:not([data-theme="light"]) .mc.sub,:root:not([data-theme="light"]) .m3.hub .mc.sub{ background:color-mix(in srgb, var(--pb) 35%, var(--surface)) } :root:not([data-theme="light"]) .mc.sub .t{ color:color-mix(in srgb, var(--pb) 80%, #fff) } }
 .mc.ref{ border-left:3px solid var(--c,var(--accent)) }
