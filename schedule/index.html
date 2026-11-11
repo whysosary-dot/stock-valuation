@@ -137,7 +137,13 @@ button{ cursor:pointer }
 .mc .t{ font-weight:600; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; color:var(--fg) }
 .mc.empty .t{ color:var(--fg-3); font-weight:500 }
 .mc.goal{ background:var(--accent); border-color:var(--accent); color:#fff; font-size:11px } .mc.goal .t{ color:#fff; font-weight:700; -webkit-line-clamp:4 }
-.mc.sub{ background:var(--accent-soft); border-color:transparent } .m3.hub .mc.sub{ background:var(--surface); border-color:var(--line) } .mc.sub .t{ color:var(--accent-ink); font-weight:700 }
+.m3[data-b]{ background:color-mix(in srgb, var(--pb) 55%, var(--surface-2)) }
+.m3[data-b] .mc{ background:color-mix(in srgb, var(--pb) 22%, var(--surface)); border-color:color-mix(in srgb, var(--pb) 70%, var(--line)) }
+.m3[data-b] .mc.ref{ background:var(--surface) }
+.mc.sub{ background:var(--pb,var(--accent-soft)); border-color:transparent } .mc.sub .t{ color:var(--pi,var(--accent-ink)); font-weight:700 }
+.m3.hub .mc.sub{ background:var(--pb); border-color:color-mix(in srgb, var(--pi) 25%, transparent) }
+.m3.hub .mc.sub .k{ color:var(--pi); opacity:.8 }
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .m3[data-b]{ background:color-mix(in srgb, var(--pb) 18%, var(--surface-2)) } :root:not([data-theme="light"]) .m3[data-b] .mc{ background:color-mix(in srgb, var(--pb) 8%, var(--surface)) } :root:not([data-theme="light"]) .mc.sub,:root:not([data-theme="light"]) .m3.hub .mc.sub{ background:color-mix(in srgb, var(--pb) 35%, var(--surface)) } :root:not([data-theme="light"]) .mc.sub .t{ color:color-mix(in srgb, var(--pb) 80%, #fff) } }
 .mc.ref{ border-left:3px solid var(--c,var(--accent)) }
 .mc.ref.on{ background:var(--ok-soft); border-color:var(--ok) } .mc.ref.on .t{ color:var(--ok); text-decoration:line-through; text-decoration-thickness:1px }
 .mc .k{ font-size:9px; color:var(--fg-3); font-family:var(--mono); line-height:1 }
@@ -391,7 +397,9 @@ function renderManage(root){
 
 /* ───────── 만다라트 (오타니 쇼헤이 식 9×9: 가운데 핵심 목표 · 8개 세부 목표 · 각 8개 실천) ─────────
    S.mandala = { goal, subs:[{title, cells:[{text, ref}×8]}×8] }  ref = 연결된 루틴 id (칸을 누르면 오늘 체크) */
-const POS=[0,1,2,3,5,6,7,8]; // 3×3 에서 가운데(4)를 뺀 8칸, 세부목표 i 의 블록 위치 = POS[i]
+const POS=[0,1,2,3,5,6,7,8];
+const PASTEL=[['#fde2e2','#b42318'],['#ffe8cc','#b54708'],['#fff3c4','#8a6a00'],['#dcf5dc','#1f7a3a'],['#d3f1f7','#0b6f85'],['#dde6ff','#2f4fd6'],['#eadcff','#6b35c9'],['#ffdcef','#b4237a']]; // 세부 목표별 파스텔 [배경, 글자]
+const pst=i=>`--pb:${PASTEL[i%8][0]};--pi:${PASTEL[i%8][1]}`; // 3×3 에서 가운데(4)를 뺀 8칸, 세부목표 i 의 블록 위치 = POS[i]
 let mFocus=null, mEdit=false;
 function mandala(){ if(!S.mandala||!Array.isArray(S.mandala.subs)||S.mandala.subs.length!==8) S.mandala={goal:'',subs:[...Array(8)].map(()=>({title:'',cells:[...Array(8)].map(()=>({text:'',ref:null}))}))}; S.mandala.subs.forEach(b=>{ if(!Array.isArray(b.cells)||b.cells.length!==8) b.cells=[...Array(8)].map(()=>({text:'',ref:null})); }); return S.mandala; }
 function refItem(id){ return id?S.items.find(i=>i.id===id):null; }
@@ -403,11 +411,11 @@ function cellHtml(c,si,ci,d){
   return `<div class="mc ${c.text?'':'empty'}" data-s="${si}" data-c="${ci}"><span class="t">${esc(c.text||'＋')}</span></div>`; }
 function blockHtml(si,d){ const M=mandala(), b=M.subs[si]; let h='';
   for(let p=0;p<9;p++){ if(p===4){ h+=`<div class="mc sub ${b.title?'':'empty'}" data-s="${si}" data-c="-1"><span class="t">${esc(b.title||`세부 목표 ${si+1}`)}</span></div>`; continue; } const ci=POS.indexOf(p); h+=cellHtml(b.cells[ci],si,ci,d); }
-  return `<div class="m3" data-b="${si}">${h}</div>`; }
+  return `<div class="m3" data-b="${si}" style="${pst(si)}">${h}</div>`; }
 function hubHtml(){ const M=mandala(); let h='';
   for(let p=0;p<9;p++){ if(p===4){ h+=`<div class="mc goal ${M.goal?'':'empty'}" data-s="-1" data-c="-1"><span class="t">${esc(M.goal||'핵심 목표')}</span></div>`; continue; } const si=POS.indexOf(p), b=M.subs[si];
     const refs=b.cells.filter(c=>refItem(c.ref)), on=refs.filter(c=>doneEff(refItem(c.ref),cur)).length;
-    h+=`<div class="mc sub ${b.title?'':'empty'}" data-s="${si}" data-c="-1" data-hub="1"><span class="t">${esc(b.title||`세부 목표 ${si+1}`)}</span>${refs.length?`<span class="k">${on}/${refs.length}</span>`:''}</div>`; }
+    h+=`<div class="mc sub ${b.title?'':'empty'}" data-s="${si}" data-c="-1" data-hub="1" style="${pst(si)}"><span class="t">${esc(b.title||`세부 목표 ${si+1}`)}</span>${refs.length?`<span class="k">${on}/${refs.length}</span>`:''}</div>`; }
   return `<div class="m3 hub">${h}</div>`; }
 function renderMandala(root){
   const M=mandala(), d=cur, narrow=window.innerWidth<=640;
