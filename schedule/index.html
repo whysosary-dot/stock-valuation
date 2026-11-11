@@ -159,6 +159,8 @@ button{ cursor:pointer }
 .mc.dropok{ outline:2px dashed var(--accent); outline-offset:-2px; transform:scale(1.04) }
 .mghost{ position:fixed; z-index:70; pointer-events:none; width:84px; height:84px; border-radius:9px; background:var(--surface); border:1px solid var(--accent); box-shadow:0 10px 28px rgba(0,0,0,.25); padding:6px; font-size:11px; font-weight:600; display:flex; align-items:center; justify-content:center; text-align:center; transform:translate(-50%,-50%) rotate(-2deg); word-break:keep-all; overflow:hidden; opacity:.95 }
 /* 셀 편집 */
+.mv .hd textarea{ flex:1; border:none; background:none; font-size:17px; font-weight:600; outline:none; min-width:0; resize:none; line-height:1.35; font-family:inherit; padding:0 } .mv .hd textarea::placeholder{ color:var(--fg-3); font-weight:500; font-size:14px }
+.mc .t{ white-space:pre-line }
 .mv .sel{ width:100%; font-size:14px; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--surface) }
 /* 플로팅 추가 */
 .fab{ position:fixed; right:18px; bottom:22px; height:44px; padding:0 18px 0 14px; border-radius:999px; border:none; background:var(--accent); color:#fff; font-weight:700; font-size:14px; box-shadow:0 8px 24px rgba(46,91,255,.35); display:inline-flex; align-items:center; gap:6px; z-index:15 }
@@ -234,7 +236,7 @@ button{ cursor:pointer }
   <div class="ft"><button class="ib del" id="fDel" style="display:none">삭제</button><button class="ib" id="fCancel">취소</button><button class="ib pri" id="fSave">저장</button></div>
 </div></div>
 <div class="ov" id="mov"><div class="md mv">
-  <div class="hd"><span id="mvKind" style="font-size:11px;font-weight:700;color:var(--fg-3);letter-spacing:.05em"></span><input type="text" id="mvText" placeholder="내용"></div>
+  <div class="hd"><span id="mvKind" style="font-size:11px;font-weight:700;color:var(--fg-3);letter-spacing:.05em"></span><textarea id="mvText" rows="2" placeholder="내용 — 엔터로 줄바꿈, ⌘/Ctrl+엔터로 저장"></textarea></div>
   <div class="bd">
     <div class="f" id="mvRefWrap"><label>루틴 연결 — 연결하면 칸을 눌러 오늘 체크, 진행이 색으로 보입니다</label><select class="sel" id="mvRef"></select></div>
     <div class="f" id="mvNewWrap" style="display:none"><label>새 루틴 종류</label><div class="pills" id="mvNewKind"><button data-k="daily" class="on">매일</button><button data-k="w3">주 3회</button><button data-k="w5">주 5회</button><button data-k="m1">월 1회</button></div></div>
@@ -489,8 +491,9 @@ function openCell(si,ci){
   $('#mvRefWrap').style.display=(isGoal||isSub)?'none':''; $('#mvNewWrap').style.display='none';
   if(!isGoal&&!isSub){ const rs=S.items.filter(i=>i.kind!=='once'); $('#mvRef').innerHTML=`<option value="">연결 안 함 (글만)</option><option value="__new">＋ 이 내용으로 새 루틴 만들기</option>`+rs.map(i=>`<option value="${i.id}" ${i.id===c.ref?'selected':''}>${esc(i.title)} · ${kindLabel(i)}</option>`).join(''); $('#mvRef').value=c.ref&&rs.some(i=>i.id===c.ref)?c.ref:''; }
   $('#mvClear').style.display=(c.text||c.ref)?'':'none';
-  $('#mov').classList.add('on'); setTimeout(()=>$('#mvText').focus(),40);
+  $('#mov').classList.add('on'); setTimeout(()=>{ const t=$('#mvText'); t.style.height='auto'; t.style.height=Math.min(160,t.scrollHeight)+'px'; t.focus(); },40);
 }
+$('#mvText').addEventListener('input',()=>{ const t=$('#mvText'); t.style.height='auto'; t.style.height=Math.min(160,t.scrollHeight)+'px'; });
 $('#mvRef').onchange=()=>{ $('#mvNewWrap').style.display=$('#mvRef').value==='__new'?'':'none'; };
 $('#mvNewKind').onclick=e=>{ const b=e.target.closest('button'); if(b) document.querySelectorAll('#mvNewKind button').forEach(x=>x.classList.toggle('on',x===b)); };
 $('#mvCancel').onclick=()=>$('#mov').classList.remove('on');
@@ -552,7 +555,7 @@ $('#fSave').onclick=()=>{
   const i=S.items.findIndex(x=>x.id===ed.id); if(i>=0) S.items[i]=ed; else S.items.push(ed);
   save(); $('#ov').classList.remove('on'); render(); toast('저장됨 — 커밋 & 푸시로 동기화');
 };
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ $('#ov').classList.remove('on'); $('#mov').classList.remove('on'); } if($('#mov').classList.contains('on')&&e.key==='Enter'&&e.target.tagName!=='TEXTAREA'&&e.target.tagName!=='SELECT'){ $('#mvSave').click(); return; } if($('#ov').classList.contains('on')&&e.key==='Enter'&&e.target.tagName!=='TEXTAREA') $('#fSave').click(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ $('#ov').classList.remove('on'); $('#mov').classList.remove('on'); } if($('#mov').classList.contains('on')&&e.key==='Enter'&&(e.metaKey||e.ctrlKey||(e.target.tagName!=='TEXTAREA'&&e.target.tagName!=='SELECT'))){ e.preventDefault(); $('#mvSave').click(); return; } if($('#ov').classList.contains('on')&&e.key==='Enter'&&e.target.tagName!=='TEXTAREA') $('#fSave').click(); });
 
 /* ───────── 네비 ───────── */
 $('#views').onclick=e=>{ const b=e.target.closest('button'); if(!b) return; view=b.dataset.v; try{ localStorage.setItem('sv_schedule_view2',view); }catch(_){} render(); };
