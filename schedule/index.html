@@ -183,7 +183,7 @@ button{ cursor:pointer }
 .mc.dropok{ outline:2px dashed var(--accent); outline-offset:-2px; transform:scale(1.04) }
 .mghost{ position:fixed; z-index:70; pointer-events:none; width:84px; height:84px; border-radius:9px; background:var(--surface); border:1px solid var(--accent); box-shadow:0 10px 28px rgba(0,0,0,.25); padding:6px; font-size:11px; font-weight:600; display:flex; align-items:center; justify-content:center; text-align:center; transform:translate(-50%,-50%) rotate(-2deg); word-break:keep-all; overflow:hidden; opacity:.95 }
 /* 셀 편집 */
-.mv .hd textarea{ flex:1; border:none; background:none; font-size:17px; font-weight:600; outline:none; min-width:0; resize:none; line-height:1.35; font-family:inherit; padding:0 } .mv .hd textarea::placeholder{ color:var(--fg-3); font-weight:500; font-size:14px }
+.mv .hd{ align-items:flex-start } .mv .hd #mvKind{ padding-top:4px; white-space:nowrap } .mv .hd textarea{ flex:1; border:none; background:none; font-size:17px; font-weight:600; outline:none; min-width:0; resize:none; line-height:1.35; font-family:inherit; padding:0 } .mv .hd textarea::placeholder{ color:var(--fg-3); font-weight:500; font-size:14px }
 .mc .t{ white-space:pre-line }
 .mv .sel{ width:100%; font-size:14px; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--surface) }
 /* 플로팅 추가 */
@@ -521,6 +521,7 @@ function openCell(si,ci){
   $('#mov').classList.add('on'); setTimeout(()=>{ const t=$('#mvText'); t.style.height='auto'; t.style.height=Math.min(160,t.scrollHeight)+'px'; t.focus(); },40);
 }
 $('#mvText').addEventListener('input',()=>{ const t=$('#mvText'); t.style.height='auto'; t.style.height=Math.min(160,t.scrollHeight)+'px'; });
+$('#mvRef').onchange=()=>{ if($('#mvRef').value!=='__new') return; const M=mandala(), t=$('#mvText').value.trim(); M.subs[mc.si].cells[mc.ci]={text:t,ref:M.subs[mc.si].cells[mc.ci].ref||null}; save(); $('#mov').classList.remove('on'); pendingLink={si:mc.si,ci:mc.ci}; openEdit(null,{kind:'daily',title:t}); };
 $('#mvCancel').onclick=()=>$('#mov').classList.remove('on');
 $('#mov').onclick=e=>{ if(e.target===$('#mov')) $('#mov').classList.remove('on'); };
 $('#mvClear').onclick=()=>{ const M=mandala(); if(mc.si===-1) M.goal=''; else if(mc.ci===-1) M.subs[mc.si].title=''; else M.subs[mc.si].cells[mc.ci]={text:'',ref:null}; save(); $('#mov').classList.remove('on'); render(); };
