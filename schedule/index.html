@@ -153,6 +153,11 @@ button{ cursor:pointer }
 .mdl .back{ margin-bottom:8px }
 @media (max-width:640px){ .mdl .m9{ gap:4px } .mdl .m3{ gap:2px; padding:3px } .mc{ font-size:9px; padding:2px } .mc .k,.mc .chk{ display:none } .mdl.zoom .mc{ font-size:13px; padding:6px } .mdl.zoom .mc .k,.mdl.zoom .mc .chk{ display:block } .mdl.zoom .mc .chk{ display:inline } .mdl.zoom .mc.goal{ font-size:14px } }
 .mdl.zoom .m3{ gap:6px; padding:6px } .mdl.zoom .mc{ font-size:13px; padding:8px 6px } .mdl.zoom .mc .t{ -webkit-line-clamp:4 }
+/* 드래그 이동 */
+.mc{ touch-action:pan-y; -webkit-touch-callout:none; -webkit-user-select:none }
+.mc.dragsrc{ opacity:.35 }
+.mc.dropok{ outline:2px dashed var(--accent); outline-offset:-2px; transform:scale(1.04) }
+.mghost{ position:fixed; z-index:70; pointer-events:none; width:84px; height:84px; border-radius:9px; background:var(--surface); border:1px solid var(--accent); box-shadow:0 10px 28px rgba(0,0,0,.25); padding:6px; font-size:11px; font-weight:600; display:flex; align-items:center; justify-content:center; text-align:center; transform:translate(-50%,-50%) rotate(-2deg); word-break:keep-all; overflow:hidden; opacity:.95 }
 /* 셀 편집 */
 .mv .sel{ width:100%; font-size:14px; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--surface) }
 /* 플로팅 추가 */
@@ -426,18 +431,46 @@ function renderMandala(root){
   if(mFocus!==null) h+=blockHtml(mFocus,d);
   else if(narrow) h+=hubHtml();
   else { h+='<div class="m9">'; for(let p=0;p<9;p++) h+=(p===4?hubHtml():blockHtml(POS.indexOf(p),d)); h+='</div>'; }
-  h+=`<div class="foot"><span>연결된 루틴 <b>${on}</b> / ${refs.length} 완료</span><span>${mEdit?'편집 모드: 칸을 누르면 내용·연결 수정':'칸을 누르면 오늘 체크 · 빈 칸은 바로 입력'}${narrow&&mFocus===null?' · 세부 목표를 누르면 그 블록으로':''}</span></div>`;
+  h+=`<div class="foot"><span>연결된 루틴 <b>${on}</b> / ${refs.length} 완료</span><span>${mEdit?'편집 모드: 칸을 누르면 내용·연결 수정':'칸을 누르면 오늘 체크 · 빈 칸은 바로 입력 · 꾹 눌러 끌면 자리 이동(세부 목표끼리 끌면 블록 통째로 교환)'}${narrow&&mFocus===null?' · 세부 목표를 누르면 그 블록으로':''}</span></div>`;
   card.innerHTML=h; root.appendChild(card);
   $('#mEdit').onclick=()=>{ mEdit=!mEdit; render(); };
   if($('#mBack')) $('#mBack').onclick=()=>{ mFocus=null; render(); };
   $('#mFill').onclick=()=>{ const used=new Set(M.subs.flatMap(b=>b.cells.map(c=>c.ref)).filter(Boolean)); const pool=S.items.filter(i=>i.kind!=='once'&&!used.has(i.id)); if(!pool.length){ toast('연결 안 된 루틴이 없습니다'); return; }
     let n=0; M.subs.forEach(b=>{ b.cells.forEach(c=>{ if(!c.ref&&!c.text&&pool.length){ const it=pool.shift(); c.ref=it.id; n++; } }); }); save(); render(); toast(`루틴 ${n}개를 빈 칸에 넣었습니다 — 편집 모드에서 자리를 바꾸세요`); };
-  card.querySelectorAll('.mc').forEach(el=>el.onclick=()=>{ const si=+el.dataset.s, ci=+el.dataset.c;
+  bindDrag(card);
+  card.querySelectorAll('.mc').forEach(el=>el.onclick=()=>{ if(dragDone){ dragDone=false; return; } const si=+el.dataset.s, ci=+el.dataset.c;
     if(si===-1){ openCell(-1,-1); return; }
     if(ci===-1){ if(el.dataset.hub&&narrow&&mFocus===null&&!mEdit){ mFocus=si; render(); } else openCell(si,-1); return; }
     const c=M.subs[si].cells[ci], it=refItem(c.ref);
     if(!mEdit&&it){ toggle(it.id,ymd(d)); return; }
     openCell(si,ci); });
+}
+/* 드래그로 자리 바꾸기 — 실천 칸끼리 교환, 세부 목표 칸끼리 블록 통째 교환. 마우스: 끌기 / 터치: 꾹 누른 뒤 끌기 */
+let dragDone=false, DG=null;
+document.addEventListener('touchmove',e=>{ if(DG&&DG.on) e.preventDefault(); },{passive:false});
+function bindDrag(card){
+  card.querySelectorAll('.mc').forEach(el=>{ const si=+el.dataset.s, ci=+el.dataset.c; if(si===-1) return;
+    el.addEventListener('pointerdown',e=>{ if(e.button&&e.button!==0) return; const touch=e.pointerType!=='mouse';
+      DG={el,si,ci,x:e.clientX,y:e.clientY,on:false,id:e.pointerId,timer:null};
+      if(touch) DG.timer=setTimeout(()=>startDrag(e),380); });
+    el.addEventListener('contextmenu',e=>{ if(DG) e.preventDefault(); });
+  });
+  function startDrag(e){ if(!DG||DG.on) return; DG.on=true; try{ DG.el.setPointerCapture(DG.id); }catch(_){}
+    DG.el.classList.add('dragsrc'); const g=document.createElement('div'); g.className='mghost'; g.textContent=DG.el.querySelector('.t')?.textContent||''; document.body.appendChild(g); DG.ghost=g; moveGhost(e.clientX,e.clientY);
+    if(navigator.vibrate) try{ navigator.vibrate(12); }catch(_){} }
+  function moveGhost(x,y){ if(!DG.ghost) return; DG.ghost.style.left=x+'px'; DG.ghost.style.top=y+'px';
+    const t=targetAt(x,y,DG); card.querySelectorAll('.mc.dropok').forEach(o=>{ if(o!==t) o.classList.remove('dropok'); }); if(t) t.classList.add('dropok'); }
+  function targetAt(x,y,d){ const under=document.elementFromPoint(x,y); const t=under&&under.closest('.mc'); if(!t||t===d.el||!card.contains(t)) return null;
+    const ts=+t.dataset.s, tc=+t.dataset.c; if(ts===-1) return null; if((d.ci===-1)!==(tc===-1)) return null; return t; }
+  function end(e,cancel){ if(!DG) return; clearTimeout(DG.timer); const d=DG; DG=null;
+    if(!d.on) return; d.el.classList.remove('dragsrc'); if(d.ghost) d.ghost.remove(); card.querySelectorAll('.mc.dropok').forEach(o=>o.classList.remove('dropok')); dragDone=true; setTimeout(()=>dragDone=false,300);
+    if(cancel) return; const t=targetAt(e.clientX,e.clientY,d); if(!t) return; const ts=+t.dataset.s, tc=+t.dataset.c, M=mandala();
+    if(d.ci===-1){ const a=M.subs[d.si]; M.subs[d.si]=M.subs[ts]; M.subs[ts]=a; }
+    else { const a=M.subs[d.si].cells[d.ci]; M.subs[d.si].cells[d.ci]=M.subs[ts].cells[tc]; M.subs[ts].cells[tc]=a; }
+    save(); render(); toast(d.ci===-1?'세부 목표 블록을 교환했습니다':'자리를 바꿨습니다'); }
+  card.addEventListener('pointermove',e=>{ if(!DG) return; if(!DG.on){ const dx=e.clientX-DG.x, dy=e.clientY-DG.y; if(Math.hypot(dx,dy)>8){ if(e.pointerType==='mouse') startDrag(e); else { clearTimeout(DG.timer); DG=null; } } return; } moveGhost(e.clientX,e.clientY); });
+  card.addEventListener('pointerup',e=>end(e,false)); card.addEventListener('pointercancel',e=>end(e,true));
+  document.addEventListener('pointerup',e=>{ if(DG&&!DG.on){ clearTimeout(DG.timer); DG=null; } },{once:false});
 }
 let mc=null;
 function openCell(si,ci){
