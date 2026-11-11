@@ -273,6 +273,8 @@ async function pull(){
     let d=false; try{ d=localStorage.getItem(LS_DIRTY)==='1'; }catch(_){}
     if(((g.updatedAt||0)>(S.updatedAt||0) && !d) || S._seed){ S=g; S.done=S.done||{}; try{ localStorage.setItem(LS,JSON.stringify(S)); }catch(_){} render(); return; }
     // 로컬에 미커밋 변경이 있어도, 원격에만 있는 루틴과 만다라트는 가져온다(덮어쓰기 방지용 병합)
+    // 원격의 초기화 지시(tomb): 지정된 루틴 삭제 + 만다라트를 원격 것으로 교체 (한 번만 적용)
+    if(g.tomb&&(g.tomb.ts||0)>(S.tombTs||0)){ const rm=new Set(g.tomb.items||[]); S.items=S.items.filter(i=>!rm.has(i.id)); Object.values(S.done).forEach(o=>rm.forEach(id=>delete o[id])); if(g.tomb.mandala) S.mandala=g.mandala; S.tombTs=g.tomb.ts; try{ localStorage.setItem(LS,JSON.stringify(S)); }catch(_){} render(); toast('GitHub 기준으로 정리했습니다'); return; }
     if((g.updatedAt||0)>(S.updatedAt||0)){ let ch=false; const ids=new Set(S.items.map(i=>i.id)); (g.items||[]).forEach(i=>{ if(!ids.has(i.id)){ S.items.push(i); ch=true; } });
       const emptyM=!S.mandala||(!S.mandala.goal&&(S.mandala.subs||[]).every(b=>!b.title&&(b.cells||[]).every(c=>!c.text&&!c.ref)));
       const localGoal=S.mandala&&S.mandala.goal; const remoteFilled=g.mandala&&(g.mandala.subs||[]).some(b=>b.title);
