@@ -254,6 +254,7 @@ button{ cursor:pointer }
     <div class="f" id="fDaysWrap"><label>요일</label><div class="pills days" id="fDays"></div></div>
     <div class="f" id="fDomWrap"><label>매월 날짜 — 쉼표로 여러 개, 말일 가능</label><input type="text" id="fDom" placeholder="1, 15, 말일"></div>
     <div class="f"><label>시간대 (참고용 — 체크는 언제든)</label><div class="pills" id="fSlot"><button data-s="any">아무 때나</button><button data-s="am">아침</button><button data-s="day">낮</button><button data-s="pm">저녁</button><button data-s="night">밤</button></div></div>
+    <div class="f"><label>소요 시간 (참고용)</label><div class="pills" id="fDur"><button data-m="0">없음</button><button data-m="30">30분</button><button data-m="60">1시간</button><button data-m="90">1시간 30분</button><button data-m="120">2시간</button></div></div>
     <div class="f"><label>색</label><div class="sw-row" id="fColor"></div></div>
     <div class="f"><label>메모</label><textarea id="fNote" placeholder="목적 · 체크 포인트 · 링크"></textarea></div>
   </div>
@@ -276,6 +277,7 @@ const $=(s,r=document)=>r.querySelector(s);
 const COLORS=['#2e5bff','#7c3aed','#db2777','#e11d48','#ea580c','#d97706','#16a34a','#0d9488','#0284c7','#64748b'];
 const DAYS=['일','월','화','수','목','금','토'];
 const SLOT={any:'',am:'아침',day:'낮',pm:'저녁',night:'밤'};
+const durLab=m=>{ m=+m||0; if(!m) return ''; const h=Math.floor(m/60), r=m%60; return (h?h+'시간':'')+(r?(h?' ':'')+r+'분':''); };
 let S=load(), view='today', cur=today(), sel=ymd(today());
 try{ const v=localStorage.getItem('sv_schedule_view2'); if(v) view=v; }catch(_){}
 
@@ -364,6 +366,7 @@ function rowHtml(it,d,opts={}){
   if(isFlex(it)){ const c=flexCount(it,d), t=times(it); tags.push(`<span class="tag q">${it.kind==='weekly'?'이번 주':'이번 달'} ${c}/${t}</span>`); }
   else if(it.kind==='once') tags.push(`<span class="tag">일정</span>`);
   if(sl) tags.push(`<span class="tag">${sl}</span>`);
+  if(it.dur) tags.push(`<span class="tag">⏱ ${durLab(it.dur)}</span>`);
   if(opts.late) tags.push(`<span class="tag late">${opts.late}</span>`);
   return `<div class="row ${chk?'done':''} ${(!chk&&eff)?'ghost':''}" data-id="${it.id}" data-ds="${ds}" style="--c:${it.color}">
     <span class="ck"></span>
@@ -377,7 +380,8 @@ function renderToday(root){
   const prog=document.createElement('div'); prog.className='card';
   const best=S.items.map(i=>({i,s:streak(i)})).sort((a,b)=>b.s-a.s)[0];
   const flexLeft=S.items.filter(i=>isFlex(i)&&occurs(i,d)&&!quotaMet(i,d)).length;
-  prog.innerHTML=`<div class="prog"><div class="ring" style="--p:${st.p}%"><i>${st.p}%</i></div><div><b>${st.dn} / ${st.n} 완료</b><span>${st.n&&st.dn===st.n?'오늘 할 일을 다 했습니다':flexLeft?`틈날 때 하나씩 — 유연 루틴 ${flexLeft}개 남음`:'틈날 때 하나씩 체크하세요'}</span></div><div class="all">${best&&best.s>1?`${best.s}일 연속<br>${esc(best.i.title)}`:''}</div></div>`;
+  const leftMin=itemsOn(d).filter(it=>dueOn(it,d)&&!doneEff(it,d)).reduce((a,i)=>a+(+i.dur||0),0);
+  prog.innerHTML=`<div class="prog"><div class="ring" style="--p:${st.p}%"><i>${st.p}%</i></div><div><b>${st.dn} / ${st.n} 완료</b><span>${st.n&&st.dn===st.n?'오늘 할 일을 다 했습니다':(flexLeft?`틈날 때 하나씩 — 유연 루틴 ${flexLeft}개 남음`:'틈날 때 하나씩 체크하세요')+(leftMin?` · 남은 시간 약 ${durLab(leftMin)}`:'')}</span></div><div class="all">${best&&best.s>1?`${best.s}일 연속<br>${esc(best.i.title)}`:''}</div></div>`;
   root.appendChild(prog);
   const card=document.createElement('div'); card.className='card';
   const all=itemsOn(d).filter(it=>dueOn(it,d)||isDone(it.id,ds));
@@ -403,7 +407,7 @@ function renderWeek(root){
   let h=`<table><thead><tr><th>루틴</th>${days.map(d=>`<th class="${ymd(d)===ts?'today':''} ${d.getDay()===0?'sun':d.getDay()===6?'sat':''}">${DAYS[d.getDay()]}<span class="n">${d.getDate()}</span></th>`).join('')}</tr></thead><tbody>`;
   const cell=(it,d)=>{ const ds=ymd(d); if(!occurs(it,d)) return `<td><button class="dot na"></button></td>`; const on=isDone(it.id,ds), fut=d>t;
     const cls=on?'on':fut?'fut':(isFlex(it)?'due':(d<t?'miss':'due')); return `<td><button class="dot ${cls}" data-id="${it.id}" data-ds="${ds}" ${fut?'disabled':''}>${on?'✓':''}</button></td>`; };
-  rs.forEach(it=>{ const sub=isFlex(it)?`${flexCount(it,a)}/${times(it)} ${it.kind==='weekly'?'이번 주':'이번 달'}`:kindLabel(it);
+  rs.forEach(it=>{ const sub=(isFlex(it)?`${flexCount(it,a)}/${times(it)} ${it.kind==='weekly'?'이번 주':'이번 달'}`:kindLabel(it))+(it.dur?` · ${durLab(it.dur)}`:'');
     h+=`<tr><td><i style="background:${it.color}"></i>${esc(it.title)}<small>${sub}</small></td>${days.map(d=>cell(it,d)).join('')}</tr>`; });
   ev.forEach(it=>{ h+=`<tr><td><i style="background:${it.color}"></i>${esc(it.title)}<small>일정 ${it.date.slice(5)}</small></td>${days.map(d=>cell(it,d)).join('')}</tr>`; });
   h+=`<tr class="sum"><td>달성률</td>${days.map(d=>{ const s=dayStat(d); return `<td>${d>t?'·':s.n?s.p+'%':'–'}</td>`; }).join('')}</tr></tbody></table>`;
@@ -428,7 +432,7 @@ function renderManage(root){
   dateHead(root,'루틴 · 일정 관리','');
   const grp=[['매일',S.items.filter(i=>i.kind==='daily')],['매주',S.items.filter(i=>i.kind==='weekly')],['매월',S.items.filter(i=>i.kind==='monthly')],['일정 (한 번)',S.items.filter(i=>i.kind==='once').sort((a,b)=>b.date.localeCompare(a.date))]];
   const card=document.createElement('div'); card.className='card mg'; let h='';
-  grp.forEach(([name,arr])=>{ if(!arr.length) return; h+=`<div class="sec">${name}<span class="cnt">${arr.length}</span></div>`+arr.map(it=>`<div class="row" data-id="${it.id}"><span class="sw" style="background:${it.color}"></span><span class="nm"><div class="ti">${esc(it.title)}</div><div class="sub"><span class="tag">${kindLabel(it)}</span>${SLOT[slotOf(it)]?`<span class="tag">${SLOT[slotOf(it)]}</span>`:''}${it.note?`<span class="note">${esc(it.note)}</span>`:''}</div></span><span class="r">${streak(it)>1?`<span class="st">${streak(it)}일째</span>`:''}<button class="ed">✎</button></span></div>`).join(''); });
+  grp.forEach(([name,arr])=>{ if(!arr.length) return; h+=`<div class="sec">${name}<span class="cnt">${arr.length}</span></div>`+arr.map(it=>`<div class="row" data-id="${it.id}"><span class="sw" style="background:${it.color}"></span><span class="nm"><div class="ti">${esc(it.title)}</div><div class="sub"><span class="tag">${kindLabel(it)}</span>${SLOT[slotOf(it)]?`<span class="tag">${SLOT[slotOf(it)]}</span>`:''}${it.dur?`<span class="tag">⏱ ${durLab(it.dur)}</span>`:''}${it.note?`<span class="note">${esc(it.note)}</span>`:''}</div></span><span class="r">${streak(it)>1?`<span class="st">${streak(it)}일째</span>`:''}<button class="ed">✎</button></span></div>`).join(''); });
   card.innerHTML=h||'<div class="empty">아직 없습니다</div>'; root.appendChild(card);
   card.querySelectorAll('.row').forEach(el=>el.onclick=()=>openEdit(el.dataset.id));
   const tip=document.createElement('div'); tip.className='hint'; tip.innerHTML='<b>틈틈이 루틴 팁</b> — 매주/매월에서 요일·날짜를 비우고 횟수만 정하면 "주 3회"처럼 아무 때나 채우는 루틴이 됩니다. 시간대는 참고 표시일 뿐 체크는 언제든 가능합니다.'; root.appendChild(tip);
@@ -536,7 +540,7 @@ $('#mvSave').onclick=()=>{ const M=mandala(), t=$('#mvText').value.trim();
 let ed=null;
 function openEdit(id,preset){
   const it=id?S.items.find(i=>i.id===id):null;
-  ed = it ? JSON.parse(JSON.stringify(it)) : Object.assign({id:'s'+Date.now().toString(36),title:'',kind:'daily',days:[],doms:[],date:sel||ymd(today()),slot:'any',times:1,color:COLORS[0],note:''},preset||{});
+  ed = it ? JSON.parse(JSON.stringify(it)) : Object.assign({id:'s'+Date.now().toString(36),title:'',kind:'daily',days:[],doms:[],date:sel||ymd(today()),slot:'any',dur:0,times:1,color:COLORS[0],note:''},preset||{});
   if(!ed.slot) ed.slot=slotOf(ed); delete ed.start; delete ed.end; delete ed.allDay;
   ed._flex=isFlex(ed); if(ed.kind==='weekly'||ed.kind==='monthly'){ if(!ed._flex&&!ed.times) ed.times=1; }
   $('#fTitle').value=ed.title||''; $('#fDate').value=ed.date||sel; $('#fNote').value=ed.note||''; $('#fTimes').value=times(ed);
@@ -548,6 +552,7 @@ function openEdit(id,preset){
 function syncForm(){
   document.querySelectorAll('#fKind button').forEach(b=>b.classList.toggle('on',b.dataset.k===ed.kind));
   document.querySelectorAll('#fSlot button').forEach(b=>b.classList.toggle('on',b.dataset.s===(ed.slot||'any')));
+  document.querySelectorAll('#fDur button').forEach(b=>b.classList.toggle('on',+b.dataset.m===(+ed.dur||0)));
   const k=ed.kind, flexable=k==='weekly'||k==='monthly';
   $('#fDateWrap').style.display=k==='once'?'':'none';
   $('#fFlexWrap').style.display=flexable?'':'none';
@@ -562,6 +567,7 @@ function syncForm(){
 $('#fKind').onclick=e=>{ const b=e.target.closest('button'); if(b){ ed.kind=b.dataset.k; if(ed.kind==='weekly'&&!(ed.days||[]).length&&!ed._flex) ed._flex=true; if(ed.kind==='monthly'&&!(ed.doms||[]).length&&!ed._flex) ed._flex=true; syncForm(); } };
 $('#fFlex').onclick=()=>{ ed._flex=!ed._flex; syncForm(); };
 $('#fSlot').onclick=e=>{ const b=e.target.closest('button'); if(b){ ed.slot=b.dataset.s; syncForm(); } };
+$('#fDur').onclick=e=>{ const b=e.target.closest('button'); if(b){ ed.dur=+b.dataset.m; syncForm(); } };
 $('#fColor').onclick=e=>{ const b=e.target.closest('button'); if(b){ ed.color=b.dataset.c; document.querySelectorAll('#fColor button').forEach(x=>x.classList.toggle('on',x===b)); syncForm(); } };
 $('#fDays').onclick=e=>{ const b=e.target.closest('button'); if(!b) return; const d=+b.dataset.d; ed.days=ed.days||[]; ed.days=ed.days.includes(d)?ed.days.filter(x=>x!==d):ed.days.concat(d).sort(); b.classList.toggle('on'); };
 $('#fCancel').onclick=()=>$('#ov').classList.remove('on');
@@ -569,7 +575,7 @@ $('#ov').onclick=e=>{ if(e.target===$('#ov')) $('#ov').classList.remove('on'); }
 $('#fDel').onclick=()=>{ S.items=S.items.filter(i=>i.id!==ed.id); Object.values(S.done).forEach(o=>delete o[ed.id]); save(); $('#ov').classList.remove('on'); render(); toast('삭제됨'); };
 $('#fSave').onclick=()=>{
   ed.title=$('#fTitle').value.trim(); if(!ed.title){ toast('제목을 입력하세요'); $('#fTitle').focus(); return; }
-  ed.note=$('#fNote').value.trim(); if(ed.slot==='any') delete ed.slot;
+  ed.note=$('#fNote').value.trim(); if(ed.slot==='any') delete ed.slot; if(!(+ed.dur)) delete ed.dur;
   if(ed.kind==='once'){ ed.date=$('#fDate').value; if(!ed.date){ toast('날짜를 고르세요'); return; } } else delete ed.date;
   if(ed.kind==='weekly'){ if(ed._flex){ ed.days=[]; ed.times=Math.max(1,parseInt($('#fTimes').value,10)||1); } else { delete ed.times; if(!(ed.days||[]).length){ toast('요일을 고르거나 "요일 상관없이"를 켜세요'); return; } } }
   if(ed.kind==='monthly'){ if(ed._flex){ ed.doms=[]; ed.times=Math.max(1,parseInt($('#fTimes').value,10)||1); } else { delete ed.times; ed.doms=$('#fDom').value.split(/[,\s]+/).filter(Boolean).map(x=>/말일|last/i.test(x)?'last':parseInt(x,10)).filter(x=>x==='last'||(x>=1&&x<=31)); if(!ed.doms.length){ toast('날짜를 입력하거나 "날짜 상관없이"를 켜세요'); return; } } } else if(ed.kind!=='weekly') ed.doms=[];
