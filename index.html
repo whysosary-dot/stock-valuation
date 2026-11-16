@@ -433,6 +433,7 @@
   @media (max-width: 1024px) {
     #tbl th:nth-child(2):not([colspan]), #tbl td:nth-child(2):not([colspan]) { display: none; }
     #tbl th, #tbl td { padding: 7px 8px; font-size: 12.5px; }
+    #tbl input.cell-num, #tbl td textarea { font-size: 12.5px; }  /* 입력 칸도 같은 크기 — 계산 칸(영업이익 합·POR)과 통일 */
     #tbl th[data-sticky-idx="0"], #tbl td[data-sticky-idx="0"] {
       width: 112px; min-width: 112px; max-width: 112px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
       border-right: 2px solid var(--border-strong) !important; box-shadow: 3px 0 8px -3px rgba(15,23,42,0.10); padding-left: 10px;
