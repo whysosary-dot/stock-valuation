@@ -13,7 +13,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,4 +22,6 @@ jobs:
       - name: report_collect.py (WiseReport 기업·산업 리포트 → report/data)
         env:
           GITHUB_TOKEN: ${{ secrets.SV_PAT }}
-        run: python3 report_collect.py 2>&1 | tail -15
+        run: |
+          set -o pipefail   # tail 때문에 스크립트 실패가 success 로 가려지던 문제(2026-11-19) 수정
+          python3 report_collect.py 2>&1 | tail -15

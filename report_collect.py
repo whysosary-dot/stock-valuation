@@ -262,10 +262,17 @@ def main():
     arg = next((a for a in sys.argv if a.startswith("--dates=")), None)
     first = fetch(1)
     dates = dates_from(first)
+    # WiseReport 가 '기업재무정보 접속장애' 오류 페이지를 내려주는 경우(2026-11-18~ 실제 발생) — 3분 간격 4회 재시도
+    for i in range(4):
+        if dates or arg: break
+        why = "접속장애 페이지" if "접속장애" in first else "발간일자 드롭다운 없음"
+        print(f"  ! WiseReport {why} — {3*(i+1)}분째 재시도 대기")
+        time.sleep(180)
+        first = fetch(1); dates = dates_from(first)
     if arg:
         dates = arg.split("=", 1)[1].split(",")
     if not dates:
-        raise SystemExit("발간일자 드롭다운을 찾지 못함 — 페이지 구조 변경?")
+        raise SystemExit("WiseReport 리포트 요약 페이지 접속장애/구조 변경 — 수집 실패 (워크플로 실패로 표시)")
     print(f"발간일자 {len(dates)}개: {', '.join(dates)}")
 
     tok = None if DRY else token()
