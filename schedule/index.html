@@ -150,7 +150,8 @@ button{ cursor:pointer }
 @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .mc.goal{ box-shadow:0 0 0 1.5px #d9a520, 0 0 0 4px rgba(217,165,32,.25), 0 8px 26px rgba(217,165,32,.35) } }
 .m3[data-b]{ background:color-mix(in srgb, var(--pb) 55%, var(--surface-2)) }
 .m3[data-b] .mc{ background:color-mix(in srgb, var(--pb) 22%, var(--surface)); border-color:color-mix(in srgb, var(--pb) 70%, var(--line)) }
-.m3[data-b] .mc.ref{ background:var(--surface) }
+.m3[data-b] .mc.ref{ background:color-mix(in srgb, var(--pb) 22%, var(--surface)); border-left:3px solid var(--c,var(--accent)) }  /* 루틴 연결 칸: 블록 파스텔 유지 + 왼쪽에 루틴 색 띠 */
+.m3[data-b] .mc.ref.on{ background:var(--ok-soft); border-color:var(--ok) }
 .mc.sub{ background:var(--pb,var(--accent-soft)); border-color:transparent } .mc.sub .t{ color:var(--pi,var(--accent-ink)); font-weight:700 }
 .m3 .mc.sub{ position:relative; isolation:isolate; overflow:hidden; border:none;
   background:linear-gradient(135deg, color-mix(in srgb, var(--pb) 55%, #fff) 0%, var(--pb) 28%, color-mix(in srgb, var(--pb) 60%, #fff) 48%, color-mix(in srgb, var(--pb) 72%, var(--pi)) 70%, color-mix(in srgb, var(--pb) 70%, #fff) 100%);
