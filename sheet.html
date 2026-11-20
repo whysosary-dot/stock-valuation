@@ -777,6 +777,12 @@ function renderSearchResults(tree, q) {
       treeSearchQuery = '';
       document.getElementById('tree-search').value = '';
       openFolderView(f.id, true);
+      // 트리를 다시 그린 뒤 선택한 폴더가 보이도록 스크롤 (검색 결과에서 고르면 트리 맨 위로 튀던 문제, 2026-11-20)
+      setTimeout(() => {
+        try { renderTree(); } catch(_) {}
+        const el = document.querySelector('#tree .node.folder.selected');
+        if (el) el.scrollIntoView({ block: 'center', behavior: 'auto' });
+      }, 0);
     });
     tree.appendChild(div);
   });
