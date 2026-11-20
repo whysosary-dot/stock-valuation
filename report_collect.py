@@ -278,7 +278,21 @@ def main():
         import report_collect_naver as rcn
         today = datetime.date.today()
         fdates = [(today - datetime.timedelta(days=i)).isoformat() for i in range(4)]
-        results = rcn.collect(fdates, attach_valuation=attach_valuation)
+        # 이미 WiseReport 로 수집된 날은 건드리지 않는다 (보조 수집이 원본을 덮어쓰지 않도록)
+        keep = []
+        for fd in fdates:
+            cur = gh(f"report/data/{fd}.json", tok) if tok else None
+            src = ""
+            if cur:
+                try: src = json.loads(base64.b64decode(cur["content"]).decode("utf-8", "replace")).get("source", "")
+                except Exception: src = ""
+            if src and "naver" not in src:
+                print(f"  · {fd}: WiseReport 원본 있음 — 보조 수집 건너뜀")
+            else:
+                keep.append(fd)
+        if not keep:
+            print("  보조 수집할 날짜 없음"); return 0
+        results = rcn.collect(keep, attach_valuation=attach_valuation)
         return save_results(results, tok)
     print(f"발간일자 {len(dates)}개: {', '.join(dates)}")
 
