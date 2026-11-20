@@ -317,6 +317,10 @@
   .fv-card.folder-card { background: var(--accent-soft); border-color: #bfcffe; }
 
   /* ── 좁은 화면 (아이폰/아이패드 세로): 상단바 잘림 방지 ── */
+  /* iOS 사파리: 글자 16px 미만인 입력창에 포커스하면 화면을 자동 확대함 → 터치 기기에서는 입력창 16px (2026-11-20) */
+  @media (hover: none) and (pointer: coarse) {
+    input[type=search], input[type=text], input:not([type]), textarea, select { font-size: 16px !important; }
+  }
   @media (max-width: 700px) {
     .topbar { gap: 6px; padding: 0 8px; }
     .topbar .hint, .topbar .cur-path, .topbar #save-status { display: none; }
