@@ -36,8 +36,19 @@ def fetch(obj, s, e):
 def main():
     today = dt.date.today()
     s = (today - dt.timedelta(days=365 * 3 + 10)).strftime("%Y%m%d"); e = today.strftime("%Y%m%d")
-    dep = {r["TMPV1"]: r for r in fetch("STATSCU0100000060BO", s, e) if r.get("TMPV2") not in (None, "", 0)}
-    cr  = {r["TMPV1"]: r for r in fetch("STATSCU0100000070BO", s, e) if r.get("TMPV2") not in (None, "", 0)}
+    # GitHub Actions 에서 큰 응답(≈100KB)이 31,680바이트에서 잘리는 현상 → 6개월 단위로 나눠 요청
+    def fetch_chunked(obj):
+        rows = {}
+        a = dt.datetime.strptime(s, "%Y%m%d").date()
+        while a <= today:
+            b = min(a + dt.timedelta(days=182), today)
+            for r in fetch(obj, a.strftime("%Y%m%d"), b.strftime("%Y%m%d")):
+                if r.get("TMPV2") not in (None, "", 0): rows[r["TMPV1"]] = r
+            a = b + dt.timedelta(days=1)
+            time.sleep(0.5)
+        return rows
+    dep = fetch_chunked("STATSCU0100000060BO")
+    cr  = fetch_chunked("STATSCU0100000070BO")
     days = sorted(set(dep) & set(cr))
     if len(days) < 30:
         raise SystemExit(f"KOFIA 데이터 부족: 예탁금 {len(dep)}일 · 신용 {len(cr)}일 · 교집합 {len(days)}일")
