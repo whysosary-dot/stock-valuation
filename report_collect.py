@@ -263,19 +263,25 @@ def main():
     first = fetch(1)
     dates = dates_from(first)
     # WiseReport 가 '기업재무정보 접속장애' 오류 페이지를 내려주는 경우(2026-11-18~ 실제 발생) — 3분 간격 4회 재시도
-    for i in range(4):
+    for i in range(2):
         if dates or arg: break
         why = "접속장애 페이지" if "접속장애" in first else "발간일자 드롭다운 없음"
-        print(f"  ! WiseReport {why} — {3*(i+1)}분째 재시도 대기")
-        time.sleep(180)
+        print(f"  ! WiseReport {why} — {2*(i+1)}분째 재시도 대기", flush=True)
+        time.sleep(120)
         first = fetch(1); dates = dates_from(first)
     if arg:
         dates = arg.split("=", 1)[1].split(",")
+    tok = None if DRY else token()
     if not dates:
-        raise SystemExit("WiseReport 리포트 요약 페이지 접속장애/구조 변경 — 수집 실패 (워크플로 실패로 표시)")
+        # ── 보조 경로: 네이버 증권 리서치 API (최근 4일) ──
+        print("  ! WiseReport 접속장애/구조 변경 — 네이버 리서치 API 로 보조 수집")
+        import report_collect_naver as rcn
+        today = datetime.date.today()
+        fdates = [(today - datetime.timedelta(days=i)).isoformat() for i in range(4)]
+        results = rcn.collect(fdates, attach_valuation=attach_valuation)
+        return save_results(results, tok)
     print(f"발간일자 {len(dates)}개: {', '.join(dates)}")
 
-    tok = None if DRY else token()
     results = {}
     # 이른 아침 WiseReport 가 증권사명·산업명 대신 내부 코드(증권사 '34', 산업 'G151050')를 내보내는 경우가 있다
     # (2026-10-12 07:21 실제 발생 — 그대로 저장하면 이미 정상인 과거 일자까지 코드판으로 덮어씀).
@@ -314,6 +320,10 @@ def main():
         results[d] = obj
         print(f"  {d}: 기업 {counts['company']} · 산업 {counts['industry']} · TP↑{counts['tp_up']} TP↓{counts['tp_down']} 의견↑{counts['op_up']} 의견↓{counts['op_down']}")
 
+    return save_results(results, tok)
+
+
+def save_results(results, tok):
     if DRY:
         Path("/tmp/report_latest.json").write_text(json.dumps(next(iter(results.values()), {}), ensure_ascii=False, indent=1))
         print("(dry-run — /tmp/report_latest.json)")
