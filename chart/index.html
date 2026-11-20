@@ -675,6 +675,14 @@ init();
 .ixn-desc{font-size:11px;color:var(--text-dim);line-height:1.5;margin:-4px 0 8px}
 .ixn-warn{font-size:11px;color:#dc2626;font-weight:600;line-height:1.5;margin:-4px 0 8px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:6px 8px}
 .ixn-card.wide .ixn-box{height:230px}
+.lq-head{grid-column:1/-1;display:flex;align-items:center;gap:8px;margin:2px 2px -4px;font-size:13px;font-weight:800}
+.lq-head .src{font-weight:500;font-size:11px;color:var(--text-dim);margin-left:4px}
+.lq-head .rg{margin-left:auto;display:inline-flex;gap:2px;background:var(--panel-2);border-radius:8px;padding:2px}
+.lq-head .rg button{border:none;background:none;font-size:11px;font-weight:600;color:var(--text-dim);padding:3px 9px;border-radius:6px;cursor:pointer}
+.lq-head .rg button.on{background:var(--panel);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.lq-card .val{font-size:18px;font-weight:800;letter-spacing:-.01em;margin:2px 0 6px}
+.lq-card .val small{font-size:11px;font-weight:500;color:var(--text-dim);margin-left:6px}
+.lq-card .val .chg{font-size:11.5px;font-weight:700;margin-left:6px}
 .ixn-cat{grid-column:1/-1;font-size:13px;font-weight:800;margin:8px 2px -4px;color:var(--text)}
 </style>
 <script>
@@ -726,7 +734,21 @@ init();
     const box = document.getElementById('index-native');
     try{
       const inds = await window.fetchIndicators();
-      box.innerHTML = '<div class="ixn-grid">' + inds.map((ind,i)=>`
+      let lq = null; try { lq = await fetch(BASE + 'liquidity.json?t=' + Math.floor(Date.now()/3e5), {cache:'no-store'}).then(r => r.ok ? r.json() : null); } catch(_) {}
+      const LQ = lq && lq.date && lq.date.length ? [
+        { k:'deposit',      name:'투자자예탁금',  unit:'조원', color:'#3056f0', dec:2 },
+        { k:'credit_ratio', name:'신용비율',      unit:'%',   color:'#f59e0b', dec:2, sub:'신용융자 합계 ÷ 예탁금 (계산)' },
+        { k:'kospi_credit', name:'코스피 신용잔고', unit:'조원', color:'#10b981', dec:2 },
+        { k:'kosdaq_credit',name:'코스닥 신용잔고', unit:'조원', color:'#8b5cf6', dec:2 },
+      ] : [];
+      const lqHtml = LQ.length ? `<div class="lq-head">💧 증시 유동성 <span class="src">금융투자협회 · 일별 · ${esc(lq.date[lq.date.length-1])} 기준</span><span class="rg" id="lq-rg"><button data-r="1">1년</button><button data-r="3">3년</button></span></div>` +
+        LQ.map((c,i)=>{ const v=lq[c.k], n=v.length, last=v[n-1], prev=v[n-2]; const d=(last!=null&&prev!=null)?last-prev:null;
+          const chg = d==null ? '' : `<span class="chg" style="color:${d>=0?'#d3273e':'#2f56e8'}">${d>0?'+':''}${d.toFixed(c.dec)}${c.unit==='%'?'%p':''}</span>`;
+          return `<div class="ixn-card lq-card"><h4>${c.name} <span style="font-weight:400;font-size:11px;color:var(--text-dim)">${c.unit}</span></h4>
+          <div class="src">${c.sub||'금융투자협회 종합통계'}</div>
+          <div class="val">${last==null?'—':last.toFixed(c.dec)}<small>${c.unit}</small>${chg}</div>
+          <div class="ixn-box"><canvas id="lq-${i}"></canvas></div></div>`; }).join('') : '';
+      box.innerHTML = '<div class="ixn-grid">' + lqHtml + inds.map((ind,i)=>`
         ${ind.category && ind.category!==(inds[i-1]||{}).category && ind.id && String(ind.id).startsWith('dk_') && !String((inds[i-1]||{}).id||'').startsWith('dk_') ? '<div class="ixn-cat">💊 '+ind.category+' 트래커</div>' : ''}
         <div class="ixn-card${ind.chartLines&&ind.products?' wide':''}"><h4 class="ixn-t" data-i="${i}">${ind.name} <span style="font-weight:400;font-size:11px;color:var(--text-dim)">${ind.unit||''}</span><span class="ixn-toggle">데이터 ▸</span></h4>
         <div class="src">${ind.source||''}${ind.category?' · '+ind.category:''}</div>
@@ -755,6 +777,26 @@ init();
             scales:{ x:{ticks:{maxTicksLimit:6,font:{size:9.5},color:'#9aa3b8'},grid:{display:false}},
               y:{reverse:!!ind.reverseY, ticks:{font:{size:9.5},color:'#9aa3b8',maxTicksLimit:5},grid:{color:'#f0f2f7'}} } } });
       });
+      /* 유동성 카드 차트 (1년/3년 전환) */
+      if (LQ.length) {
+        let lqCharts = []; let lqRange = 1; try { lqRange = +(localStorage.getItem('chart_lq_range')||1) || 1; } catch(_) {}
+        const drawLq = () => {
+          lqCharts.forEach(ch => { try { ch.destroy(); } catch(_) {} }); lqCharts = [];
+          const cut = new Date(); cut.setFullYear(cut.getFullYear() - lqRange); const cutS = cut.toISOString().slice(0,10);
+          let i0 = lq.date.findIndex(d => d >= cutS); if (i0 < 0) i0 = 0;
+          const labels = lq.date.slice(i0).map(d => d.slice(2).replace(/-/g,'.'));
+          LQ.forEach((c,i) => { const cv = document.getElementById('lq-'+i); if (!cv) return;
+            const data = lq[c.k].slice(i0);
+            const g = cv.getContext('2d').createLinearGradient(0,0,0,170); g.addColorStop(0, c.color+'55'); g.addColorStop(1, c.color+'05');
+            lqCharts.push(new Chart(cv, { type:'line', data:{ labels, datasets:[{ label:c.name, data, borderColor:c.color, backgroundColor:g, fill:true, borderWidth:1.8, pointRadius:0, pointHitRadius:8, tension:.2 }] },
+              options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false}, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ` ${Number(ctx.parsed.y).toFixed(c.dec)}${c.unit}` } } },
+                scales:{ x:{ticks:{maxTicksLimit:5,font:{size:9.5},color:'#9aa3b8',maxRotation:0},grid:{display:false}}, y:{ticks:{font:{size:9.5},color:'#9aa3b8',maxTicksLimit:5, callback:v=>c.unit==='%'?v+'%':v+'조'},grid:{color:'#f0f2f7'}} } } }));
+          });
+          box.querySelectorAll('#lq-rg button').forEach(b => b.classList.toggle('on', +b.dataset.r === lqRange));
+        };
+        box.querySelectorAll('#lq-rg button').forEach(b => b.addEventListener('click', () => { lqRange = +b.dataset.r; try { localStorage.setItem('chart_lq_range', lqRange); } catch(_) {} drawLq(); }));
+        drawLq();
+      }
       /* 지표 이름 클릭 → 차트 ↔ raw 데이터 테이블 토글 */
       box.querySelectorAll('.ixn-t').forEach(t=>t.addEventListener('click', ()=>{
         const i = +t.dataset.i, ind = inds[i];
