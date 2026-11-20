@@ -15,13 +15,23 @@ URL = "https://freesis.kofia.or.kr/meta/getMetaDataList.do"
 def fetch(obj, s, e):
     body = {"dmSearch": {"tmpV40": "1000000", "tmpV41": "1", "tmpV1": "D", "tmpV45": s, "tmpV46": e, "OBJ_NM": obj}}
     req = urllib.request.Request(URL, data=json.dumps(body).encode(), headers={"Content-Type": "application/json", "Accept": "application/json", "User-Agent": "Mozilla/5.0"})
-    for i in range(3):
+    last = None
+    for i in range(4):
         try:
-            with urllib.request.urlopen(req, timeout=40) as r:
-                return json.load(r).get("ds1", [])
+            with urllib.request.urlopen(req, timeout=60) as r:
+                raw = r.read()
+            txt = raw.decode("utf-8", "replace").strip()
+            try:
+                return json.loads(txt).get("ds1", [])
+            except Exception as ex:
+                # 응답이 잘렸거나(네트워크) HTML 오류 페이지인 경우 — 진단용으로 앞뒤를 남기고 재시도
+                print(f"  ! {obj} JSON 파싱 실패 (len={len(raw)}): {txt[:100]!r} … {txt[-80:]!r}")
+                last = ex
         except Exception as ex:
-            if i == 2: raise
-            time.sleep(3 * (i + 1))
+            last = ex
+            print(f"  ! {obj} 요청 실패: {ex}")
+        time.sleep(5 * (i + 1))
+    raise last
 
 def main():
     today = dt.date.today()
