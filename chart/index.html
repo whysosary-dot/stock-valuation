@@ -679,6 +679,8 @@ init();
 .lq-head .src{font-weight:500;font-size:11px;color:var(--text-dim);margin-left:4px}
 .lq-head .rg{margin-left:auto;display:inline-flex;gap:2px;background:var(--panel-2);border-radius:8px;padding:2px}
 .lq-head .rg button{border:none;background:none;font-size:11px;font-weight:600;color:var(--text-dim);padding:3px 9px;border-radius:6px;cursor:pointer}
+.lq-head .ttl{white-space:nowrap}.lq-head .rg button{white-space:nowrap}
+@media(max-width:700px){.lq-head{flex-wrap:wrap}.lq-head .src{flex-basis:100%;order:3;margin:2px 0 0}}
 .lq-head .rg button.on{background:var(--panel);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .lq-card .val{font-size:18px;font-weight:800;letter-spacing:-.01em;margin:2px 0 6px}
 .lq-card .val small{font-size:11px;font-weight:500;color:var(--text-dim);margin-left:6px}
@@ -741,7 +743,7 @@ init();
         { k:'kospi_credit', name:'코스피 신용잔고', unit:'조원', color:'#10b981', dec:2 },
         { k:'kosdaq_credit',name:'코스닥 신용잔고', unit:'조원', color:'#8b5cf6', dec:2 },
       ] : [];
-      const lqHtml = LQ.length ? `<div class="lq-head">💧 증시 유동성 <span class="src">금융투자협회 · 일별 · ${esc(lq.date[lq.date.length-1])} 기준</span><span class="rg" id="lq-rg"><button data-r="1">1년</button><button data-r="3">3년</button></span></div>` +
+      const lqHtml = LQ.length ? `<div class="lq-head"><span class="ttl">💧 증시 유동성</span><span class="src">금융투자협회 · 일별 · ${esc(lq.date[lq.date.length-1])} 기준</span><span class="rg" id="lq-rg"><button data-r="1">1년</button><button data-r="3">3년</button></span></div>` +
         LQ.map((c,i)=>{ const v=lq[c.k], n=v.length, last=v[n-1], prev=v[n-2]; const d=(last!=null&&prev!=null)?last-prev:null;
           const chg = d==null ? '' : `<span class="chg" style="color:${d>=0?'#d3273e':'#2f56e8'}">${d>0?'+':''}${d.toFixed(c.dec)}${c.unit==='%'?'%p':''}</span>`;
           return `<div class="ixn-card lq-card"><h4>${c.name} <span style="font-weight:400;font-size:11px;color:var(--text-dim)">${c.unit}</span></h4>
