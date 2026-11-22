@@ -685,6 +685,9 @@ init();
 .lq-card .val{font-size:18px;font-weight:800;letter-spacing:-.01em;margin:2px 0 6px}
 .lq-card .val small{font-size:11px;font-weight:500;color:var(--text-dim);margin-left:6px}
 .lq-card .val .chg{font-size:11.5px;font-weight:700;margin-left:6px}
+.lq-card .val .fg-lab{display:inline-block;font-size:11px;font-weight:700;color:#fff;border-radius:6px;padding:2px 7px;margin-left:8px;vertical-align:middle}
+.lq-card .fg-parts{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:11px;color:var(--text-dim)}
+.lq-card .fg-parts b{font-weight:800}
 .ixn-cat{grid-column:1/-1;font-size:13px;font-weight:800;margin:8px 2px -4px;color:var(--text)}
 </style>
 <script>
@@ -743,6 +746,22 @@ init();
         { k:'kospi_credit', name:'코스피 신용잔고', unit:'조원', color:'#10b981', dec:2 },
         { k:'kosdaq_credit',name:'코스닥 신용잔고', unit:'조원', color:'#8b5cf6', dec:2 },
       ] : [];
+      let st = null; try { st = await fetch(BASE + 'sentiment.json?t=' + Math.floor(Date.now()/3e5), {cache:'no-store'}).then(r => r.ok ? r.json() : null); } catch(_) {}
+      const ST = st && st.date && st.date.length ? [
+        { k:'vix', name:'VIX', unit:'pt', color:'#ef4444', dec:1, sub:'CBOE 변동성지수 종가 (yfinance ^VIX)' },
+        { k:'fg',  name:'공포·탐욕 지수', unit:'', color:'#f97316', dec:1, sub:'자체 계산 — CNN 방식 4요소(모멘텀·변동성·안전자산·정크본드) 1년 백분위 평균 · 공식 아님', fg:true },
+      ] : [];
+      const fgLabel = v => v == null ? '' : v < 25 ? '극단적 공포' : v < 45 ? '공포' : v < 55 ? '중립' : v < 75 ? '탐욕' : '극단적 탐욕';
+      const fgColor = v => v == null ? '#9aa3b8' : v < 25 ? '#b91c1c' : v < 45 ? '#ef4444' : v < 55 ? '#6b7280' : v < 75 ? '#16a34a' : '#15803d';
+      const stHtml = ST.length ? `<div class="lq-head"><span class="ttl">😨 투자 심리</span><span class="src">미국 · 일별 · ${esc(st.date[st.date.length-1])} 기준${LQ.length ? ' · 기간은 위 유동성 버튼과 공유' : ''}</span>${LQ.length ? '' : '<span class="rg" id="lq-rg"><button data-r="1">1년</button><button data-r="3">3년</button></span>'}</div>` +
+        ST.map((c,i)=>{ const v=st[c.k], n=v.length, last=v[n-1], prev=v[n-2]; const d=(last!=null&&prev!=null)?last-prev:null;
+          const chg = d==null ? '' : `<span class="chg" style="color:${d>=0?'#d3273e':'#2f56e8'}">${d>0?'+':''}${d.toFixed(c.dec)}</span>`;
+          const lab = c.fg ? `<span class="fg-lab" style="background:${fgColor(last)}">${fgLabel(last)}</span>` : '';
+          const parts = c.fg && st.fg_parts ? `<div class="fg-parts">${Object.keys(st.fg_parts).map(k=>`<span title="${esc((st.fg_parts_label||{})[k]||k)}">${esc(((st.fg_parts_label||{})[k]||k).split(' ')[0])} <b style="color:${fgColor(st.fg_parts[k])}">${st.fg_parts[k]==null?'—':Math.round(st.fg_parts[k])}</b></span>`).join('')}</div>` : '';
+          return `<div class="ixn-card lq-card"><h4>${c.name} <span style="font-weight:400;font-size:11px;color:var(--text-dim)">${c.unit}</span></h4>
+          <div class="src">${c.sub}</div>
+          <div class="val">${last==null?'—':last.toFixed(c.dec)}<small>${c.unit}</small>${chg}${lab}</div>
+          <div class="ixn-box"><canvas id="st-${i}"></canvas></div>${parts}</div>`; }).join('') : '';
       const lqHtml = LQ.length ? `<div class="lq-head"><span class="ttl">💧 증시 유동성</span><span class="src">금융투자협회 · 일별 · ${esc(lq.date[lq.date.length-1])} 기준</span><span class="rg" id="lq-rg"><button data-r="1">1년</button><button data-r="3">3년</button></span></div>` +
         LQ.map((c,i)=>{ const v=lq[c.k], n=v.length, last=v[n-1], prev=v[n-2]; const d=(last!=null&&prev!=null)?last-prev:null;
           const chg = d==null ? '' : `<span class="chg" style="color:${d>=0?'#d3273e':'#2f56e8'}">${d>0?'+':''}${d.toFixed(c.dec)}${c.unit==='%'?'%p':''}</span>`;
@@ -750,7 +769,7 @@ init();
           <div class="src">${c.sub||'금융투자협회 종합통계'}</div>
           <div class="val">${last==null?'—':last.toFixed(c.dec)}<small>${c.unit}</small>${chg}</div>
           <div class="ixn-box"><canvas id="lq-${i}"></canvas></div></div>`; }).join('') : '';
-      box.innerHTML = '<div class="ixn-grid">' + lqHtml + inds.map((ind,i)=>`
+      box.innerHTML = '<div class="ixn-grid">' + lqHtml + stHtml + inds.map((ind,i)=>`
         ${ind.category && ind.category!==(inds[i-1]||{}).category && ind.id && String(ind.id).startsWith('dk_') && !String((inds[i-1]||{}).id||'').startsWith('dk_') ? '<div class="ixn-cat">💊 '+ind.category+' 트래커</div>' : ''}
         <div class="ixn-card${ind.chartLines&&ind.products?' wide':''}"><h4 class="ixn-t" data-i="${i}">${ind.name} <span style="font-weight:400;font-size:11px;color:var(--text-dim)">${ind.unit||''}</span><span class="ixn-toggle">데이터 ▸</span></h4>
         <div class="src">${ind.source||''}${ind.category?' · '+ind.category:''}</div>
@@ -780,13 +799,26 @@ init();
               y:{reverse:!!ind.reverseY, ticks:{font:{size:9.5},color:'#9aa3b8',maxTicksLimit:5},grid:{color:'#f0f2f7'}} } } });
       });
       /* 유동성 카드 차트 (1년/3년 전환) */
-      if (LQ.length) {
+      if (LQ.length || ST.length) {
         let lqCharts = []; let lqRange = 1; try { lqRange = +(localStorage.getItem('chart_lq_range')||1) || 1; } catch(_) {}
         const drawLq = () => {
           lqCharts.forEach(ch => { try { ch.destroy(); } catch(_) {} }); lqCharts = [];
           const cut = new Date(); cut.setFullYear(cut.getFullYear() - lqRange); const cutS = cut.toISOString().slice(0,10);
-          let i0 = lq.date.findIndex(d => d >= cutS); if (i0 < 0) i0 = 0;
-          const labels = lq.date.slice(i0).map(d => d.slice(2).replace(/-/g,'.'));
+          let i0 = LQ.length ? lq.date.findIndex(d => d >= cutS) : 0; if (i0 < 0) i0 = 0;
+          const labels = LQ.length ? lq.date.slice(i0).map(d => d.slice(2).replace(/-/g,'.')) : [];
+          if (ST.length) {
+            let j0 = st.date.findIndex(d => d >= cutS); if (j0 < 0) j0 = 0;
+            const sl = st.date.slice(j0).map(d => d.slice(2).replace(/-/g,'.'));
+            ST.forEach((c,i) => { const cv = document.getElementById('st-'+i); if (!cv) return;
+              const data = st[c.k].slice(j0);
+              const g = cv.getContext('2d').createLinearGradient(0,0,0,170); g.addColorStop(0, c.color+'55'); g.addColorStop(1, c.color+'05');
+              const bands = c.fg ? { fgBands: { id:'fgBands', beforeDraw(ch){ const {ctx, chartArea:ca, scales:{y}} = ch; if (!ca) return; const z=[[0,25,'#fee2e2'],[25,45,'#fff1f2'],[55,75,'#f0fdf4'],[75,100,'#dcfce7']]; ctx.save(); z.forEach(([a,b,col])=>{ const y1=y.getPixelForValue(b), y2=y.getPixelForValue(a); ctx.fillStyle=col; ctx.fillRect(ca.left, y1, ca.right-ca.left, y2-y1); }); ctx.restore(); } } } : {};
+              lqCharts.push(new Chart(cv, { type:'line', data:{ labels:sl, datasets:[{ label:c.name, data, borderColor:c.color, backgroundColor:g, fill:!c.fg, borderWidth:1.8, pointRadius:0, pointHitRadius:8, tension:.2 }] },
+                plugins: c.fg ? [bands.fgBands] : [],
+                options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false}, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => c.fg ? ` ${Number(ctx.parsed.y).toFixed(1)} · ${fgLabel(ctx.parsed.y)}` : ` ${Number(ctx.parsed.y).toFixed(c.dec)}${c.unit}` } } },
+                  scales:{ x:{ticks:{maxTicksLimit:5,font:{size:9.5},color:'#9aa3b8',maxRotation:0},grid:{display:false}}, y:{ min: c.fg?0:undefined, max: c.fg?100:undefined, ticks:{font:{size:9.5},color:'#9aa3b8',maxTicksLimit:5},grid:{color:'#f0f2f7'}} } } }));
+            });
+          }
           LQ.forEach((c,i) => { const cv = document.getElementById('lq-'+i); if (!cv) return;
             const data = lq[c.k].slice(i0);
             const g = cv.getContext('2d').createLinearGradient(0,0,0,170); g.addColorStop(0, c.color+'55'); g.addColorStop(1, c.color+'05');
