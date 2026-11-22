@@ -1425,6 +1425,7 @@ td input, td textarea{border-radius:8px}
   <button class="page-tab-btn" data-page="market">🌐 Market</button>
   <button class="page-tab-btn" data-page="awake">🔔 Awake</button>
   <button class="page-tab-btn" data-page="chart">📉 Chart</button>
+  <button class="page-tab-btn" data-page="index">📈 Index</button>
   <button class="page-tab-btn" data-page="interest">👀 Interest</button>
   <button class="page-tab-btn" data-page="report">📑 Report</button>
   <button class="page-tab-btn" data-page="telegram">📨 Telegram</button>
@@ -1582,6 +1583,10 @@ td input, td textarea{border-radius:8px}
   ></iframe>
 </div><!-- /page-chart -->
 
+<div id="page-index" class="page">
+  <!-- 📈 Index — chart/index.html?only=index (Chart 탭 인덱스 하위 탭을 별도 탭으로 분리, 2026-11-23) -->
+  <iframe id="index-frame" style="width:100%;height:calc(100vh - 48px);border:none;display:block;" loading="lazy" title="Index — 유동성 · 심리 · 선행지표"></iframe>
+</div>
 <div id="page-schedule" class="page">
   <!-- 🗓 Schedule — 일간·주간·월간 루틴 (same-origin schedule/index.html, 데이터 invest-private sv/schedule.json, 저장은 ☁️ 커밋 & 푸시) -->
   <iframe id="schedule-frame" style="width:100%;height:calc(100vh - 48px);border:none;display:block;" loading="lazy" title="Schedule"></iframe>
@@ -2922,7 +2927,7 @@ init();
 
 const IFRAME_TAB_SRC = {
   calendar:  'https://whysosary-dot.github.io/investment-calendar/',
-  index:     'https://whysosary-dot.github.io/invest-index/',
+  index:     './chart/index.html?only=index&v=' + Math.floor(Date.now()/60000),  // 📈 Index 탭 = Chart 페이지 인덱스 전용 모드 (유동성·심리·선행지표)
   screener:  'https://whysosary-dot.github.io/stock-screener/daily.html?v=' + Math.floor(Date.now()/60000),  // 캐시 우회(1분)   // 최신 일자 바로 (날짜는 페이지 안 드롭다운)
   dart:      'https://whysosary-dot.github.io/dart-monitoring/',
   awake:     './view/index.html?src=awake&v=' + Math.floor(Date.now()/600000),
@@ -2935,7 +2940,7 @@ const IFRAME_TAB_SRC = {
 };
 
 function activatePage(page, opts = {}) {
-  if (page === 'etfmonitor' || page === 'index' || page === 'rules' || page === 'research') page = page === 'rules' ? 'diary' : page === 'research' ? 'sheet' : 'chart';  // Chart·Diary·Folder 로 이동한 옛 탭
+  if (page === 'etfmonitor' || page === 'rules' || page === 'research') page = page === 'rules' ? 'diary' : page === 'research' ? 'sheet' : 'chart';  // Chart·Diary·Folder 로 이동한 옛 탭
   if (page === 'usmarket' || page === 'krmarket') { try { localStorage.setItem('sv_market_sub', page === 'usmarket' ? 'us' : 'kr'); } catch (_) {} page = 'market'; }  // US/KR Market → Market 탭 하위
   const btn = document.querySelector(`.page-tab-btn[data-page="${page}"]`);
   if (!btn) return;
@@ -2975,7 +2980,7 @@ document.querySelectorAll('.page-tab-btn').forEach(btn => {
 });
 // ── 같은 출처(whysosary-dot.github.io) 탭 페이지에 공통 테마·스킨 주입 (Telegram·Report 톤으로 통일) ──
 // 끄려면 localStorage sv_skin_off=1. 뷰어(view/)로 여는 탭(US/KR Market·Awake·Interest)은 뷰어가 직접 주입한다.
-const SKIN_KEY = { 'etfmonitor-frame': 'etf', 'dart-frame': 'dart', 'index-frame': 'index', 'calendar-frame': 'calendar',
+const SKIN_KEY = { 'etfmonitor-frame': 'etf', 'dart-frame': 'dart', 'calendar-frame': 'calendar',
                    'screener-frame': 'screener' };
 function svInjectSkin(fr) {
   try {
@@ -7125,8 +7130,8 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
     }
   }
   const orig = window.activatePage;
-  window.activatePage = function(p, o){ orig(p, o); if(p==='index') renderIndexNative(); };
-  if((location.hash||'').replace('#','')==='index') renderIndexNative();
+  /* 옛 네이티브 렌더러는 사용 안 함 — 📈 Index 탭은 chart/index.html?only=index iframe (2026-11-23) */
+  void orig;
 })();
 </script>
 

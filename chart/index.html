@@ -646,6 +646,14 @@ async function init() {
   $('#etf-sort').addEventListener('change', e => { ETF.sort = e.target.value; renderEtf(); });
   let qt; $('#etf-q').addEventListener('input', e => { clearTimeout(qt); qt = setTimeout(() => { ETF.q = e.target.value.trim(); renderEtf(); }, 200); });
   document.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('[data-m]').forEach(x => x.classList.remove('on')); b.classList.add('on'); state.mkt = b.dataset.m; state.favOnly = false; state.tag = null; renderScan(); loadHist(); }));
+  /* ?only=index → 대시보드 📈 Index 탭 전용 모드: 하위 탭 숨기고 인덱스만 / 일반 Chart 탭에서는 인덱스 하위 탭 숨김(별도 탭으로 분리) */
+  if (new URLSearchParams(location.search).get('only') === 'index') {
+    document.documentElement.classList.add('only-index');
+    const h = document.querySelector('.top h1'); if (h) h.textContent = '📈 Index — 유동성 · 심리 · 선행지표';
+    document.querySelector('.tab[data-v="index"]')?.click();
+  } else {
+    document.querySelector('.tab[data-v="index"]')?.remove();
+  }
   let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => state.view === 'index' ? null : state.view === 'etf' ? renderEtf() : EXT[state.view] ? showExt(state.view) : state.view === 'board' ? renderBoard() : renderScan(), 150); });
 }
 init();
@@ -654,6 +662,7 @@ init();
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 #index-native{padding:4px 0 26px}
+html.only-index .tabs{display:none}
 .ixn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;max-width:1280px;margin:0 auto}
 @media(max-width:700px){.ixn-grid{grid-template-columns:1fr}}
 .ixn-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--sk-radius,14px);padding:14px;box-shadow:var(--sk-shadow,0 1px 3px rgba(0,0,0,.05));min-width:0;overflow:hidden}
@@ -749,11 +758,12 @@ init();
       let st = null; try { st = await fetch(BASE + 'sentiment.json?t=' + Math.floor(Date.now()/3e5), {cache:'no-store'}).then(r => r.ok ? r.json() : null); } catch(_) {}
       const ST = st && st.date && st.date.length ? [
         { k:'vix', name:'VIX', unit:'pt', color:'#ef4444', dec:1, sub:'CBOE 변동성지수 종가 (yfinance ^VIX)' },
+        ...(st && st.vkospi && st.vkospi.length ? [{ k:'vkospi', dk:'vk_date', name:'VKOSPI', unit:'pt', color:'#db2777', dec:2, sub:'코스피200 변동성지수 종가 · 금융위원회 지수시세정보(공공데이터포털) · 1영업일 지연' }] : []),
         { k:'fg',  name:'공포·탐욕 지수', unit:'', color:'#f97316', dec:1, sub:'자체 계산 — CNN 방식 4요소(모멘텀·변동성·안전자산·정크본드) 1년 백분위 평균 · 공식 아님', fg:true },
       ] : [];
       const fgLabel = v => v == null ? '' : v < 25 ? '극단적 공포' : v < 45 ? '공포' : v < 55 ? '중립' : v < 75 ? '탐욕' : '극단적 탐욕';
       const fgColor = v => v == null ? '#9aa3b8' : v < 25 ? '#b91c1c' : v < 45 ? '#ef4444' : v < 55 ? '#6b7280' : v < 75 ? '#16a34a' : '#15803d';
-      const stHtml = ST.length ? `<div class="lq-head"><span class="ttl">😨 투자 심리</span><span class="src">미국 · 일별 · ${esc(st.date[st.date.length-1])} 기준${LQ.length ? ' · 기간은 위 유동성 버튼과 공유' : ''}</span>${LQ.length ? '' : '<span class="rg" id="lq-rg"><button data-r="1">1년</button><button data-r="3">3년</button></span>'}</div>` +
+      const stHtml = ST.length ? `<div class="lq-head"><span class="ttl">😨 투자 심리</span><span class="src">일별 · 미국 ${esc(st.date[st.date.length-1])}${st.vk_date&&st.vk_date.length?' · 한국 '+esc(st.vk_date[st.vk_date.length-1]):''} 기준${LQ.length ? ' · 기간은 위 유동성 버튼과 공유' : ''}</span>${LQ.length ? '' : '<span class="rg" id="lq-rg"><button data-r="1">1년</button><button data-r="3">3년</button></span>'}</div>` +
         ST.map((c,i)=>{ const v=st[c.k], n=v.length, last=v[n-1], prev=v[n-2]; const d=(last!=null&&prev!=null)?last-prev:null;
           const chg = d==null ? '' : `<span class="chg" style="color:${d>=0?'#d3273e':'#2f56e8'}">${d>0?'+':''}${d.toFixed(c.dec)}</span>`;
           const lab = c.fg ? `<span class="fg-lab" style="background:${fgColor(last)}">${fgLabel(last)}</span>` : '';
@@ -808,9 +818,10 @@ init();
           const labels = LQ.length ? lq.date.slice(i0).map(d => d.slice(2).replace(/-/g,'.')) : [];
           if (ST.length) {
             let j0 = st.date.findIndex(d => d >= cutS); if (j0 < 0) j0 = 0;
-            const sl = st.date.slice(j0).map(d => d.slice(2).replace(/-/g,'.'));
+            const slUS = st.date.slice(j0).map(d => d.slice(2).replace(/-/g,'.'));
             ST.forEach((c,i) => { const cv = document.getElementById('st-'+i); if (!cv) return;
-              const data = st[c.k].slice(j0);
+              const dts = st[c.dk || 'date']; let k0 = c.dk ? dts.findIndex(d => d >= cutS) : j0; if (k0 < 0) k0 = 0;
+              const data = st[c.k].slice(k0); const sl = c.dk ? dts.slice(k0).map(d => d.slice(2).replace(/-/g,'.')) : slUS;
               const g = cv.getContext('2d').createLinearGradient(0,0,0,170); g.addColorStop(0, c.color+'55'); g.addColorStop(1, c.color+'05');
               const bands = c.fg ? { fgBands: { id:'fgBands', beforeDraw(ch){ const {ctx, chartArea:ca, scales:{y}} = ch; if (!ca) return; const z=[[0,25,'#fee2e2'],[25,45,'#fff1f2'],[55,75,'#f0fdf4'],[75,100,'#dcfce7']]; ctx.save(); z.forEach(([a,b,col])=>{ const y1=y.getPixelForValue(b), y2=y.getPixelForValue(a); ctx.fillStyle=col; ctx.fillRect(ca.left, y1, ca.right-ca.left, y2-y1); }); ctx.restore(); } } } : {};
               lqCharts.push(new Chart(cv, { type:'line', data:{ labels:sl, datasets:[{ label:c.name, data, borderColor:c.color, backgroundColor:g, fill:!c.fg, borderWidth:1.8, pointRadius:0, pointHitRadius:8, tension:.2 }] },

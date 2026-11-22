@@ -84,7 +84,7 @@ jobs:
           case "$M" in both|kr|kr+us) python3 chart/build_chart.py kr 2>&1 | grep -v "Failed download\|possibly delisted\|Invalid Crumb" | tail -12 ;; esac
           case "$M" in both|us|kr+us) python3 chart/build_chart.py us 2>&1 | grep -v "Failed download\|possibly delisted\|Invalid Crumb" | tail -12 ;; esac
           python3 chart/liquidity.py 2>&1 | tail -3 || echo "liquidity 실패(무시)"   # 금투협 예탁금·신용잔고 → chart/data/liquidity.json
-          python3 chart/sentiment.py 2>&1 | grep -v "Failed download" | tail -3 || echo "sentiment 실패(무시)"   # VIX·공포탐욕(자체) → chart/data/sentiment.json
+          DATAGOKR_KEY="${{ secrets.DATAGOKR_KEY }}" python3 chart/sentiment.py 2>&1 | grep -v "Failed download" | tail -3 || echo "sentiment 실패(무시)"   # VIX·공포탐욕(자체) → chart/data/sentiment.json
       - name: push data branch (orphan, 단일 커밋)
         if: steps.m.outputs.mkt != 'none'
         run: |
