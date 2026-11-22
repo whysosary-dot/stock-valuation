@@ -7043,6 +7043,8 @@ try { localStorage.removeItem('tg_msgs_v1'); } catch(_) {}
 </style>
 <script>
 (function(){
+  /* 2026-11-23: 📈 Index 탭은 chart/index.html?only=index iframe 으로 교체 — 옛 네이티브 렌더러 비활성 */
+  return;
   const page = document.getElementById('page-index');
   if(!page) return;
   page.innerHTML = '<div id="index-native"><div class="ixn-load">지표 불러오는 중…</div></div>';
