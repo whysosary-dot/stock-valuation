@@ -1,0 +1,350 @@
+{
+"updated": "2026-11-23",
+"cats": [
+{
+"name": "반도체·AI 공급망",
+"accounts": [
+{
+"h": "dylan522p",
+"n": "Dylan Patel",
+"p": "GPU·TPU 원가, 데이터센터, HBM 수급 심층 분석"
+},
+{
+"h": "dnystedt",
+"n": "Dan Nystedt",
+"p": "대만 공급망 뉴스·TSMC 등 월 매출 선행지표"
+},
+{
+"h": "jukan05",
+"n": "Jukan",
+"p": "한국·일본·대만 반도체 뉴스와 리포트 요지"
+},
+{
+"h": "mingchikuo",
+"n": "Ming-Chi Kuo",
+"p": "애플·AI 서버 공급망 조사"
+},
+{
+"h": "firstadopter",
+"n": "Tae Kim",
+"p": "빅테크·반도체 실적과 시장 해설"
+},
+{
+"h": "BenBajarin",
+"n": "Ben Bajarin",
+"p": "반도체·PC·AI 칩 시장 조사"
+},
+{
+"h": "aleabitoreddit",
+"n": "Serenity",
+"p": "AI·반도체 공급망 리서치"
+},
+{
+"h": "pequityresearch",
+"n": "P Equity Research",
+"p": "증권사 리포트 요지·전문가 콜 정리"
+},
+{
+"h": "DrNHJ",
+"n": "루팡",
+"p": "테크·반도체 뉴스와 리포트를 한국어로 요약"
+},
+{
+"h": "FundaAI",
+"n": "FUNDA",
+"p": "AI 인프라·서버 공급망 리서치"
+},
+{
+"h": "Beth_Kindig",
+"n": "Beth Kindig",
+"p": "AI·반도체 종목 분석"
+},
+{
+"h": "bubbleboi",
+"n": "bubble boi",
+"p": "AI 인프라 관련 의견"
+}
+]
+},
+{
+"name": "테크 전략·새 흐름",
+"accounts": [
+{
+"h": "benthompson",
+"n": "Ben Thompson",
+"p": "빅테크 전략·플랫폼 경제 분석"
+},
+{
+"h": "emollick",
+"n": "Ethan Mollick",
+"p": "AI가 실제 업무에 쓰이는 방식"
+},
+{
+"h": "karpathy",
+"n": "Andrej Karpathy",
+"p": "AI 기술 방향 변화"
+},
+{
+"h": "packyM",
+"n": "Packy McCormick",
+"p": "신산업 기업 해설"
+},
+{
+"h": "DarioAmodei",
+"n": "Dario Amodei",
+"p": "앤트로픽 CEO 발언"
+},
+{
+"h": "JensenHuang",
+"n": "Jensen Huang",
+"p": "엔비디아 창업자 발언"
+},
+{
+"h": "leopoldasch",
+"n": "Leopold Aschenbrenner",
+"p": "AI 장기 전망"
+},
+{
+"h": "LeopoldTracker_",
+"n": "Leopold Stock Tracker",
+"p": "Aschenbrenner 펀드 매매 추적"
+},
+{
+"h": "jack",
+"n": "jack",
+"p": "테크 창업자 시각"
+}
+]
+},
+{
+"name": "투자자 시각·기업 분석",
+"accounts": [
+{
+"h": "GavinSBaker",
+"n": "Gavin Baker",
+"p": "AI 캐펙스·반도체 사이클 투자자 시각"
+},
+{
+"h": "altcap",
+"n": "Brad Gerstner",
+"p": "빅테크·AI 대형 투자 논리"
+},
+{
+"h": "jaminball",
+"n": "Jamin Ball",
+"p": "소프트웨어 밸류에이션 주간 정리"
+},
+{
+"h": "DrewCohenMoney",
+"n": "Drew Cohen",
+"p": "기업 구조를 쉽게 푸는 심층 분석"
+},
+{
+"h": "citrini",
+"n": "Citrini",
+"p": "테마형 투자 리서치"
+},
+{
+"h": "munster_gene",
+"n": "Gene Munster",
+"p": "빅테크 성장주 전망"
+}
+]
+},
+{
+"name": "성장주 발굴",
+"accounts": [
+{
+"h": "michaelsikand",
+"n": "Michael Sikand",
+"p": "성장주 아이디어·시장 분위기"
+},
+{
+"h": "wealthmatica",
+"n": "Nick",
+"p": "중소형 성장주 심층 글"
+},
+{
+"h": "ariaradnia",
+"n": "Aria Radnia",
+"p": "성장주 밸류에이션 코멘트"
+},
+{
+"h": "danielisdizzy",
+"n": "Daniel",
+"p": "네오클라우드·AI 인프라 종목 소식"
+},
+{
+"h": "alc2022",
+"n": "Antonio Linares",
+"p": "장기 성장주 투자 관점"
+},
+{
+"h": "JonahLupton",
+"n": "Jonah Lupton",
+"p": "롱숏 펀드 성장주 의견"
+},
+{
+"h": "ChrisCamillo",
+"n": "Chris Camillo",
+"p": "소비 트렌드에서 종목 찾기"
+},
+{
+"h": "hamids",
+"n": "Hamid",
+"p": "실적 일정·테슬라·우주 종목 소식"
+},
+{
+"h": "StockSavvyShay",
+"n": "Shay Boloor",
+"p": "AI·테크 종목 시황 정리"
+},
+{
+"h": "iancassel",
+"n": "Ian Cassel",
+"p": "초소형주 발굴 원칙"
+}
+]
+},
+{
+"name": "매크로·시장 데이터",
+"accounts": [
+{
+"h": "KobeissiLetter",
+"n": "The Kobeissi Letter",
+"p": "매크로 지표·시장 속보"
+}
+]
+},
+{
+"name": "트레이딩·차트",
+"accounts": [
+{
+"h": "TrendSpider",
+"n": "TrendSpider",
+"p": "차트·밸류에이션 밴드"
+},
+{
+"h": "markminervini",
+"n": "Mark Minervini",
+"p": "추세 매매 원칙"
+},
+{
+"h": "RichardMoglen",
+"n": "Richard Moglen",
+"p": "추세 매매 인터뷰"
+}
+]
+},
+{
+"name": "대가·가치투자",
+"accounts": [
+{
+"h": "BillAckman",
+"n": "Bill Ackman",
+"p": "대형 헤지펀드 매니저의 시장 견해"
+},
+{
+"h": "mjmauboussin",
+"n": "Michael Mauboussin",
+"p": "의사결정·밸류에이션 이론"
+},
+{
+"h": "hmarksofficial",
+"n": "Howard Marks",
+"p": "시장 사이클 메모"
+},
+{
+"h": "MohnishPabrai",
+"n": "Mohnish Pabrai",
+"p": "가치투자 원칙"
+},
+{
+"h": "GSpier",
+"n": "Guy Spier",
+"p": "가치투자 원칙"
+},
+{
+"h": "KennethLFisher",
+"n": "Ken Fisher",
+"p": "시장 전망 칼럼"
+},
+{
+"h": "bkaellner",
+"n": "Brad Kaellner",
+"p": "투자 교육"
+}
+]
+},
+{
+"name": "게임·콘텐츠",
+"accounts": [
+{
+"h": "NintendoCoLtd",
+"n": "任天堂 IR",
+"p": "닌텐도 공식 IR 소식"
+},
+{
+"h": "Capcom_IR",
+"n": "Capcom IR",
+"p": "캡콤 공식 IR 소식"
+},
+{
+"h": "thisisgamecom",
+"n": "디스이즈게임",
+"p": "국내 게임 뉴스"
+},
+{
+"h": "Liesofp",
+"n": "Lies of P",
+"p": "네오위즈 대표작 공식 소식"
+},
+{
+"h": "SodStm",
+"n": "Shape of Dreams",
+"p": "네오위즈 퍼블리싱작 공식 소식"
+},
+{
+"h": "Capcomfuchu",
+"n": "プラサカプコン府中",
+"p": "캡콤 오프라인 매장 소식"
+},
+{
+"h": "SoloLevelingDNC",
+"n": "Solo Leveling 웹툰",
+"p": "나 혼자만 레벨업 IP 소식"
+},
+{
+"h": "sololeveling_pr",
+"n": "俺だけレベルアップな件",
+"p": "나혼렙 애니 공식 소식"
+},
+{
+"h": "SoloLv_POPUP",
+"n": "나혼렙 팝업스토어",
+"p": "나혼렙 IP 상품 소식"
+},
+{
+"h": "A_SUOL",
+"n": "수월 SUOL",
+"p": "웹툰 작가 공지"
+}
+]
+},
+{
+"name": "한국 투자·기타",
+"accounts": [
+{
+"h": "DIPI_E",
+"n": "디피",
+"p": "국내 투자 유튜버"
+},
+{
+"h": "toshi777111111",
+"n": "透",
+"p": "기타"
+}
+]
+}
+]
+}
