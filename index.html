@@ -1429,6 +1429,7 @@ td input, td textarea{border-radius:8px}
   <button class="page-tab-btn" data-page="interest">👀 Interest</button>
   <button class="page-tab-btn" data-page="report">📑 Report</button>
   <button class="page-tab-btn" data-page="telegram">📨 Telegram</button>
+  <button class="page-tab-btn" data-page="x">𝕏 X</button>
   <button class="page-tab-btn" data-page="sheet">📁 Folder</button>
   <button class="page-tab-btn" data-page="schedule">🗓 Schedule</button>
   <button class="page-tab-btn" data-page="diary">📔 Diary</button>
@@ -1548,6 +1549,11 @@ td input, td textarea{border-radius:8px}
   <!-- 텔레그램 채널 언급 종목 — same-origin ./telegram/ , 데이터는 telegram/data/*.json (매일 23:50 자동 수집) -->
   <iframe id="telegram-frame" style="width:100%;height:calc(100vh - 48px);border:none;display:block;" loading="lazy" title="Telegram"></iframe>
 </div><!-- /page-telegram -->
+
+<div id="page-x" class="page">
+  <!-- X 팔로우 계정 데일리 — same-origin ./x/ , 데이터는 x/data/*.json (매일 05:30 자동 수집) -->
+  <iframe id="x-frame" style="width:100%;height:calc(100vh - 48px);border:none;display:block;" loading="lazy" title="X"></iframe>
+</div><!-- /page-x -->
 
 <div id="page-report" class="page">
   <!-- 증권사 리포트 정리 — same-origin ./report/ , 데이터는 report/data/*.json (평일 07:20 자동 수집) -->
@@ -2933,7 +2939,8 @@ const IFRAME_TAB_SRC = {
   awake:     './view/index.html?src=awake&v=' + Math.floor(Date.now()/600000),
   interest:  './view/index.html?src=interest&v=' + Math.floor(Date.now()/600000),
   report:    './report/index.html?v=' + Date.now(),  // 증권사 리포트 정리 (same-origin)
-  telegram:  './telegram/index.html?v=' + Date.now(),  // 텔레그램 채널 언급 종목 (same-origin)
+  telegram:  './telegram/index.html?v=' + Date.now(),
+  x:         './x/index.html?v=' + Date.now(),  // X 팔로우 계정 데일리 (same-origin)  // 텔레그램 채널 언급 종목 (same-origin)
   chart:     './chart/index.html?v=' + Math.floor(Date.now()/60000),
   schedule:  './schedule/index.html?v=' + Math.floor(Date.now()/60000),  // 🗓 Schedule 탭 (same-origin)  // Chart 탭 (same-origin, 1분 단위 캐시 무효화 — Pages CDN·사파리 iframe 캐시 대응)
   // sheet 은 X-Frame-Options 로 iframe 차단되어 안내 페이지로 대체 (IFRAME_TAB_SRC 등록 X)
