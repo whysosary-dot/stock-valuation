@@ -779,8 +779,8 @@ html.only-index .tabs{display:none}
           <div class="src">${c.sub||'금융투자협회 종합통계'}</div>
           <div class="val">${last==null?'—':last.toFixed(c.dec)}<small>${c.unit}</small>${chg}</div>
           <div class="ixn-box"><canvas id="lq-${i}"></canvas></div></div>`; }).join('') : '';
-      box.innerHTML = '<div class="ixn-grid">' + lqHtml + stHtml + inds.map((ind,i)=>`
-        ${ind.category && ind.category!==(inds[i-1]||{}).category && ind.id && String(ind.id).startsWith('dk_') && !String((inds[i-1]||{}).id||'').startsWith('dk_') ? '<div class="ixn-cat">💊 '+ind.category+' 트래커</div>' : ''}
+      const indHead = inds.length ? '<div class="lq-head"><span class="ttl">📊 투자 지표</span><span class="src">업종 선행지표 · 지표 이름을 누르면 원자료</span></div>' : '';
+      box.innerHTML = '<div class="ixn-grid">' + lqHtml + stHtml + indHead + inds.map((ind,i)=>`
         <div class="ixn-card${ind.chartLines&&ind.products?' wide':''}"><h4 class="ixn-t" data-i="${i}">${ind.name} <span style="font-weight:400;font-size:11px;color:var(--text-dim)">${ind.unit||''}</span><span class="ixn-toggle">데이터 ▸</span></h4>
         <div class="src">${ind.source||''}${ind.category?' · '+ind.category:''}</div>
         <div class="ixn-box"><canvas id="ixn-${i}"></canvas></div>
