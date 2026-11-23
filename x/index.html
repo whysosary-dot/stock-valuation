@@ -1,0 +1,38 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>X 데일리</title>
+<style>
+:root{--ink:#1f2937;--mut:#6b7280;--line:#e5e7eb;--teal:#0f766e;--mint:#a7d7cf;--rose:#be123c;--bg:#f8fafc}
+*{box-sizing:border-box}body{margin:0;padding:14px;font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;color:var(--ink);background:var(--bg);font-size:14px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto}.top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+h1{font-size:19px;margin:0 8px 0 0}select,button.t{font-size:13px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+button.t.on{background:var(--teal);color:#fff;border-color:var(--teal)}.meta{color:var(--mut);font-size:12px}
+.box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0}
+.hl{border-left:4px solid var(--teal);background:#f0fdfa}.hl li{margin:4px 0}.hl ul{margin:6px 0 0;padding-left:18px}
+h2{font-size:15px;margin:18px 0 6px;display:flex;align-items:center;gap:6px}h2 .c{font-size:11.5px;color:var(--mut);font-weight:400}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:10px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px}
+.card .who{font-weight:700}.card .who a{color:var(--ink);text-decoration:none}.card .h{color:var(--mut);font-weight:400;font-size:12px}
+.card .p{color:var(--teal);font-size:12px;margin-bottom:6px}.card ul{margin:0;padding-left:17px}.card li{margin:5px 0}
+.card li a{color:var(--mut);font-size:11.5px;text-decoration:none;white-space:nowrap}.tk{display:inline-block;font-size:11px;background:#ecfdf5;color:var(--teal);border-radius:5px;padding:0 5px;margin-left:3px}
+.note{font-size:12px;color:var(--mut);margin-top:8px}.warn{color:var(--rose)}
+table{border-collapse:collapse;width:100%;font-size:13px}td,th{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left}th{background:#f1f5f9}
+</style></head><body><div class="wrap">
+<div class="top"><h1>𝕏 팔로우 계정 데일리</h1><select id="d"></select><button class="t on" id="b1">오늘의 글</button><button class="t" id="b2">팔로우 분류</button><span class="meta" id="m"></span></div>
+<div id="v"></div></div>
+<script>
+const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const J=p=>fetch(p+'?v='+Date.now()).then(r=>{if(!r.ok)throw new Error(p+' '+r.status);return r.json()});
+let mode=1;
+async function day(){const d=$('d').value;if(!d){$('v').innerHTML='<div class="box">아직 데이터가 없습니다.</div>';return}
+ try{const x=await J('data/'+d+'.json');$('m').textContent=`${x.window||''} · 글 ${x.count?x.count.posts:'-'}개 · 계정 ${x.count?x.count.accounts:'-'}개 · 생성 ${x.generated||''}`;
+ let h='<div class="box hl"><b>★ 오늘의 핵심 (Claude 정리)</b><ul>'+(x.top||[]).map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul><div class="note warn">'+esc(x.note||'')+'</div></div>';
+ for(const c of x.cats){h+=`<h2>${esc(c.name)} <span class="c">${c.accounts.length}개 계정</span></h2><div class="grid">`;
+  for(const a of c.accounts){h+=`<div class="card"><div class="who"><a href="https://x.com/${esc(a.h)}" target="_blank" rel="noopener">${esc(a.n)}</a> <span class="h">@${esc(a.h)}</span></div><div class="p">(${esc(a.p||'')})</div><ul>`+a.posts.map(p=>`<li>${esc(p.t)}${(p.k||[]).map(k=>`<span class="tk">${esc(k)}</span>`).join('')} <a href="${esc(p.u)}" target="_blank" rel="noopener">원문 ↗</a></li>`).join('')+'</ul></div>'}
+  h+='</div>'}
+ $('v').innerHTML=h}catch(e){$('v').innerHTML='<div class="box warn">불러오기 실패: '+esc(e.message)+'</div>'}}
+async function accs(){try{const x=await J('accounts.json');$('m').textContent='분류 기준일 '+x.updated;let h='';
+ for(const c of x.cats){h+=`<h2>${esc(c.name)} <span class="c">${c.accounts.length}개</span></h2><div class="box" style="padding:4px 10px"><table>`+c.accounts.map(a=>`<tr><td style="width:38%"><a href="https://x.com/${esc(a.h)}" target="_blank" rel="noopener" style="color:#1f2937;text-decoration:none"><b>${esc(a.n)}</b></a> <span class="meta">@${esc(a.h)}</span></td><td>(${esc(a.p)})</td></tr>`).join('')+'</table></div>'}
+ $('v').innerHTML=h}catch(e){$('v').innerHTML='<div class="box warn">불러오기 실패: '+esc(e.message)+'</div>'}}
+function go(){$('b1').classList.toggle('on',mode==1);$('b2').classList.toggle('on',mode==2);$('d').style.display=mode==1?'':'none';mode==1?day():accs()}
+$('b1').onclick=()=>{mode=1;go()};$('b2').onclick=()=>{mode=2;go()};$('d').onchange=day;
+J('data/index.json').then(x=>{$('d').innerHTML=x.dates.map(d=>`<option>${d}</option>`).join('');go()}).catch(()=>go());
+</script></body></html>
