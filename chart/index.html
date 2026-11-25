@@ -579,13 +579,15 @@ function insightHtml(key) {
   if (!ai && !(au && au.lines && au.lines.length)) h += `<div class="none">이 섹션의 인사이트 데이터가 없습니다.</div>`;
   return h + '</div>';
 }
+/* 📈 Index 탭(?only=index)과 📉 Chart 탭의 인사이트 분리: Index 에서는 인덱스 섹션만, Chart 에서는 인덱스 섹션 제외 */
+const ONLY_INDEX = new URLSearchParams(location.search).get('only') === 'index';
 function openInsight(initKey) {
-  let key = initKey; const bg = document.createElement('div'); bg.className = 'mb';
+  let key = ONLY_INDEX ? 'index' : (initKey === 'index' ? 'kr' : initKey); const bg = document.createElement('div'); bg.className = 'mb';
   const render = async () => {
     await loadExtraInsight(key);
     bg.innerHTML = `<div class="md" role="dialog">
       <div class="hd"><h2>💡 인사이트</h2><span class="s">${esc(INS_LABEL[key] || key)}</span><button class="x" title="닫기">×</button></div>
-      <div class="ichips">${Object.keys(INS_LABEL).map(k => `<button class="chip${k === key ? ' on' : ''}" data-k="${k}">${INS_LABEL[k]}</button>`).join('')}</div>
+      <div class="ichips"${ONLY_INDEX ? ' style="display:none"' : ''}>${Object.keys(INS_LABEL).filter(k => ONLY_INDEX ? k === 'index' : k !== 'index').map(k => `<button class="chip${k === key ? ' on' : ''}" data-k="${k}">${INS_LABEL[k]}</button>`).join('')}</div>
       <div class="bd2"><div class="ins">${insightHtml(key)}</div></div></div>`;
     bg.querySelectorAll('.ichips .chip').forEach(b => b.onclick = () => { key = b.dataset.k; render(); });
     bg.querySelector('.x').onclick = close;
