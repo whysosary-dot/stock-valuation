@@ -6573,7 +6573,7 @@ async function ghCommitAllRun(pat) {
     // ── 2. diary.json : localStorage 다이어리 전체 커밋 ──
     let diaryFile = await ghApiGet(pat, 'sv/diary.json');
     if (!diaryFile) { await new Promise(r => setTimeout(r, 800)); diaryFile = await ghApiGet(pat, 'sv/diary.json'); }   // 일시적 404 대비 재조회
-    try { const snaps = autoSnapshotDiary(); if (snaps.length) toast('🕘 자동 기록: ' + snaps.join(', '), 'ok', 3500); } catch (e) { console.warn('[autoSnapshot]', e); }
+    try { autoSnapshotDiary(); /* 자동 기록은 그대로 하되 알림은 띄우지 않음 (2026-11-25) */ } catch (e) { console.warn('[autoSnapshot]', e); }
     const diaryBody = JSON.stringify(diary.data, null, 2);
     let diaryPutRes;
     try {
