@@ -780,7 +780,16 @@ html.only-index .tabs{display:none}
           <div class="val">${last==null?'—':last.toFixed(c.dec)}<small>${c.unit}</small>${chg}</div>
           <div class="ixn-box"><canvas id="lq-${i}"></canvas></div></div>`; }).join('') : '';
       const indHead = inds.length ? '<div class="lq-head"><span class="ttl">📊 투자 지표</span><span class="src">업종 선행지표 · 지표 이름을 누르면 원자료</span></div>' : '';
+      /* 섹터별 묶음: 반도체(기판 포함) → 조선 → 기계 → 카지노 → 게임 → 제약·뷰티 → 기타 */
+      const SECT = [['반도체','💾 반도체'],['조선','🚢 조선'],['기계','⚙️ 기계'],['카지노','🎰 카지노'],['게임','🎮 게임'],['제약','💊 제약·뷰티'],['기타','📌 기타']];
+      const sectOf = ind => { const c = String(ind.category||''), id = String(ind.id||'');
+        if (/반도체/.test(c)) return '반도체'; if (/조선|해운/.test(c)) return '조선'; if (id === 'jmtba' || /기계/.test(c)) return '기계';
+        if (/카지노/.test(c)) return '카지노'; if (/게임/.test(c)) return '게임'; if (id.startsWith('dk_') || /제약|뷰티/.test(c)) return '제약'; return '기타'; };
+      const sIdx = k => SECT.findIndex(x => x[0] === k);
+      inds.forEach((x, n) => { if (x._o == null) x._o = n; });
+      inds.sort((a, b) => (sIdx(sectOf(a)) - sIdx(sectOf(b))) || (a._o - b._o));
       box.innerHTML = '<div class="ixn-grid">' + lqHtml + stHtml + indHead + inds.map((ind,i)=>`
+        ${i === 0 || sectOf(ind) !== sectOf(inds[i-1]) ? '<div class="ixn-cat">' + SECT[sIdx(sectOf(ind))][1] + '</div>' : ''}
         <div class="ixn-card${ind.chartLines&&ind.products?' wide':''}"><h4 class="ixn-t" data-i="${i}">${ind.name} <span style="font-weight:400;font-size:11px;color:var(--text-dim)">${ind.unit||''}</span><span class="ixn-toggle">데이터 ▸</span></h4>
         <div class="src">${ind.source||''}${ind.category?' · '+ind.category:''}</div>
         <div class="ixn-box"><canvas id="ixn-${i}"></canvas></div>
